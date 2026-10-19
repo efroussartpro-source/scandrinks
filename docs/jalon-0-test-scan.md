@@ -17,11 +17,14 @@
    - si la lecture prend 3 secondes ou moins : le cadre s'entoure de vert et une ligne s'ajoute dans la liste ;
    - si les chiffres affichés sont bien ceux imprimés sous le code-barres du pack, et pas ceux d'une canette vue à travers le film.
 3. **Refais l'essai avec quelques canettes ou bouteilles seules.**
-4. **Teste l'app depuis l'écran d'accueil.**
+4. **Envoie-moi le rapport tout de suite.** Touche « Copier le rapport » et colle-le dans la conversation avec Claude. Ajoute tes remarques : ce qui a bien marché, ce qui a moins bien marché, les packs difficiles.
+   > Rien n'est enregistré : avant d'avoir envoyé le rapport, ne ferme pas Safari et ne touche pas « Effacer la liste ».
+5. **Teste ensuite l'app depuis l'écran d'accueil.**
    - Dans Safari, fais Partager → « Sur l'écran d'accueil ».
    - Ouvre ScanDrinks depuis l'icône, puis touche « Démarrer la caméra ». Note si l'autorisation caméra est redemandée.
-   - Ferme l'app en la balayant vers le haut, rouvre-la, et note de nouveau.
-5. **Envoie-moi le rapport.** Touche « Copier le rapport » et colle-le dans la conversation avec Claude. Ajoute tes remarques : ce qui a bien marché, ce qui a moins bien marché, les packs difficiles.
+   - Scanne 2 ou 3 packs.
+   - Ferme l'app en la balayant vers le haut, rouvre-la, et note de nouveau si l'autorisation est redemandée.
+   - Copie le rapport depuis l'icône et envoie-le-moi aussi. On le reconnaît à la ligne « Mode : écran d'accueil ».
 
 ## Ce qu'on décide ensuite
 
@@ -33,6 +36,6 @@
 
 ## En cas de souci
 
-- **« L'accès à la caméra a été refusé »** : va dans Réglages › Apps › Safari › Caméra, choisis « Autoriser », puis recharge la page.
+- **« L'accès à la caméra a été refusé »** : va dans Réglages › Apps › Safari › Caméra, choisis « Autoriser », puis recharge la page. Si tu as ouvert l'app depuis l'icône, ferme-la et rouvre-la.
 - **Rien ne se lit** : vérifie l'éclairage et éloigne un peu le téléphone. Les iPhone récents font mal la mise au point de trop près.
 - **La caméra s'arrête quand tu changes d'app** : c'est normal. Touche de nouveau « Démarrer la caméra ».

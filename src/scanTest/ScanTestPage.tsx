@@ -95,6 +95,8 @@ export default function ScanTestPage() {
   }
 
   function clearList() {
+    // Rien n'est enregistré ailleurs : un faux geste effacerait tout le test.
+    if (entries.length > 0 && !window.confirm(`Effacer ${codesCountLabel(entries.length)} ? Rien n'est enregistré ailleurs.`)) return
     setEntries([])
     setCopyState('idle')
   }

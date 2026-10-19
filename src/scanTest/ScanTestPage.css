@@ -17,9 +17,11 @@
   color: #555555;
 }
 
+/* Tout ce qui est analysé reste visible (contain) : l'employé voit le code
+   réellement lu, pack ou canette. Format adapté au téléphone tenu droit. */
 .viewfinder {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 4;
   border-radius: 14px;
   overflow: hidden;
   background: #000000;
@@ -34,7 +36,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Bande de visée : on centre le code-barres dedans. */

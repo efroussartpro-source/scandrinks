@@ -72,6 +72,18 @@ async function scenarioFullScan(browser) {
   assert.match(await items.first().innerText(), /EAN-13/)
   assert.match(await page.getByRole('status').first().innerText(), /ZXing \(WebAssembly\)/)
 
+  // Ce qui est analysé doit être visible : sinon l'app peut lire un code que l'employé ne voit pas.
+  const shown = await page.evaluate(() => {
+    const video = document.querySelector('video')
+    const box = video.getBoundingClientRect()
+    const fit = getComputedStyle(video).objectFit
+    const sx = box.width / video.videoWidth
+    const sy = box.height / video.videoHeight
+    const scale = fit === 'contain' ? Math.min(sx, sy) : fit === 'cover' ? Math.max(sx, sy) : Number.NaN
+    return { fit, width: Math.min(1, box.width / (video.videoWidth * scale)), height: Math.min(1, box.height / (video.videoHeight * scale)) }
+  })
+  assert.ok(shown.width > 0.999 && shown.height > 0.999, `toute l'image analysée doit être visible : ${JSON.stringify(shown)}`)
+
   await page.waitForTimeout(3_000)
   assert.equal(await items.count(), 1, 'le même pack reste dans le champ : une seule ligne')
 
@@ -98,6 +110,19 @@ async function scenarioFullScan(browser) {
   await page.getByRole('button', { name: 'Démarrer la caméra' }).waitFor()
 
   assert.equal(page.url(), firstUrl, "aucune modification d'URL")
+
+  // « Effacer la liste » demande confirmation : un faux geste ne doit pas effacer le test.
+  let dialogMessage = null
+  page.once('dialog', (dialog) => {
+    dialogMessage = dialog.message()
+    void dialog.dismiss()
+  })
+  await page.getByRole('button', { name: 'Effacer la liste' }).click()
+  assert.ok(dialogMessage, "une confirmation est demandée avant d'effacer la liste")
+  assert.equal(await items.count(), 1, 'refuser la confirmation garde la liste')
+  page.once('dialog', (dialog) => void dialog.accept())
+  await page.getByRole('button', { name: 'Effacer la liste' }).click()
+  await page.getByText('0 code lu').waitFor({ timeout: 5_000 })
   await context.close()
   console.log('Scénario A (lecture complète) : OK')
 }
