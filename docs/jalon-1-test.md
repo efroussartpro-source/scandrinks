@@ -48,7 +48,7 @@
 8. **Essaie avec deux iPhone** : scannez le même produit l'un après l'autre. Le stock affiché doit suivre les deux mouvements.
 9. **Essaie le mode avion.**
    - Sur une fiche, active le mode avion, puis touche « Valider ».
-   - « Pas de connexion, rien n'a été enregistré. » doit s'afficher.
+   - « Pas de connexion : enregistrement non confirmé. Touche « Réessayer ». » doit s'afficher.
    - Désactive le mode avion, puis touche « Réessayer » : le stock ne doit augmenter qu'une fois.
 
 ## Ce qu'on décide ensuite

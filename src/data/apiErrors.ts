@@ -12,7 +12,7 @@
 export type ApiErrorKind = 'network' | 'session' | 'forbidden' | 'barcode_taken' | 'invalid' | 'unknown'
 
 const MESSAGES: Record<ApiErrorKind, string> = {
-  network: "Pas de connexion, rien n'a été enregistré.",
+  network: 'Pas de connexion. Réessaie quand le réseau revient.',
   session: 'Ta session a expiré : reconnecte-toi.',
   forbidden: "Ce compte n'a pas accès au stock.",
   barcode_taken: 'Ce code appartient déjà à un autre produit.',
@@ -35,6 +35,15 @@ export class ApiError extends Error {
 
 export function apiErrorMessage(kind: ApiErrorKind): string {
   return MESSAGES[kind]
+}
+
+// Après un échec d'enregistrement, la base a peut-être reçu l'envoi (réponse perdue) :
+// on ne dit pas « rien n'a été enregistré ». « Réessayer » garde le même identifiant,
+// donc ne crée jamais de doublon (décision du porteur du projet, 19/10/2026).
+export const SAVE_NOT_CONFIRMED_MESSAGE = 'Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».'
+
+export function saveErrorMessage(kind: ApiErrorKind): string {
+  return kind === 'network' ? SAVE_NOT_CONFIRMED_MESSAGE : MESSAGES[kind]
 }
 
 const NETWORK_MESSAGE = /failed to fetch|load failed|networkerror/i

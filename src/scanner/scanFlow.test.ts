@@ -58,7 +58,7 @@ test('enregistré → lecture avec la notice saved, et le même code ignoré pen
 })
 test('recherche impossible (réseau) → lecture, avec une notice error', () => {
   expect(flowReducer({ step: 'looking_up', code: '1' }, { type: 'lookup_failed', code: '1', kind: 'network' }))
-    .toEqual({ step: 'scanning', notice: { kind: 'error', message: "Pas de connexion, rien n'a été enregistré." }, cooldown: null })
+    .toEqual({ step: 'scanning', notice: { kind: 'error', message: 'Pas de connexion. Réessaie quand le réseau revient.' }, cooldown: null })
 })
 test('étapes intermédiaires', () => {
   const unknown: FlowState = { step: 'unknown', code: '9002490274658' }

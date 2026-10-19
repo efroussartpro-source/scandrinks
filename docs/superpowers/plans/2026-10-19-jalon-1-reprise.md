@@ -63,11 +63,13 @@ Cette note permet à une nouvelle session de reprendre le jalon 1 exactement où
 6. **Test du porteur du projet sur iPhone**, d'après `docs/jalon-1-test.md`. Les défauts trouvés sont corrigés en TDD.
 7. **Fin du jalon :** fusion dans `main` avec son accord (`git merge --ff-only jalon-1`). Ensuite, appliquer superpowers:finishing-a-development-branch.
 
-## Décision en attente du porteur du projet
+## Décision prise par le porteur du projet
 
-**Libellé après une coupure réseau.** Le texte actuel, « Pas de connexion, rien n'a été enregistré. », vient de la spec §7. Il peut être faux quand la réponse se perd alors que la base a bien enregistré.
+**Libellé après une coupure réseau, validé le 19/10/2026.**
+- Après un enregistrement qui échoue : « Pas de connexion : enregistrement non confirmé. Touche « Réessayer ». ».
+- Ailleurs (recherche, listes, formulaires) : « Pas de connexion. Réessaie quand le réseau revient. ».
 
-Proposition : « Pas de connexion : enregistrement non confirmé. Touche « Réessayer ». ». Question posée le 19/10/2026, sans réponse pour l'instant. Si elle est validée, modifier la spec (§7 et journal des décisions), `apiErrors.ts`, les tests et le protocole.
+Ces libellés sont appliqués dans `apiErrors.ts` (`saveErrorMessage`), les tests, le protocole et la spec (§7 et journal des décisions).
 
 ## Règles de travail
 

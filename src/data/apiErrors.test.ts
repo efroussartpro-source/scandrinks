@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { apiErrorMessage, classifyApiError, type ApiErrorKind } from './apiErrors'
+import { apiErrorMessage, classifyApiError, saveErrorMessage, type ApiErrorKind } from './apiErrors'
 
 test.each([
   [new TypeError('Failed to fetch'), 'network'], [{ message: 'TypeError: Load failed', code: '', status: 0 }, 'network'],
@@ -20,10 +20,15 @@ test('detail porte le code pris ou le champ refusé', () => {
 })
 
 test.each([
-  ['network', "Pas de connexion, rien n'a été enregistré."],
+  ['network', 'Pas de connexion. Réessaie quand le réseau revient.'],
   ['session', 'Ta session a expiré : reconnecte-toi.'],
   ['forbidden', "Ce compte n'a pas accès au stock."],
   ['barcode_taken', 'Ce code appartient déjà à un autre produit.'],
   ['invalid', 'Enregistrement refusé : vérifie la saisie ou scanne de nouveau.'],
   ['unknown', 'Base injoignable. Réessaie dans un instant.'],
 ])('message %s', (kind, message) => { expect(apiErrorMessage(kind as ApiErrorKind)).toBe(message) })
+
+test("échec d'un enregistrement : la base a peut-être reçu l'envoi, on invite à « Réessayer » (sans doublon)", () => {
+  expect(saveErrorMessage('network')).toBe('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».')
+  expect(saveErrorMessage('invalid')).toBe(apiErrorMessage('invalid'))
+})

@@ -9,7 +9,7 @@
  */
 import { useEffect, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
-import { apiErrorMessage } from '../data/apiErrors'
+import { saveErrorMessage } from '../data/apiErrors'
 import { parseIntInRange } from '../domain/productDraft'
 import { describeConfirm, QUANTITY_MAX, QUANTITY_MIN, type ScanMode } from '../domain/stock'
 import type { ConfirmState } from './scanFlow'
@@ -62,7 +62,7 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
       </div>
       {status === 'failed' && errorKind && (
         <p role="alert" className="message message-error">
-          {apiErrorMessage(errorKind)}
+          {saveErrorMessage(errorKind)}
         </p>
       )}
       <div className="card-actions">

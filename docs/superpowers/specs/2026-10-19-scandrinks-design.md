@@ -282,7 +282,7 @@ Limites connues :
 
 | Situation | Comportement |
 |---|---|
-| Coupure réseau au moment de valider | Message « Pas de connexion, rien n'a été enregistré » et bouton « Réessayer ». La saisie reste affichée. Grâce à l'identifiant unique de l'action, un double envoi ne crée pas de doublon. |
+| Coupure réseau au moment de valider | Message « Pas de connexion : enregistrement non confirmé. Touche « Réessayer ». » et bouton « Réessayer ». La saisie reste affichée. La réponse a pu se perdre alors que la base avait enregistré : grâce à l'identifiant unique de l'action, « Réessayer » ne crée jamais de doublon. |
 | Double scan du même code | Le code n'est pas relu tant que sa fiche est affichée, ni pendant 2 secondes après la validation. |
 | Saisie hors limites | Le champ est refusé avec un message clair (bornes de RG-3, RG-4 et RG-7). |
 | Code déjà associé à un autre produit | L'app indique le produit concerné et laisse le choix : laisser le code ou le déplacer. |
@@ -366,6 +366,7 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 | 19/10/2026 | **Jalon 0 : GO pour l'app web** | Test en boutique sur iPhone : unités et packs lus rapidement. Les codes des packs sont inconnus d'Open Food Facts, comme prévu, et la fiche se crée au premier scan |
 | 19/10/2026 | Normalisation des codes (RG-13) | Étiquettes réelles : le pack Lipton porte deux codes (EAN-13 et code long GS1 avec DLUO et lot), le pack Red Bull a un code de lot à part |
 | 19/10/2026 | Un plan d'implémentation par jalon | Chaque jalon est validé sur iPhone avant d'écrire le suivant |
+| 19/10/2026 | Après une coupure : « enregistrement non confirmé », et non plus « rien n'a été enregistré » | Relecture du jalon 1 : la réponse peut se perdre alors que la base a enregistré. « Réessayer » ne crée pas de doublon |
 
 ## 12. Glossaire
 
