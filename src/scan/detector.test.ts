@@ -28,6 +28,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.doUnmock(WASM_URL_MODULE)
+  vi.doUnmock('barcode-detector/ponyfill')
   vi.unstubAllGlobals()
 })
 
@@ -53,5 +54,25 @@ describe('createBarcodeDetector', () => {
     await expect(createBarcodeDetector()).rejects.toMatchObject({ name: 'ScannerEngineError' })
     vi.stubGlobal('BarcodeDetector', FakeNativeDetector)
     await expect(createBarcodeDetector()).resolves.toMatchObject({ engine: 'native' })
+  })
+
+  test('après un échec de ZXing, le module est purgé, et le nouvel essai le recharge', async () => {
+    const purge = vi.fn()
+    let attempt = 0
+    vi.doMock('barcode-detector/ponyfill', () => ({
+      BarcodeDetector: class {
+        async detect() {
+          return []
+        }
+      },
+      prepareZXingModule: async () => {
+        if (attempt++ === 0) throw new Error('wasm')
+      },
+      purgeZXingModule: purge,
+    }))
+    const { createBarcodeDetector } = await import('./detector')
+    await expect(createBarcodeDetector()).rejects.toMatchObject({ name: 'ScannerEngineError' })
+    expect(purge).toHaveBeenCalledTimes(1)
+    await expect(createBarcodeDetector()).resolves.toMatchObject({ engine: 'zxing' })
   })
 })

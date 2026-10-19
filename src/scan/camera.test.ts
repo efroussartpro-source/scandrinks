@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { startCamera, stopCamera } from './camera'
+import { attachCamera, openCamera, stopCamera } from './camera'
 
 // Faux objets du navigateur (caméra et balise vidéo), seule dépendance externe.
 class FakeTrack extends EventTarget {
@@ -36,40 +36,54 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('startCamera', () => {
+describe('openCamera', () => {
   test('refuse hors adresse sécurisée (https)', async () => {
     vi.stubGlobal('isSecureContext', false)
     vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn() } })
-    await expect(startCamera(asVideo(fakeVideo()))).rejects.toMatchObject({ name: 'InsecureContextError' })
+    await expect(openCamera()).rejects.toMatchObject({ name: 'InsecureContextError' })
   })
 
   test("refuse si le navigateur n'offre pas l'accès caméra", async () => {
     vi.stubGlobal('isSecureContext', true)
     vi.stubGlobal('navigator', {})
-    await expect(startCamera(asVideo(fakeVideo()))).rejects.toMatchObject({ name: 'InsecureContextError' })
+    await expect(openCamera()).rejects.toMatchObject({ name: 'InsecureContextError' })
   })
 
-  test('demande la caméra arrière en 1280×720, branche le flux et renvoie sa taille', async () => {
-    const track = new FakeTrack({ width: 1280, height: 720 })
-    const getUserMedia = vi.fn(async () => fakeStream([track]))
+  test('demande la caméra arrière en 1280×720 et renvoie le flux', async () => {
+    const stream = fakeStream([new FakeTrack({})])
+    const getUserMedia = vi.fn(async () => stream)
     vi.stubGlobal('isSecureContext', true)
     vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } })
-    const video = fakeVideo()
-    const result = await startCamera(asVideo(video))
+    await expect(openCamera()).resolves.toBe(stream)
     expect(getUserMedia).toHaveBeenCalledWith({
       audio: false,
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
     })
-    expect(video.srcObject).toBe(result.stream)
+  })
+})
+
+describe('attachCamera', () => {
+  test('branche le flux, lance la lecture et renvoie la taille de la piste', async () => {
+    const stream = fakeStream([new FakeTrack({ width: 1280, height: 720 })])
+    const video = fakeVideo()
+    const size = await attachCamera(asVideo(video), stream)
+    expect(video.srcObject).toBe(stream)
     expect(video.played).toBe(true)
-    expect([result.width, result.height]).toEqual([1280, 720])
+    expect(size).toEqual({ width: 1280, height: 720 })
   })
 
   test('sans taille dans les réglages de la piste, prend celle de la vidéo', async () => {
-    vi.stubGlobal('isSecureContext', true)
-    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: async () => fakeStream([new FakeTrack({})]) } })
-    const result = await startCamera(asVideo(fakeVideo(640, 480)))
-    expect([result.width, result.height]).toEqual([640, 480])
+    const size = await attachCamera(asVideo(fakeVideo(640, 480)), fakeStream([new FakeTrack({})]))
+    expect(size).toEqual({ width: 640, height: 480 })
+  })
+
+  test("si play() échoue, le flux est arrêté, la vidéo détachée et l'erreur relancée", async () => {
+    const track = new FakeTrack({})
+    const video = fakeVideo()
+    video.play = async () => { throw Object.assign(new Error('refus'), { name: 'NotAllowedError' }) }
+    await expect(attachCamera(asVideo(video), fakeStream([track]))).rejects.toMatchObject({ name: 'NotAllowedError' })
+    expect(track.stopped).toBe(true)
+    expect(video.srcObject).toBeNull()
   })
 })
 

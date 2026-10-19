@@ -7,7 +7,7 @@
  * WebAssembly (barcode-detector/ponyfill). Le fichier .wasm est servi par
  * l'app elle-même : aucun appel à un CDN tiers.
  */
-import { BarcodeDetector as ZXingBarcodeDetector, prepareZXingModule } from 'barcode-detector/ponyfill'
+import { BarcodeDetector as ZXingBarcodeDetector, prepareZXingModule, purgeZXingModule } from 'barcode-detector/ponyfill'
 import zxingWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'
 import { chooseEngine, type ScanEngine } from './engine'
 import { PRODUCT_BARCODE_FORMATS } from './formats'
@@ -64,6 +64,8 @@ async function buildDetector(): Promise<DetectorResult> {
       fireImmediately: true,
     })
   } catch (cause) {
+    // Sans purge, le module garde l'échec en mémoire et le nouvel essai échouerait aussi.
+    purgeZXingModule()
     const error = new Error("Le lecteur de codes-barres n'a pas pu se charger.", { cause })
     error.name = 'ScannerEngineError'
     throw error

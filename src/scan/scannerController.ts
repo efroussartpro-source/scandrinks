@@ -9,7 +9,7 @@
  * demande d'autorisation, par exemple) referment la caméra au lieu de la
  * laisser allumée.
  */
-import { startCamera, stopCamera } from './camera'
+import { attachCamera, detachVideo, openCamera, stopCamera } from './camera'
 import { createScanDeduper } from './deduper'
 import { createBarcodeDetector, type CodeDetector, type DetectedCode } from './detector'
 import type { ScanEngine } from './engine'
@@ -39,7 +39,8 @@ const DECODE_REPORT_INTERVAL_MS = 1000
 
 export interface ScannerDeps {
   createDetector: () => Promise<{ detector: CodeDetector; engine: ScanEngine }>
-  startCamera: (video: HTMLVideoElement) => Promise<{ stream: MediaStream; width: number; height: number }>
+  openCamera: () => Promise<MediaStream>
+  attachCamera: (video: HTMLVideoElement, stream: MediaStream) => Promise<{ width: number; height: number }>
   stopCamera: (stream: MediaStream | null) => void
   createDeduper: () => (code: string) => boolean
   now: () => number
@@ -47,7 +48,8 @@ export interface ScannerDeps {
 
 const DEFAULT_DEPS: ScannerDeps = {
   createDetector: createBarcodeDetector,
-  startCamera,
+  openCamera,
+  attachCamera,
   stopCamera,
   createDeduper: () => createScanDeduper(),
   now: () => performance.now(),
@@ -86,6 +88,7 @@ export function createScannerController(options: {
     timer = null
     deps.stopCamera(stream)
     stream = null
+    detachVideo(video)
   }
 
   function halt(kind: ScannerErrorKind) {
@@ -100,13 +103,20 @@ export function createScannerController(options: {
     try {
       const { detector, engine } = await deps.createDetector()
       if (current !== session) return
-      const camera = await deps.startCamera(video)
+      const opened = await deps.openCamera()
       if (current !== session) {
-        deps.stopCamera(camera.stream)
+        deps.stopCamera(opened)
         return
       }
-      stream = camera.stream
-      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+      // Retenu avant le branchement : un arrêt pendant attachCamera le referme aussitôt.
+      stream = opened
+      const size = await deps.attachCamera(video, opened)
+      if (current !== session) {
+        deps.stopCamera(opened)
+        detachVideo(video)
+        return
+      }
+      opened.getVideoTracks()[0]?.addEventListener('ended', () => {
         if (current === session) halt('interrupted')
       })
       const accept = deps.createDeduper()
@@ -114,7 +124,7 @@ export function createScannerController(options: {
       setState({
         status: 'running',
         engine,
-        resolution: { width: camera.width, height: camera.height },
+        resolution: size,
         lastDecodeMs: null,
       })
       void tick(current, detector, accept)
@@ -141,7 +151,13 @@ export function createScannerController(options: {
         setState({ lastDecodeMs: Math.round(finishedAt - startedAt) })
       }
       for (const code of codes) {
-        if (accept(code.rawValue)) onDetect(code.rawValue, code.format)
+        if (!accept(code.rawValue)) continue
+        try {
+          onDetect(code.rawValue, code.format)
+        } catch (error) {
+          // Une erreur de l'écran ne doit pas couper la lecture des codes suivants.
+          console.error(error)
+        }
       }
     }
     timer = setTimeout(() => void tick(current, detector, accept), intervalMs)
