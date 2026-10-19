@@ -12,7 +12,10 @@
  * - un double appui sur « Valider » ne fait qu'un envoi ;
  * - « Réessayer » garde le même identifiant : la base ne crée pas de doublon ;
  * - après un échec, la quantité ne change plus (ce qui est réessayé est ce
- *   qui était affiché).
+ *   qui était affiché) ;
+ * - pendant une annulation, aucun code n'est relu : son résultat s'affiche
+ *   toujours, même en cas d'échec ;
+ * - un code de lot n'efface pas le message « enregistré » ni son « Annuler ».
  */
 import { normalizeScannedCode } from '../codes/normalize'
 import type { LookupResult, Product } from '../data/api'
@@ -46,7 +49,8 @@ export type ConfirmState = {
 }
 
 export type FlowState =
-  | { step: 'scanning'; notice: Notice | null; cooldown: { code: string; until: number } | null }
+  // undoing : une annulation est en cours (le message « enregistré » attend sa réponse).
+  | { step: 'scanning'; notice: Notice | null; cooldown: { code: string; until: number } | null; undoing?: true }
   | { step: 'looking_up'; code: string }
   | ConfirmState
   | { step: 'unknown'; code: string }
@@ -68,6 +72,7 @@ export type FlowEvent =
   | { type: 'choose_attach'; product?: Product }
   | { type: 'open_manual' }
   | { type: 'product_ready'; target: ConfirmTarget; movementId: string }
+  | { type: 'undo_started' }
   | { type: 'undo_done'; productName: string; stock: number; packSize: number }
   | { type: 'undo_failed'; kind: ApiErrorKind }
   | { type: 'notice_expired' }
@@ -92,11 +97,14 @@ const confirmFor = (target: ConfirmTarget, movementId: string): ConfirmState => 
 export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
   switch (event.type) {
     case 'code_read': {
-      if (state.step !== 'scanning') return state
+      if (state.step !== 'scanning' || state.undoing) return state
       const normalized = normalizeScannedCode(event.rawValue, event.format)
       if (normalized.kind === 'ignored') {
-        // Lecture parasite (clé fausse) : ignorée sans message.
-        return normalized.reason === 'not_a_product' ? { ...state, notice: { kind: 'not_a_product' } } : state
+        // Lecture parasite (clé fausse) : ignorée sans message. Un code de lot ne masque
+        // pas un message plus important (enregistrement avec son « Annuler », erreur).
+        if (normalized.reason === 'invalid_check_digit') return state
+        if (state.notice && state.notice.kind !== 'not_a_product' && state.notice.kind !== 'cancelled') return state
+        return { ...state, notice: { kind: 'not_a_product' } }
       }
       if (state.cooldown && state.cooldown.code === normalized.code && event.at < state.cooldown.until) return state
       return { step: 'looking_up', code: normalized.code }
@@ -132,7 +140,8 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
       if (state.step !== 'confirm' || state.status !== 'saving') return state
       return { ...state, status: 'failed', errorKind: event.kind }
     case 'close':
-      if (state.step === 'scanning' || state.step === 'looking_up') return state
+      // Pendant une recherche, « Annuler » rend la main : la réponse tardive sera ignorée.
+      if (state.step === 'scanning') return state
       if (state.step === 'confirm' && state.status === 'saving') return state
       return scanningWith(null)
     case 'choose_new_product':
@@ -142,17 +151,23 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
         ? { step: 'attach', code: state.code, product: event.product ?? null }
         : state
     case 'open_manual':
-      return state.step === 'scanning' ? { step: 'manual' } : state
+      return state.step === 'scanning' && !state.undoing ? { step: 'manual' } : state
     case 'product_ready':
       return state.step === 'new_product' || state.step === 'attach' || state.step === 'manual'
         ? confirmFor(event.target, event.movementId)
         : state
+    case 'undo_started':
+      if (state.step !== 'scanning' || state.undoing || state.notice?.kind !== 'saved') return state
+      return { ...state, undoing: true }
     case 'undo_done':
       if (state.step !== 'scanning') return state
-      return { ...state, notice: { kind: 'cancelled', productName: event.productName, stock: event.stock, packSize: event.packSize } }
+      return scanningWith(
+        { kind: 'cancelled', productName: event.productName, stock: event.stock, packSize: event.packSize },
+        state.cooldown,
+      )
     case 'undo_failed':
-      return state.step === 'scanning' ? { ...state, notice: { kind: 'error', message: UNDO_FAILED_MESSAGE } } : state
+      return state.step === 'scanning' ? scanningWith({ kind: 'error', message: UNDO_FAILED_MESSAGE }, state.cooldown) : state
     case 'notice_expired':
-      return state.step === 'scanning' && state.notice !== null ? { ...state, notice: null } : state
+      return state.step === 'scanning' && state.notice !== null && !state.undoing ? { ...state, notice: null } : state
   }
 }

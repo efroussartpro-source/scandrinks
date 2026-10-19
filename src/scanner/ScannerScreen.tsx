@@ -38,7 +38,6 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
   const videoRef = useRef<HTMLVideoElement>(null)
   const [flow, dispatch] = useReducer(flowReducer, initialFlow)
   const [mode, setMode] = useState<ScanMode>(() => loadMode())
-  const [undoing, setUndoing] = useState(false)
   const [offResults, setOffResults] = useState<Record<string, OffLookupResult>>({})
   const offRequested = useRef(new Set<string>())
 
@@ -116,22 +115,22 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
 
   // Chaque message disparaît au bout de 5 s, sauf pendant une annulation.
   const notice = flow.step === 'scanning' ? flow.notice : null
+  const undoing = flow.step === 'scanning' && flow.undoing === true
   useEffect(() => {
     if (notice === null || undoing) return
     const timer = setTimeout(() => dispatch({ type: 'notice_expired' }), NOTICE_MS)
     return () => clearTimeout(timer)
   }, [notice, undoing])
 
+  // Pendant l'annulation, l'automate ne relit aucun code : son résultat s'affiche toujours.
   const undo = useCallback(
     async (saved: SavedNotice) => {
-      setUndoing(true)
+      dispatch({ type: 'undo_started' })
       try {
         const result = await api.cancelMovement(saved.movementId, latest.current.employee)
         dispatch({ type: 'undo_done', productName: saved.productName, stock: result.stock, packSize: saved.packSize })
       } catch (error) {
         dispatch({ type: 'undo_failed', kind: failWith(error) })
-      } finally {
-        setUndoing(false)
       }
     },
     [failWith],
@@ -161,7 +160,7 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
                 notice={flow.notice}
                 undoing={undoing}
                 onUndo={() => {
-                  if (flow.notice?.kind === 'saved') void undo(flow.notice)
+                  if (flow.notice?.kind === 'saved' && !undoing) void undo(flow.notice)
                 }}
               />
             )}
@@ -172,7 +171,14 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
           </>
         )
       case 'looking_up':
-        return <p className="muted">Recherche du code…</p>
+        return (
+          <>
+            <p className="muted">Recherche du code…</p>
+            <button type="button" onClick={close}>
+              Annuler
+            </button>
+          </>
+        )
       case 'confirm':
         return (
           <ConfirmCard

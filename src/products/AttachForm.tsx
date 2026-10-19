@@ -8,6 +8,7 @@
  * appartient déjà à un autre produit, on le laisse ou on le déplace ici.
  */
 import { useRef, useState } from 'react'
+import { selectAllSoon } from '../app/selectAll'
 import type { Product } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
@@ -90,7 +91,7 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
               inputMode="numeric"
               pattern="[0-9]*"
               value={units}
-              onFocus={(event) => event.target.select()}
+              onFocus={selectAllSoon}
               onChange={(event) => {
                 setUnits(event.target.value)
                 setUnitsError(null)

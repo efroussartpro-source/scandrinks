@@ -16,12 +16,19 @@ function requireEnv(name: string, value: string | undefined): string {
   return value
 }
 
+export const DB_TIMEOUT_MS = 15_000
+
 export const SHOP_EMAIL = requireEnv('VITE_SHOP_EMAIL', import.meta.env.VITE_SHOP_EMAIL)
 
 export const supabase = createClient(
   requireEnv('VITE_SUPABASE_URL', import.meta.env.VITE_SUPABASE_URL),
   requireEnv('VITE_SUPABASE_PUBLISHABLE_KEY', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY),
-  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } },
+  {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    // Réseau bloqué dans la réserve : au bout de 15 s, l'appel échoue comme une coupure
+    // (« Pas de connexion », puis « Réessayer » avec le même identifiant).
+    db: { timeout: DB_TIMEOUT_MS },
+  },
 )
 
 export const api = createApi(supabase)

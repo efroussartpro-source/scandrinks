@@ -8,6 +8,7 @@
  * fiche, l'app propose d'y ajouter le pack plutôt que de créer un doublon.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { selectAllSoon } from '../app/selectAll'
 import { normalizeScannedCode } from '../codes/normalize'
 import type { Product } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
@@ -167,7 +168,7 @@ export default function NewProductForm(props: NewProductFormProps) {
               inputMode="numeric"
               pattern="[0-9]*"
               value={draft[field]}
-              onFocus={(event) => event.target.select()}
+              onFocus={selectAllSoon}
               onChange={(event) => change(field, event.target.value)}
             />
             {errors[field] && <span className="field-error">{errors[field]}</span>}

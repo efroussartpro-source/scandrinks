@@ -32,3 +32,16 @@ export function filterProducts(products: Product[], query: string): Product[] {
   if (wanted === '') return products
   return products.filter((product) => fold(product.name).includes(wanted))
 }
+
+// Une recherche pré-remplie qui ne trouve rien ne doit pas cacher la bonne fiche : le
+// nom donné par Open Food Facts diffère souvent de celui tapé pour le pack. On montre
+// alors toute la liste (moins de 30 produits), avec un avertissement.
+export function productsForSearch(
+  products: Product[],
+  query: string,
+  suggested: string,
+): { products: Product[]; widened: boolean } {
+  const found = filterProducts(products, query)
+  if (found.length === 0 && suggested !== '' && query === suggested) return { products, widened: true }
+  return { products: found, widened: false }
+}

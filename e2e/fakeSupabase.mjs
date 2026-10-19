@@ -48,12 +48,14 @@ function initialCatalogue(name) {
  * options.catalogue : 'coca_with_code' (par défaut), 'coca_without_code' ou 'empty'.
  * options.failNextRecord : coupe le premier record_movement (réseau perdu).
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
+ * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
  */
 export async function installFakeSupabase(page, options = {}) {
-  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null } = options
+  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null } = options
   const db = initialCatalogue(catalogue)
   const calls = []
   let recordFailuresLeft = failNextRecord ? 1 : 0
+  let hangLeft = hangFirst ? 1 : 0
   let createdCount = 0
 
   const stockOf = (productId) =>
@@ -132,6 +134,11 @@ export async function installFakeSupabase(page, options = {}) {
       const body = request.postDataJSON() ?? {}
       calls.push({ fn, body })
       if (fn === expireSessionOn) return reply(401, { code: 'PGRST303', message: 'JWT expired', details: null, hint: null })
+      if (fn === hangFirst && hangLeft > 0) {
+        // Réseau bloqué : la requête reste sans réponse, jusqu'à ce que l'app l'abandonne.
+        hangLeft -= 1
+        return
+      }
       if (fn === 'record_movement' && recordFailuresLeft > 0) {
         recordFailuresLeft -= 1
         return route.abort('internetdisconnected')

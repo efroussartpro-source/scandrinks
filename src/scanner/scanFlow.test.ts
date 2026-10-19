@@ -79,3 +79,29 @@ test('annulation réussie ou échouée', () => {
     .toMatchObject({ notice: { kind: 'error', message: UNDO_FAILED_MESSAGE } })
 })
 
+
+test('recherche en cours : Annuler revient à la lecture, la réponse tardive est ignorée', () => {
+  const closed = flowReducer({ step: 'looking_up', code: PACK }, { type: 'close' })
+  expect(closed).toEqual(scanning())
+  expect(flowReducer(closed, { type: 'lookup_done', code: PACK, result: { found: true, product: lipton, units: 12 }, movementId: 'm9' })).toBe(closed)
+})
+
+test("pendant l'annulation, aucun code n'est relu et le résultat s'affiche toujours", () => {
+  const saved = flowReducer(saving(), { type: 'save_done', delta: 12, stock: 12, at: 10_000 })
+  const undoing = flowReducer(saved, { type: 'undo_started' })
+  expect(undoing).toMatchObject({ step: 'scanning', undoing: true })
+  expect(flowReducer(undoing, { type: 'code_read', rawValue: '5449000000996', format: 'ean_13', at: 20_000 })).toBe(undoing)
+  expect(flowReducer(undoing, { type: 'open_manual' })).toBe(undoing)
+  expect(flowReducer(undoing, { type: 'notice_expired' })).toBe(undoing)
+  const failed = flowReducer(undoing, { type: 'undo_failed', kind: 'network' })
+  expect(failed).toMatchObject({ notice: { kind: 'error', message: UNDO_FAILED_MESSAGE } })
+  expect(failed).not.toHaveProperty('undoing', true)
+  const done = flowReducer(undoing, { type: 'undo_done', productName: 'Lipton Pêche 50 cl', stock: 0, packSize: 12 })
+  expect(done).toMatchObject({ notice: { kind: 'cancelled' } })
+  expect(done).not.toHaveProperty('undoing', true)
+})
+
+test("un code de lot n'efface pas le message « enregistré » ni son bouton Annuler", () => {
+  const saved = flowReducer(saving(), { type: 'save_done', delta: 12, stock: 12, at: 10_000 })
+  expect(flowReducer(saved, { type: 'code_read', rawValue: '902602365', format: 'code_128', at: 10_500 })).toBe(saved)
+})

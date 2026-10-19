@@ -91,6 +91,17 @@ async function scenarioMain(browser) {
   await page.getByRole('button', { name: 'Entrée +' }).click()
   await card.getByText('Pack de 24 → +24').waitFor()
 
+  // La quantité se tape au clavier : on efface le chiffre, puis on tape le nouveau.
+  const quantity = card.getByLabel('Quantité')
+  await quantity.click()
+  await quantity.press('End')
+  await quantity.press('Backspace')
+  await quantity.pressSequentially('6')
+  await card.getByText('Pack de 24 × 6 → +144').waitFor()
+  await quantity.press('Backspace')
+  await quantity.pressSequentially('1')
+  await card.getByText('Pack de 24 → +24').waitFor()
+
   // Toute l'image analysée est visible : l'app ne lit pas un code que l'employé ne voit pas.
   const shown = await page.evaluate(() => {
     const video = document.querySelector('video')
@@ -219,6 +230,34 @@ async function scenarioAttach(browser) {
   console.log('Scénario E (ajout à un produit existant) : OK')
 }
 
+async function scenarioStalledDatabase(browser) {
+  // Recherche bloquée : « Annuler » rend la main tout de suite.
+  {
+    const { context, page } = await openApp(browser, { hangFirst: 'lookup_barcode' })
+    await signIn(page)
+    await page.getByText('Recherche du code…').waitFor({ timeout: SCAN_TIMEOUT })
+    await page.getByRole('button', { name: 'Annuler' }).click()
+    await page.getByRole('button', { name: 'Saisie manuelle' }).waitFor()
+    await context.close()
+  }
+  // Enregistrement bloqué : au bout du délai, « Réessayer » avec le même identifiant.
+  {
+    const { context, page, fake } = await openApp(browser, { hangFirst: 'record_movement' })
+    await signIn(page)
+    const card = confirmCard(page)
+    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await card.getByRole('button', { name: 'Valider' }).click()
+    await card.getByText("Pas de connexion, rien n'a été enregistré.").waitFor({ timeout: 25_000 })
+    await card.getByRole('button', { name: 'Réessayer' }).click()
+    await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 48 (2 packs)').waitFor()
+    const records = recordCalls(fake)
+    assert.equal(records.length, 2, 'deux tentatives')
+    assert.equal(records[0].body.p_id, records[1].body.p_id, 'le nouvel essai garde le même identifiant')
+    await context.close()
+  }
+  console.log('Scénario G (base qui ne répond pas) : OK')
+}
+
 async function scenarioReaderAndCamera(browser) {
   // Lecteur indisponible : le wasm arrive sous un mauvais type.
   {
@@ -263,12 +302,20 @@ try {
   browser = await chromium.launch({
     args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${y4m}`],
   })
-  await scenarioMain(browser)
-  await scenarioNetworkCut(browser)
-  await scenarioSessionExpired(browser)
-  await scenarioNewProduct(browser)
-  await scenarioAttach(browser)
-  await scenarioReaderAndCamera(browser)
+  // E2E_ONLY=A,G lance seulement les scénarios cités (mise au point).
+  const only = process.env.E2E_ONLY?.split(',')
+  const scenarios = [
+    ['A', scenarioMain],
+    ['B', scenarioNetworkCut],
+    ['C', scenarioSessionExpired],
+    ['D', scenarioNewProduct],
+    ['E', scenarioAttach],
+    ['F', scenarioReaderAndCamera],
+    ['G', scenarioStalledDatabase],
+  ]
+  for (const [letter, scenario] of scenarios) {
+    if (!only || only.includes(letter)) await scenario(browser)
+  }
   console.log('E2E OK')
 } finally {
   await browser?.close()

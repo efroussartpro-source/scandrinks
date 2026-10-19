@@ -7,7 +7,10 @@
  * l'envoi et après un échec, la quantité ne change plus : ce qui est réessayé
  * est exactement ce qui était affiché.
  */
+import { useEffect, useState } from 'react'
+import { selectAllSoon } from '../app/selectAll'
 import { apiErrorMessage } from '../data/apiErrors'
+import { parseIntInRange } from '../domain/productDraft'
 import { describeConfirm, QUANTITY_MAX, QUANTITY_MIN, type ScanMode } from '../domain/stock'
 import type { ConfirmState } from './scanFlow'
 
@@ -22,6 +25,17 @@ interface ConfirmCardProps {
 export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClose }: ConfirmCardProps) {
   const { target, quantity, status, errorKind } = state
   const locked = status !== 'idle'
+  // Ce qui est tapé reste tel quel (le champ peut être vide un instant) ; seule une
+  // valeur de 1 à 99 change la quantité. En quittant le champ, il reprend la quantité.
+  const [text, setText] = useState(String(quantity))
+  useEffect(() => setText(String(quantity)), [quantity])
+
+  function type(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 2)
+    setText(digits)
+    const value = parseIntInRange(digits, QUANTITY_MIN, QUANTITY_MAX)
+    if (value !== null) onQuantity(value)
+  }
 
   return (
     <section className="card confirm" data-mode={mode} aria-label="Fiche de confirmation">
@@ -36,10 +50,11 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
           id="confirm-quantity"
           inputMode="numeric"
           pattern="[0-9]*"
-          value={quantity}
+          value={text}
           disabled={locked}
-          onFocus={(event) => event.target.select()}
-          onChange={(event) => onQuantity(Number(event.target.value))}
+          onFocus={selectAllSoon}
+          onBlur={() => setText(String(quantity))}
+          onChange={(event) => type(event.target.value)}
         />
         <button type="button" aria-label="Plus" disabled={locked || quantity >= QUANTITY_MAX} onClick={() => onQuantity(quantity + 1)}>
           +

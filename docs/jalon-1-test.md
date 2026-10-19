@@ -38,10 +38,11 @@
      - Le code du pack doit ouvrir la création de fiche.
    - **Un autre pack, avec sa canette.** Dans le formulaire, touche « Scanner une canette du pack » et vise une canette : elle est enregistrée avec la fiche.
 6. **Scanne la canette seule d'un pack déjà créé**, mais sans sa canette.
-   - Sur « Code inconnu », touche « Ajouter à un produit existant ».
-   - Le bon produit doit être proposé dans la liste.
+   - Pour bien tester, crée d'abord la fiche d'un pack de Coca en tapant toi-même le nom « Coca 33 cl », sans scanner de canette.
+   - Scanne ensuite une canette de Coca seule. Sur « Code inconnu », touche « Ajouter à un produit existant ».
+   - « Coca 33 cl » doit être dans la liste. Si le nom donné par Open Food Facts ne correspond pas, la liste complète s'affiche avec un avertissement.
 7. **Fais des entrées et des sorties.**
-   - **Entrée de 2 packs :** sur la fiche, mets la quantité à 2 avec « + », puis touche « Valider ». Vérifie le stock affiché.
+   - **Entrée de 2 packs :** sur la fiche, touche le chiffre de la quantité et tape 2 au clavier, puis touche « Valider ». Vérifie le stock affiché. Essaie aussi « + » et « − ».
    - **Sortie :** passe en « Sortie − ». La fiche devient orange, avec le signe moins. Fais une sortie de quelques unités.
    - **Annulation :** juste après une validation, touche « Annuler » sur le message.
 8. **Essaie avec deux iPhone** : scannez le même produit l'un après l'autre. Le stock affiché doit suivre les deux mouvements.
