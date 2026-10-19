@@ -1,4 +1,6 @@
-// Provisoire : remplacé par la page de test du scan (Tâche 5).
+// Jalon 0 : l'app se limite à la page de test du scan (remplacée au jalon 1).
+import ScanTestPage from './scanTest/ScanTestPage'
+
 export default function App() {
-  return <h1>ScanDrinks</h1>
+  return <ScanTestPage />
 }
