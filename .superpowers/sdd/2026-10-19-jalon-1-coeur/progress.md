@@ -108,3 +108,6 @@ Task 4: complete (commits 6405fa1..c33db4e, tests: execute_sql supabase/tests/da
 Task 10: Step 3 → .env.production écrit (VITE_SUPABASE_URL https://ubddiqqjdwcntdbrsrzr.supabase.co, clé sb_publishable_… active « default », VITE_SHOP_EMAIL tabvapshoplongecourt@gmail.com) ; npm ci (conteneur neuf) puis npm test → 200 passed (200) ; npm run e2e → E2E OK ; npm run build → OK, le paquet contient l'adresse du vrai projet et aucune valeur e2e.
 Task 10: Ruling: commit local sans envoi — l'envoi publie la préversion avec la clé ; il attend la désactivation des inscriptions (Step 1), comme l'ordonne la note de reprise — coût si faux : la préversion arrive quelques minutes plus tard.
 Task 10: en attente du porteur du projet — Step 1 (désactiver les inscriptions, créer le compte du tabac avec « Auto Confirm User »).
+Task 10: Step 1 fait par le porteur du projet (19/10/2026) : inscriptions désactivées, compte du tabac créé — vérifié : auth.users = 1 compte, tabvapshoplongecourt@gmail.com, email confirmé.
+Task 10: Step 2 → insert into public.allowed_users … returning user_id → 1 ligne (96090cde-2b80-490f-a736-549dcd7ca898).
+Task 10: Step 6 (base, avant l'envoi) → signup : 422 signup_disabled « Signups not allowed for this instance » ; product_stock sans connexion : 42501 ; rpc lookup_barcode sans connexion : 42501 ; allowed_users sans connexion : 42501.
