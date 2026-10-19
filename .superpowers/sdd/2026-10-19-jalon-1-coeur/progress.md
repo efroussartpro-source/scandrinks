@@ -111,3 +111,6 @@ Task 10: en attente du porteur du projet — Step 1 (désactiver les inscription
 Task 10: Step 1 fait par le porteur du projet (19/10/2026) : inscriptions désactivées, compte du tabac créé — vérifié : auth.users = 1 compte, tabvapshoplongecourt@gmail.com, email confirmé.
 Task 10: Step 2 → insert into public.allowed_users … returning user_id → 1 ligne (96090cde-2b80-490f-a736-549dcd7ca898).
 Task 10: Step 6 (base, avant l'envoi) → signup : 422 signup_disabled « Signups not allowed for this instance » ; product_stock sans connexion : 42501 ; rpc lookup_barcode sans connexion : 42501 ; allowed_users sans connexion : 42501.
+Task 10: Step 5 → commit da67563 envoyé (git push -u origin jalon-1) ; la préversion sert le nouveau paquet au 3e essai (≈ 30 s), même fichier que le build local (index-BkmAMw1S.js).
+Task 10: Step 6 (préversion) → https://jalon-1.scandrinks.pages.dev/ : 200 ; wasm zxing_reader-BxB2YfIY.wasm : application/wasm, 1 093 289 octets, signature 00 61 73 6d, identique au build local ; script Playwright jetable (dossier temporaire, non versionné) : adresse affichée tabvapshoplongecourt@gmail.com, mauvais mot de passe → « Mot de passe incorrect. », aucune erreur de page.
+Task 10: en attente du porteur du projet — Step 7 (test sur iPhone, docs/jalon-1-test.md).
