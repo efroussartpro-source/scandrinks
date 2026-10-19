@@ -48,7 +48,7 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 
 ### Hors version 1 (possible plus tard)
 
-Notifications, lien avec la caisse, prix et budget Metro, import des factures Metro, partage de la liste par WhatsApp, mode hors ligne, plusieurs boutiques.
+Notifications, lien avec la caisse, prix et budget Metro, import des factures Metro, partage de la liste par WhatsApp, mode hors ligne, plusieurs boutiques, suivi des dates limites (la DLUO figure dans le code long de certaines étiquettes de packs).
 
 ## 4. Parcours et écrans
 
@@ -160,6 +160,7 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 | RG-10 | Modifier les unités d'un code ou le pack Metro **ne change pas les mouvements passés**. |
 | RG-11 | Un produit archivé disparaît des listes (Stock, À racheter, choix d'un produit) mais reste visible avec le filtre « Archivés ». Ses mouvements restent dans l'historique. Scanner un de ses codes propose de le réactiver. |
 | RG-12 | Déplacer un code vers un autre produit ne change pas les mouvements passés. |
+| RG-13 | **Chaque code lu est normalisé avant toute recherche.** Un UPC-A (12 chiffres) devient son EAN-13, avec un 0 devant. Un GTIN à 14 chiffres qui commence par 0 (carton ITF-14 ou code long) est ramené à 13 chiffres. Un code long GS1 (Code 128) qui contient un identifiant produit (01) est ramené à ce GTIN : le code court et le code long d'une même étiquette désignent donc le même produit. Un code long sans identifiant produit (lot ou date seuls) est ignoré, avec le message « Ce code n'identifie pas un produit ». Un code EAN, UPC ou ITF dont la clé de contrôle est fausse est ignoré, car c'est une lecture parasite. |
 
 ## 6. Architecture technique
 
@@ -362,6 +363,9 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 | 19/10/2026 | Stock en unités, arrondi au pack supérieur, stock négatif autorisé | Validé à la partie 2 |
 | 19/10/2026 | Supabase (Paris) et Cloudflare Pages | Gratuits, compte Supabase déjà relié, usage professionnel autorisé |
 | 19/10/2026 | Nom : ScanDrinks | Choix du porteur du projet |
+| 19/10/2026 | **Jalon 0 : GO pour l'app web** | Test en boutique sur iPhone : unités et packs lus rapidement. Les codes des packs sont inconnus d'Open Food Facts, comme prévu, et la fiche se crée au premier scan |
+| 19/10/2026 | Normalisation des codes (RG-13) | Étiquettes réelles : le pack Lipton porte deux codes (EAN-13 et code long GS1 avec DLUO et lot), le pack Red Bull a un code de lot à part |
+| 19/10/2026 | Un plan d'implémentation par jalon | Chaque jalon est validé sur iPhone avant d'écrire le suivant |
 
 ## 12. Glossaire
 
