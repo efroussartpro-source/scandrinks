@@ -1,6 +1,6 @@
-// Jalon 0 : l'app se limite à la page de test du scan (remplacée au jalon 1).
-import ScanTestPage from './scanTest/ScanTestPage'
+// L'app entière : connexion, prénom, puis l'écran Scanner (voir app/AppShell.tsx).
+import AppShell from './app/AppShell'
 
 export default function App() {
-  return <ScanTestPage />
+  return <AppShell />
 }

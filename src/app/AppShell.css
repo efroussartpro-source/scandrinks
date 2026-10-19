@@ -1,0 +1,116 @@
+/* Coquille de l'app : une colonne, gros boutons, lisible en réserve. */
+.screen,
+.app {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.screen h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header .brand {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.app-header .employee {
+  margin-left: auto;
+  color: #555555;
+}
+
+button {
+  min-height: 48px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 17px;
+  border-radius: 12px;
+  border: 1px solid #c8c8c8;
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+button.primary {
+  border: none;
+  background: #1f6f3f;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+.icon-button {
+  min-width: 48px;
+  padding: 0;
+  font-size: 22px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  color: #444444;
+}
+
+/* 16 px au moins : en dessous, iOS zoome sur le champ touché. */
+.field input {
+  min-height: 48px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 17px;
+  color: #1a1a1a;
+  border: 1px solid #c8c8c8;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.field input[readonly] {
+  background: #f3f3f3;
+  color: #555555;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.message-error {
+  background: #fdecea;
+  color: #8a1c13;
+}
+
+.message-ok {
+  background: #e8f5ec;
+  color: #14532d;
+}
+
+.muted {
+  margin: 0;
+  color: #666666;
+}
