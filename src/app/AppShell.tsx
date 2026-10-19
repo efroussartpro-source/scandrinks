@@ -14,6 +14,7 @@ import NameScreen from '../auth/NameScreen'
 import { loadEmployeeName, saveEmployeeName } from '../auth/employee'
 import { apiErrorMessage } from '../data/apiErrors'
 import { supabase } from '../data/supabaseClient'
+import ScannerScreen from '../scanner/ScannerScreen'
 import SettingsScreen from '../settings/SettingsScreen'
 import './AppShell.css'
 
@@ -107,9 +108,7 @@ export default function AppShell() {
           ⚙
         </button>
       </header>
-      <section className="placeholder">
-        <p className="muted">Écran Scanner (bientôt).</p>
-      </section>
+      <ScannerScreen employee={employee} onSessionExpired={onSessionExpired} />
     </div>
   )
 }

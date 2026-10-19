@@ -1,0 +1,208 @@
+/**
+ * ScannerScreen.tsx — Écran principal : viseur, modes Entrée/Sortie, fiche et messages.
+ *
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §7)
+ *
+ * La logique vit dans scanFlow.ts ; cet écran fait les appels réseau selon
+ * l'étape obtenue et affiche le résultat. La caméra tourne en continu, même
+ * pendant qu'une fiche est affichée : le scan suivant est prêt aussitôt.
+ */
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { classifyApiError, type ApiErrorKind } from '../data/apiErrors'
+import { api } from '../data/supabaseClient'
+import type { ScanMode } from '../domain/stock'
+import { lookupProduct, type OffLookupResult } from '../off/openFoodFacts'
+import { scannerErrorMessage } from '../scan/scannerErrors'
+import { useBarcodeScanner } from '../scan/useBarcodeScanner'
+import ConfirmCard from './ConfirmCard'
+import { loadMode, saveMode } from './mode'
+import Notice from './Notice'
+import { flowReducer, initialFlow, type Notice as FlowNotice } from './scanFlow'
+import './Scanner.css'
+
+const NOTICE_MS = 5000
+
+type SavedNotice = Extract<FlowNotice, { kind: 'saved' }>
+
+interface ScannerScreenProps {
+  employee: string
+  onSessionExpired: () => void
+}
+
+export default function ScannerScreen({ employee, onSessionExpired }: ScannerScreenProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [flow, dispatch] = useReducer(flowReducer, initialFlow)
+  const [mode, setMode] = useState<ScanMode>(() => loadMode())
+  const [undoing, setUndoing] = useState(false)
+  const [offResults, setOffResults] = useState<Record<string, OffLookupResult>>({})
+  const offRequested = useRef(new Set<string>())
+
+  // Valeurs lues au moment d'un envoi, sans relancer les effets quand elles changent.
+  const latest = useRef({ mode, employee, onSessionExpired })
+  useEffect(() => {
+    latest.current = { mode, employee, onSessionExpired }
+  })
+
+  const failWith = useCallback((error: unknown): ApiErrorKind => {
+    const kind = classifyApiError(error).kind
+    if (kind === 'session') latest.current.onSessionExpired()
+    return kind
+  }, [])
+
+  const onDetect = useCallback((rawValue: string, format: string) => {
+    dispatch({ type: 'code_read', rawValue, format, at: Date.now() })
+  }, [])
+  const scanner = useBarcodeScanner({ videoRef, onDetect })
+  const startCamera = scanner.start
+
+  useEffect(() => {
+    void startCamera()
+  }, [startCamera])
+
+  // Code lu : recherche dans la base.
+  const lookupCode = flow.step === 'looking_up' ? flow.code : null
+  useEffect(() => {
+    if (lookupCode === null) return
+    api.lookupBarcode(lookupCode).then(
+      (result) => dispatch({ type: 'lookup_done', code: lookupCode, result, movementId: crypto.randomUUID() }),
+      (error: unknown) => dispatch({ type: 'lookup_failed', code: lookupCode, kind: failWith(error) }),
+    )
+  }, [lookupCode, failWith])
+
+  // Code inconnu : nom proposé par Open Food Facts, demandé une fois par code (sauf échec).
+  const unknownCode = flow.step === 'unknown' ? flow.code : null
+  useEffect(() => {
+    if (unknownCode === null || offRequested.current.has(unknownCode)) return
+    offRequested.current.add(unknownCode)
+    void lookupProduct(unknownCode).then((result) => {
+      if (result.status === 'error') offRequested.current.delete(unknownCode)
+      setOffResults((current) => ({ ...current, [unknownCode]: result }))
+    })
+  }, [unknownCode])
+
+  // « Valider » ou « Réessayer » : envoi avec l'identifiant gardé par l'automate.
+  const savingRequest = flow.step === 'confirm' && flow.status === 'saving' ? flow : null
+  useEffect(() => {
+    if (savingRequest === null) return
+    const { target, quantity, movementId } = savingRequest
+    api
+      .recordMovement({
+        id: movementId,
+        productId: target.product.id,
+        code: target.code,
+        mode: latest.current.mode,
+        units: target.units,
+        quantity,
+        employee: latest.current.employee,
+      })
+      .then(
+        (result) => dispatch({ type: 'save_done', delta: result.delta, stock: result.stock, at: Date.now() }),
+        (error: unknown) => dispatch({ type: 'save_failed', kind: failWith(error) }),
+      )
+  }, [savingRequest, failWith])
+
+  // Chaque message disparaît au bout de 5 s, sauf pendant une annulation.
+  const notice = flow.step === 'scanning' ? flow.notice : null
+  useEffect(() => {
+    if (notice === null || undoing) return
+    const timer = setTimeout(() => dispatch({ type: 'notice_expired' }), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [notice, undoing])
+
+  const undo = useCallback(
+    async (saved: SavedNotice) => {
+      setUndoing(true)
+      try {
+        const result = await api.cancelMovement(saved.movementId, latest.current.employee)
+        dispatch({ type: 'undo_done', productName: saved.productName, stock: result.stock, packSize: saved.packSize })
+      } catch (error) {
+        dispatch({ type: 'undo_failed', kind: failWith(error) })
+      } finally {
+        setUndoing(false)
+      }
+    },
+    [failWith],
+  )
+
+  function changeMode(next: ScanMode) {
+    setMode(next)
+    saveMode(next)
+  }
+
+  // Pendant l'envoi ou après un échec, le mode ne change plus : on réessaie ce qui était affiché.
+  const modeLocked = flow.step === 'confirm' && flow.status !== 'idle'
+  const close = () => dispatch({ type: 'close' })
+
+  function renderPanel() {
+    switch (flow.step) {
+      case 'scanning':
+        return (
+          <>
+            {flow.notice && (
+              <Notice
+                notice={flow.notice}
+                undoing={undoing}
+                onUndo={() => {
+                  if (flow.notice?.kind === 'saved') void undo(flow.notice)
+                }}
+              />
+            )}
+            <p className="muted">Vise le code-barres du pack ou de la bouteille.</p>
+            <button type="button" onClick={() => dispatch({ type: 'open_manual' })}>
+              Saisie manuelle
+            </button>
+          </>
+        )
+      case 'looking_up':
+        return <p className="muted">Recherche du code…</p>
+      case 'confirm':
+        return (
+          <ConfirmCard
+            state={flow}
+            mode={mode}
+            onQuantity={(quantity) => dispatch({ type: 'set_quantity', quantity })}
+            onValidate={() => dispatch({ type: 'validate' })}
+            onClose={close}
+          />
+        )
+      default:
+        // Code inconnu, nouveau produit, ajout de code, saisie manuelle : Tâche 8.
+        return (
+          <section className="card">
+            <p className="muted">Bientôt.</p>
+            <button type="button" onClick={close}>
+              Annuler
+            </button>
+          </section>
+        )
+    }
+  }
+
+  return (
+    <section className="scanner">
+      <div className="viewfinder">
+        <video ref={videoRef} playsInline muted autoPlay aria-label="Image de la caméra" />
+        <div className="aim" aria-hidden="true" />
+      </div>
+      {scanner.status === 'error' && scanner.errorKind && (
+        <div className="camera-problem">
+          <p role="alert" className="message message-error">
+            {scannerErrorMessage(scanner.errorKind)}
+          </p>
+          <button type="button" onClick={() => void startCamera()}>
+            Démarrer la caméra
+          </button>
+        </div>
+      )}
+      <div className="modes" role="group" aria-label="Mode">
+        <button type="button" className="mode mode-in" aria-pressed={mode === 'in'} disabled={modeLocked} onClick={() => changeMode('in')}>
+          Entrée +
+        </button>
+        <button type="button" className="mode mode-out" aria-pressed={mode === 'out'} disabled={modeLocked} onClick={() => changeMode('out')}>
+          Sortie −
+        </button>
+      </div>
+      <div className="panel">{renderPanel()}</div>
+    </section>
+  )
+}

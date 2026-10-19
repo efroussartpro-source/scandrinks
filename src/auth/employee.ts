@@ -18,13 +18,12 @@ export function validateEmployeeName(raw: string): { ok: true; name: string } | 
 }
 
 export function loadEmployeeName(storage?: Storage | null): string | null {
-  const stored = storage === undefined ? readStored(EMPLOYEE_KEY) : readStored(EMPLOYEE_KEY, storage)
+  const stored = readStored(EMPLOYEE_KEY, storage)
   if (stored === null) return null
   const checked = validateEmployeeName(stored)
   return checked.ok ? checked.name : null
 }
 
 export function saveEmployeeName(name: string, storage?: Storage | null): void {
-  if (storage === undefined) writeStored(EMPLOYEE_KEY, name)
-  else writeStored(EMPLOYEE_KEY, name, storage)
+  writeStored(EMPLOYEE_KEY, name, storage)
 }
