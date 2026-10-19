@@ -12,17 +12,22 @@ import { classifyApiError, type ApiErrorKind } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import type { ScanMode } from '../domain/stock'
 import { lookupProduct, type OffLookupResult } from '../off/openFoodFacts'
+import AttachForm from '../products/AttachForm'
+import ManualEntry from '../products/ManualEntry'
+import NewProductForm from '../products/NewProductForm'
+import '../products/Products.css'
 import { scannerErrorMessage } from '../scan/scannerErrors'
 import { useBarcodeScanner } from '../scan/useBarcodeScanner'
 import ConfirmCard from './ConfirmCard'
 import { loadMode, saveMode } from './mode'
 import Notice from './Notice'
-import { flowReducer, initialFlow, type Notice as FlowNotice } from './scanFlow'
+import { flowReducer, initialFlow, type ConfirmTarget, type Notice as FlowNotice } from './scanFlow'
 import './Scanner.css'
 
 const NOTICE_MS = 5000
 
 type SavedNotice = Extract<FlowNotice, { kind: 'saved' }>
+type CaptureHandler = (rawValue: string, format: string) => void
 
 interface ScannerScreenProps {
   employee: string
@@ -49,8 +54,16 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
     return kind
   }, [])
 
+  // Pendant la capture d'une canette (formulaire « Nouveau produit »), les codes lus vont au formulaire.
+  const captureRef = useRef<CaptureHandler | null>(null)
+  const setCapture = useCallback((handler: CaptureHandler | null) => {
+    captureRef.current = handler
+  }, [])
+
   const onDetect = useCallback((rawValue: string, format: string) => {
-    dispatch({ type: 'code_read', rawValue, format, at: Date.now() })
+    const capture = captureRef.current
+    if (capture) capture(rawValue, format)
+    else dispatch({ type: 'code_read', rawValue, format, at: Date.now() })
   }, [])
   const scanner = useBarcodeScanner({ videoRef, onDetect })
   const startCamera = scanner.start
@@ -132,6 +145,11 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
   // Pendant l'envoi ou après un échec, le mode ne change plus : on réessaie ce qui était affiché.
   const modeLocked = flow.step === 'confirm' && flow.status !== 'idle'
   const close = () => dispatch({ type: 'close' })
+  const ready = (target: ConfirmTarget) => dispatch({ type: 'product_ready', target, movementId: crypto.randomUUID() })
+  const offName = (code: string) => {
+    const result = offResults[code]
+    return result?.status === 'found' ? result.suggestedName : null
+  }
 
   function renderPanel() {
     switch (flow.step) {
@@ -165,16 +183,50 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
             onClose={close}
           />
         )
-      default:
-        // Code inconnu, nouveau produit, ajout de code, saisie manuelle : Tâche 8.
+      case 'unknown': {
+        const name = offName(flow.code)
         return (
-          <section className="card">
-            <p className="muted">Bientôt.</p>
+          <section className="card" aria-label="Code inconnu">
+            <h2 className="card-title">Code inconnu : {flow.code}</h2>
+            {name !== null && <p>Open Food Facts : {name}</p>}
+            {offResults[flow.code] === undefined && <p className="muted">Recherche du nom…</p>}
+            <button type="button" className="primary" onClick={() => dispatch({ type: 'choose_new_product' })}>
+              Nouveau produit
+            </button>
+            <button type="button" onClick={() => dispatch({ type: 'choose_attach' })}>
+              Ajouter à un produit existant
+            </button>
             <button type="button" onClick={close}>
               Annuler
             </button>
           </section>
         )
+      }
+      case 'new_product':
+        return (
+          <NewProductForm
+            code={flow.code}
+            off={offResults[flow.code]}
+            setCapture={setCapture}
+            onReady={ready}
+            onAttachToExisting={(product) => dispatch({ type: 'choose_attach', product })}
+            onCancel={close}
+            onSessionExpired={onSessionExpired}
+          />
+        )
+      case 'attach':
+        return (
+          <AttachForm
+            code={flow.code}
+            preselected={flow.product}
+            offName={offName(flow.code)}
+            onReady={ready}
+            onCancel={close}
+            onSessionExpired={onSessionExpired}
+          />
+        )
+      case 'manual':
+        return <ManualEntry onReady={ready} onCancel={close} onSessionExpired={onSessionExpired} />
     }
   }
 

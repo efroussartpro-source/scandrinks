@@ -1,0 +1,37 @@
+/* Formulaires et liste de produits (code inconnu, saisie manuelle). */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-list button {
+  width: 100%;
+  text-align: left;
+}
+
+.field-error {
+  color: #8a1c13;
+  font-size: 14px;
+}
+
+.message-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff4e5;
+  color: #6b3a00;
+}
+
+.message-warning p {
+  margin: 0;
+}

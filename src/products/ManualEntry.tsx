@@ -1,0 +1,56 @@
+/**
+ * ManualEntry.tsx — Saisie manuelle, quand le code est illisible ou absent.
+ *
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2)
+ *
+ * On choisit le produit, puis un pack Metro ou une unité ; la suite est la
+ * même fiche de confirmation qu'après un scan.
+ */
+import { useState } from 'react'
+import type { Product } from '../data/api'
+import type { ConfirmTarget } from '../scanner/scanFlow'
+import ProductPicker from './ProductPicker'
+
+interface ManualEntryProps {
+  onReady: (target: ConfirmTarget) => void
+  onCancel: () => void
+  onSessionExpired: () => void
+}
+
+export default function ManualEntry({ onReady, onCancel, onSessionExpired }: ManualEntryProps) {
+  const [product, setProduct] = useState<Product | null>(null)
+
+  if (product === null) {
+    return (
+      <section className="card" aria-label="Saisie manuelle">
+        <h2 className="card-title">Saisie manuelle</h2>
+        <ProductPicker initialQuery="" onPick={setProduct} onSessionExpired={onSessionExpired} />
+        <button type="button" onClick={onCancel}>
+          Annuler
+        </button>
+      </section>
+    )
+  }
+
+  return (
+    <section className="card" aria-label="Saisie manuelle">
+      <h2 className="card-title">{product.name}</h2>
+      {product.packSize > 1 && (
+        <button type="button" className="primary" onClick={() => onReady({ product, units: product.packSize, code: null })}>
+          Par pack de {product.packSize}
+        </button>
+      )}
+      <button type="button" onClick={() => onReady({ product, units: 1, code: null })}>
+        À l'unité
+      </button>
+      <div className="card-actions">
+        <button type="button" onClick={() => setProduct(null)}>
+          Autre produit
+        </button>
+        <button type="button" onClick={onCancel}>
+          Annuler
+        </button>
+      </div>
+    </section>
+  )
+}
