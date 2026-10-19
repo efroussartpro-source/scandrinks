@@ -883,3 +883,18 @@ Envoyer `docs/jalon-0-test-scan.md` et l'adresse du site, puis attendre le rappo
 - Open Food Facts accepte un UPC-A à 12 chiffres et renvoie le code sur 13 chiffres (`049000028911` → `0049000028911`). Dans la table `barcodes`, il faudra stocker les UPC-A sous leur forme EAN-13 (avec un `0` devant). Sinon, un même produit lu par deux moteurs différents risque d'apparaître en double.
 - Le `.wasm` pèse 1,1 Mo, soit 464 Ko compressé. Le service worker du jalon 1 devra le mettre en cache pour que l'app s'ouvre vite.
 - La lecture d'une trame 1280×720 prend environ 130 ms dans Chromium sans écran, pour la première lecture.
+
+### Points reportés par la relecture finale (19/10/2026), à traiter avant de réutiliser `src/scan/`
+
+- `camera.ts` / `scannerController.ts` : si `video.play()` échoue, le flux de `getUserMedia` reste ouvert. De plus, un démarrage périmé écrit encore `video.srcObject`, et `release()` ne vide pas `srcObject`. Correctif : `try/catch` autour du branchement et de `play()`, branchement seulement après le contrôle de session, et `srcObject = null` dans `release()`.
+- `scannerController.ts` : une exception levée par `onDetect` arrête la boucle sans message. Correctif : protéger l'appel, ou garantir la planification du passage suivant par un `try/finally`.
+- `detector.ts` : le nouvel essai de ZXing ne fonctionne que parce qu'une nouvelle closure `locateFile` est créée à chaque appel. Correctif : appeler `purgeZXingModule()` dans le `catch`.
+- `e2e/scan-smoke.mjs` : ajouter deux cas, le wasm servi en `text/html` (message `engine` attendu) et `visibilitychange` vers `hidden` (message `interrupted` attendu).
+- Zone de secours du rapport : passer à 16 px pour éviter le zoom d'iOS, et sélectionner le texte au focus.
+
+### À décider ou à vérifier au jalon 1
+
+- Version minimale d'iOS de l'équipe (la cible de Vite 8 est Safari 16).
+- Contrôle de la clé GTIN-14 pour les lectures ITF, qui sinon peuvent produire des codes parasites.
+- Gestion des événements `mute`/`unmute` de la piste vidéo sur iOS.
+- Si la lecture est lente en boutique : un canvas réutilisé (`willReadFrequently`), recadré sur la zone visible, avec `ImageData` passé à `detect`. Prévoir aussi un verrou anti-veille (`navigator.wakeLock`).
