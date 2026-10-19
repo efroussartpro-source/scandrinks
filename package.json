@@ -12,6 +12,7 @@
     "e2e": "npm run build && node e2e/scan-smoke.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
     "barcode-detector": "3.2.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
