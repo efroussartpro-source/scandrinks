@@ -17,7 +17,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { ean13Y4m } from './ean13.mjs'
-import { COCA_CODE, GOOD_PASSWORD, installFakeSupabase } from './fakeSupabase.mjs'
+import { COCA_CODE, GOOD_PASSWORD, SUPABASE_URL, installFakeSupabase } from './fakeSupabase.mjs'
 
 const PORT = 4173
 const BASE = `http://localhost:${PORT}`
@@ -812,6 +812,32 @@ async function scenarioHistory(browser) {
     /— Zoé — Entrée \+12 — Lipton Pêche 50 cl$/.test(document.querySelector('.history-line')?.textContent ?? ''),
   )
   assert.ok(catalogReads > readsBefore, "catalogue relu au retour dans l'app")
+
+  // 7. « Voir plus » touché pendant cette relecture : aucune ligne ne manque. Trois mouvements arrivent
+  // d'un autre téléphone ; la relecture répond d'abord, la page demandée avec l'ancien curseur ensuite.
+  for (const delta of [1, 2, 3]) fake.addMovement({ productId: 'p-lipton', kind: 'in', delta, employee: 'Yann' })
+  let slowHistory = true
+  await page.route(`${SUPABASE_URL}/rest/v1/rpc/list_history`, async (route) => {
+    if (slowHistory) {
+      const firstPage = route.request().postDataJSON()?.p_before_id === null
+      await new Promise((resolve) => setTimeout(resolve, firstPage ? 400 : 1500))
+    }
+    return route.fallback()
+  })
+  await setVisibility('hidden')
+  await setVisibility('visible')
+  await page.getByRole('button', { name: 'Voir plus' }).click()
+  await page.waitForTimeout(2500)
+  slowHistory = false
+  const more = page.getByRole('button', { name: 'Voir plus' })
+  while ((await more.count()) > 0) {
+    const shown = (await lineTexts()).length
+    await more.click()
+    await page.waitForFunction((count) => document.querySelectorAll('.history-line').length > count, shown)
+  }
+  texts = await lineTexts()
+  assert.equal(texts.length, 65, 'les 65 mouvements, sans trou')
+  assert.equal(new Set(texts).size, 65, 'aucune ligne en double')
   await context.close()
   console.log('Scénario M (historique) : OK')
 }
@@ -958,14 +984,41 @@ async function scenarioFinishing(browser) {
     await tab(page, 'Stock').click()
     await page.setViewportSize({ width: 390, height: 600 })
     await page.getByRole('button', { name: 'Nouveau produit' }).click()
-    await page.getByLabel('Stock idéal (unités)').focus()
-    assert.ok(
-      await page.evaluate(() => {
+    const fieldAboveTabBar = () =>
+      page.evaluate(() => {
         const field = document.activeElement.getBoundingClientRect()
         return field.bottom <= document.querySelector('.tab-bar').getBoundingClientRect().top
-      }),
-      'le champ reste au-dessus de la barre d\'onglets',
-    )
+      })
+    await page.getByLabel('Stock idéal (unités)').focus()
+    assert.ok(await fieldAboveTabBar(), "le champ reste au-dessus de la barre d'onglets")
+
+    // Même chose dans l'app installée sur un iPhone à barre d'accueil : la barre d'onglets grandit de la zone du
+    // geste (34 px). Le champ est placé à 80 px du bas, sous la barre : le navigateur ne le remonte que si la
+    // marge réservée en bas couvre toute la barre.
+    const cdp = await context.newCDPSession(page)
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 47, bottom: 34, left: 0, right: 0 } })
+    const stockField = page.getByLabel('Stock idéal (unités)')
+    await page.evaluate(() => document.activeElement.blur())
+    await stockField.evaluate((input) => window.scrollBy(0, input.getBoundingClientRect().bottom - (window.innerHeight - 80)))
+    await stockField.focus()
+    assert.ok(await fieldAboveTabBar(), "le champ reste au-dessus de la barre d'onglets, barre d'accueil comprise")
+    await context.close()
+  }
+  {
+    // 5. Démarrage impossible (réseau coupé pendant le chargement de l'app) : un message au lieu d'une page
+    // blanche, et « Recharger », seul moyen de relancer dans l'app installée.
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
+    const page = await context.newPage()
+    await installFakeSupabase(page)
+    let cut = true
+    await page.route('**/assets/App-*.js', (route) => (cut ? route.abort('internetdisconnected') : route.fallback()))
+    await page.goto(`${BASE}/`)
+    await page
+      .getByText("L'app ne peut pas démarrer. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks.")
+      .waitFor()
+    cut = false
+    await page.getByRole('button', { name: 'Recharger' }).click()
+    await page.getByRole('button', { name: 'Se connecter' }).waitFor()
     await context.close()
   }
   console.log('Scénario O (finitions) : OK')

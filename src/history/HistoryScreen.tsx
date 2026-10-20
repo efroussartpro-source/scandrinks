@@ -5,17 +5,17 @@
  *
  * Par pages de 50, avec « Voir plus ». La première page est relue à
  * l'ouverture de l'onglet et au retour dans l'app : la liste repart alors du
- * haut, et une réponse arrivée après une relecture plus récente est ignorée.
+ * haut. Une réponse arrivée après une relecture plus récente est ignorée, et
+ * une page suivante ne s'ajoute que si elle suit la liste affichée.
  * Toute ligne active s'annule, après confirmation. La base garde le premier
  * auteur : si un autre téléphone a annulé juste avant, c'est son prénom qui
  * s'affiche.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { HistoryCursor } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { historyLine, type HistoryMovement } from '../domain/movements'
-import { markCancelled, mergeHistoryPage } from './historyList'
+import { appendHistoryPage, markCancelled, type HistoryState } from './historyList'
 import './History.css'
 
 interface HistoryScreenProps {
@@ -25,8 +25,7 @@ interface HistoryScreenProps {
 }
 
 export default function HistoryScreen({ employee, onCatalogChanged, onSessionExpired }: HistoryScreenProps) {
-  const [movements, setMovements] = useState<HistoryMovement[] | null>(null)
-  const [next, setNext] = useState<HistoryCursor | null>(null)
+  const [history, setHistory] = useState<HistoryState | null>(null)
   // Première page illisible, ou échec de « Voir plus » ou d'une annulation.
   const [loadError, setLoadError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -46,15 +45,13 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
     else show(apiErrorMessage(kind))
   }, [])
 
-  // Première page : la liste repart du haut ; un « Voir plus » en cours ne compte plus.
+  // Première page : la liste repart du haut.
   const reload = useCallback(() => {
     const id = ++requestId.current
-    setLoadingMore(false)
     api.listHistory(null).then(
       (page) => {
         if (id !== requestId.current) return
-        setMovements(page.movements)
-        setNext(page.next)
+        setHistory({ movements: page.movements, next: page.next })
         setLoadError(null)
         setError(null)
       },
@@ -77,19 +74,16 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
   }, [reload])
 
   function loadMore() {
-    if (next === null || loadingMore) return
-    const id = requestId.current
+    const cursor = history?.next ?? null
+    if (cursor === null || loadingMore) return
     setLoadingMore(true)
     setError(null)
-    api.listHistory(next).then(
+    api.listHistory(cursor).then(
       (page) => {
-        if (id !== requestId.current) return
-        setMovements((current) => mergeHistoryPage(current ?? [], page.movements))
-        setNext(page.next)
         setLoadingMore(false)
+        setHistory((current) => current && appendHistoryPage(current, cursor, page))
       },
       (thrown: unknown) => {
-        if (id !== requestId.current) return
         setLoadingMore(false)
         fail(thrown, setError)
       },
@@ -102,7 +96,9 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
     setError(null)
     try {
       const result = await api.cancelMovement(movement.id, employee)
-      setMovements((current) => current && markCancelled(current, movement.id, result.cancelledAt, result.cancelledBy))
+      setHistory(
+        (current) => current && { ...current, movements: markCancelled(current.movements, movement.id, result.cancelledAt, result.cancelledBy) },
+      )
       onCatalogChanged()
     } catch (thrown) {
       fail(thrown, setError)
@@ -111,6 +107,8 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
     }
   }
 
+  const movements = history?.movements ?? null
+  const next = history?.next ?? null
   const now = new Date()
 
   return (

@@ -10,9 +10,10 @@
   box-sizing: border-box;
 }
 
-/* Un champ amené à l'écran (focus) s'arrête au-dessus de la barre d'onglets, fixée en bas. */
+/* Un champ amené à l'écran (focus) s'arrête au-dessus de la barre d'onglets, fixée en bas. Elle mesure
+   57 px plus le bas de la zone sûre (au moins 8 px) : la barre d'accueil de l'iPhone l'agrandit. */
 html {
-  scroll-padding-bottom: 76px;
+  scroll-padding-bottom: calc(68px + max(8px, env(safe-area-inset-bottom)));
 }
 
 body {

@@ -4,12 +4,13 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§7)
  *
  * L'app se charge à part : si elle ne peut pas démarrer (configuration
- * manquante, fichier introuvable pendant une mise à jour), un message
- * s'affiche au lieu d'une page blanche (m13).
+ * manquante, réseau coupé pendant le chargement, mise à jour en cours), un
+ * message s'affiche au lieu d'une page blanche (m13), avec « Recharger »
+ * quand recharger peut aider.
  */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { startupErrorMessage } from './startup'
+import { isConfigurationMissing, startupErrorMessage } from './startup'
 import './styles.css'
 
 const root = document.getElementById('root')!
@@ -24,10 +25,21 @@ import('./App').then(
   },
   (error: unknown) => {
     console.error(error)
+    const screen = document.createElement('main')
+    screen.className = 'screen'
     const message = document.createElement('p')
     message.setAttribute('role', 'alert')
     message.className = 'message message-error'
     message.textContent = startupErrorMessage(error)
-    root.replaceChildren(message)
+    screen.append(message)
+    if (!isConfigurationMissing(error)) {
+      const reload = document.createElement('button')
+      reload.type = 'button'
+      reload.className = 'primary'
+      reload.textContent = 'Recharger'
+      reload.addEventListener('click', () => window.location.reload())
+      screen.append(reload)
+    }
+    root.replaceChildren(screen)
   },
 )
