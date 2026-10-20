@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { formatClock, formatWhen, movementLine, type Movement } from './movements'
+import { formatClock, formatWhen, historyLine, movementLine, type HistoryMovement, type Movement } from './movements'
 
 // now = mardi 20/10/2026, 14:00 à Paris.
 const now = new Date('2026-10-20T12:00:00Z')
@@ -23,4 +23,13 @@ test('lignes de mouvements (§4.5)', () => {
   expect(movementLine(m({ kind: 'out', delta: -6 }), now)).toBe('lun. 14:32 — Sam — Sortie −6')
   expect(movementLine(m({ kind: 'inventory', delta: -3, counted: 53 }), now)).toBe('lun. 14:32 — Sam — Inventaire : 53 comptés (−3)')
   expect(movementLine(m({ cancelledAt: '2026-10-19T12:40:00Z', cancelledBy: 'Léa' }), now)).toBe('lun. 14:32 — Sam — Entrée +24 — annulé par Léa')
+})
+
+test("ligne d'historique : le produit à la fin, puis l'annulation", () => {
+  const base: HistoryMovement = { ...m(), productId: 'p1', productName: 'Coca-Cola 33 cl' }
+  expect(historyLine(base, now)).toBe('lun. 14:32 — Sam — Entrée +24 — Coca-Cola 33 cl')
+  expect(historyLine({ ...base, kind: 'inventory', delta: -3, counted: 53 }, now))
+    .toBe('lun. 14:32 — Sam — Inventaire : 53 comptés (−3) — Coca-Cola 33 cl')
+  expect(historyLine({ ...base, cancelledAt: '2026-10-19T13:00:00Z', cancelledBy: 'Léa' }, now))
+    .toBe('lun. 14:32 — Sam — Entrée +24 — Coca-Cola 33 cl — annulé par Léa')
 })

@@ -6,7 +6,8 @@
  * « lun. 14:32 — Sam — Entrée +24 », « … — Inventaire : 53 comptés (−3) ».
  * Le jour de la semaine suffit pendant 7 jours ; au-delà, la date s'affiche,
  * avec l'année si elle diffère. Une ligne annulée porte « annulé par … ».
- * Sert à la fiche produit (jalon 2) et à l'Historique (jalon 3).
+ * Sert à la fiche produit (jalon 2) et à l'Historique (jalon 3), où le nom
+ * du produit vient en dernier : « … — Entrée +24 — Coca-Cola 33 cl ».
  */
 import { describeInventory } from './inventory'
 import { formatDelta } from './stock'
@@ -22,6 +23,12 @@ export interface Movement {
   createdAt: string
   cancelledAt: string | null
   cancelledBy: string | null
+}
+
+// Ligne de l'Historique : tous produits confondus, archivés compris.
+export interface HistoryMovement extends Movement {
+  productId: string
+  productName: string
 }
 
 const DAY_MS = 86_400_000
@@ -72,8 +79,15 @@ export function describeMovement(m: Movement): string {
   }
 }
 
-export function movementLine(m: Movement, now: Date): string {
-  const line = `${formatWhen(m.createdAt, now)} — ${m.employee} — ${describeMovement(m)}`
+function withCancellation(line: string, m: Movement): string {
   if (m.cancelledAt === null) return line
   return m.cancelledBy ? `${line} — annulé par ${m.cancelledBy}` : `${line} — annulé`
+}
+
+export function movementLine(m: Movement, now: Date): string {
+  return withCancellation(`${formatWhen(m.createdAt, now)} — ${m.employee} — ${describeMovement(m)}`, m)
+}
+
+export function historyLine(m: HistoryMovement, now: Date): string {
+  return withCancellation(`${formatWhen(m.createdAt, now)} — ${m.employee} — ${describeMovement(m)} — ${m.productName}`, m)
 }
