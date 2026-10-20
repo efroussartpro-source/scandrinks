@@ -5,13 +5,20 @@
  *
  * L'adresse du compte est déjà remplie : on ne tape que le mot de passe.
  * Le champ e-mail en lecture seule permet au trousseau iCloud d'enregistrer
- * le mot de passe avec la bonne adresse.
+ * le mot de passe avec la bonne adresse. Le message d'accueil dit pourquoi
+ * se reconnecter : en vert après un changement de mot de passe, en rouge
+ * après une session perdue.
  */
 import { useState, type FormEvent } from 'react'
 import { SHOP_EMAIL, supabase } from '../data/supabaseClient'
 import { loginErrorMessage } from './loginError'
 
-export default function LoginScreen({ notice }: { notice: string | null }) {
+export interface LoginNotice {
+  text: string
+  tone: 'error' | 'ok'
+}
+
+export default function LoginScreen({ notice }: { notice: LoginNotice | null }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -35,9 +42,14 @@ export default function LoginScreen({ notice }: { notice: string | null }) {
   return (
     <main className="screen">
       <h1>ScanDrinks</h1>
-      {notice && (
+      {notice?.tone === 'ok' && (
+        <p role="status" className="message message-ok">
+          {notice.text}
+        </p>
+      )}
+      {notice?.tone === 'error' && (
         <p role="alert" className="message message-error">
-          {notice}
+          {notice.text}
         </p>
       )}
       <form className="form" onSubmit={submit}>

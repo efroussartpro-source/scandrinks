@@ -15,7 +15,8 @@ import { classifyApiError } from '../data/apiErrors'
 
 export interface PasswordAuth {
   signIn(password: string): Promise<{ error: unknown }>
-  updatePassword(password: string): Promise<{ error: unknown }>
+  // Le mot de passe actuel accompagne le nouveau : certains projets Supabase l'exigent.
+  updatePassword(password: string, currentPassword: string): Promise<{ error: unknown }>
   signOutEverywhere(): Promise<{ error: unknown }>
   signOutLocal(): Promise<void>
 }
@@ -25,6 +26,30 @@ export type PasswordFailureKind = 'wrong_current' | 'weak' | 'same' | 'network' 
 export type PasswordStep = 'verify' | 'update' | 'sign_out_everywhere'
 
 export type ChangePasswordResult = { ok: true } | { ok: false; step: PasswordStep; kind: PasswordFailureKind }
+
+const NOT_CONFIRMED = 'Pas de connexion : changement non confirmé. Touche « Réessayer ».'
+
+export function passwordFailureMessage(step: PasswordStep, kind: PasswordFailureKind): string {
+  switch (kind) {
+    case 'wrong_current':
+      return 'Mot de passe actuel incorrect.'
+    case 'weak':
+      return 'Mot de passe refusé : trop simple. Choisis-en un plus long ou moins courant.'
+    case 'same':
+      return "Le nouveau mot de passe doit être différent de l'actuel."
+    case 'network':
+      return step === 'verify' ? 'Pas de connexion. Réessaie quand le réseau revient.' : NOT_CONFIRMED
+    case 'unknown':
+      return 'Changement impossible. Réessaie.'
+  }
+}
+
+// Le nouveau mot de passe est peut-être déjà enregistré : réponse perdue au changement, ou
+// échec après lui. Seuls un refus net (trop simple, identique) et la vérification n'en sont pas.
+export function isUncertainFailure(step: PasswordStep, kind: PasswordFailureKind): boolean {
+  if (step === 'sign_out_everywhere') return true
+  return step === 'update' && (kind === 'network' || kind === 'unknown')
+}
 
 export function classifyPasswordError(error: unknown): PasswordFailureKind {
   if (classifyApiError(error).kind === 'network') return 'network'
@@ -59,7 +84,7 @@ export async function changePassword(
     const alsoRefused = await attempt(() => auth.signIn(input.next))
     if (alsoRefused) return { ok: false, step: 'verify', kind: classifyPasswordError(alsoRefused) }
   } else {
-    const failed = await attempt(() => auth.updatePassword(input.next))
+    const failed = await attempt(() => auth.updatePassword(input.next, input.current))
     if (failed) return { ok: false, step: 'update', kind: classifyPasswordError(failed) }
   }
   const notSignedOut = await attempt(() => auth.signOutEverywhere())

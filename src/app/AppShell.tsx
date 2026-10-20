@@ -12,7 +12,7 @@
  * jamais celle de toute l'équipe.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import LoginScreen from '../auth/LoginScreen'
+import LoginScreen, { type LoginNotice } from '../auth/LoginScreen'
 import NameScreen from '../auth/NameScreen'
 import { loadEmployeeName, saveEmployeeName } from '../auth/employee'
 import { apiErrorMessage } from '../data/apiErrors'
@@ -20,6 +20,7 @@ import { supabase } from '../data/supabaseClient'
 import { shoppingList } from '../domain/restock'
 import HistoryScreen from '../history/HistoryScreen'
 import ScannerScreen from '../scanner/ScannerScreen'
+import ChangePasswordScreen from '../settings/ChangePasswordScreen'
 import SettingsScreen from '../settings/SettingsScreen'
 import ShoppingScreen from '../shopping/ShoppingScreen'
 import StockScreen from '../stock/StockScreen'
@@ -28,16 +29,17 @@ import TabBar, { type Tab } from './TabBar'
 import { useCatalog } from './useCatalog'
 import './AppShell.css'
 
-type Overlay = 'settings' | 'name' | null
+type Overlay = 'settings' | 'name' | 'password' | null
 
-const SESSION_EXPIRED = apiErrorMessage('session')
+const SESSION_EXPIRED: LoginNotice = { text: apiErrorMessage('session'), tone: 'error' }
+const PASSWORD_CHANGED: LoginNotice = { text: 'Mot de passe changé. Connecte-toi avec le nouveau mot de passe.', tone: 'ok' }
 
 export default function AppShell() {
   const [session, setSession] = useState<SessionState>('checking')
   const [employee, setEmployee] = useState<string | null>(() => loadEmployeeName())
   const [tab, setTab] = useState<Tab>('scanner')
   const [overlay, setOverlay] = useState<Overlay>(null)
-  const [loginNotice, setLoginNotice] = useState<string | null>(null)
+  const [loginNotice, setLoginNotice] = useState<LoginNotice | null>(null)
   // Vrai pendant une déconnexion demandée : l'événement SIGNED_OUT n'est alors pas une session perdue.
   const signingOut = useRef(false)
 
@@ -79,6 +81,12 @@ export default function AppShell() {
       signingOut.current = false
       window.alert('Déconnexion impossible sans réseau. Réessaie quand le réseau revient.')
     }
+  }, [])
+
+  // Mot de passe changé : la déconnexion qui suit est voulue, et l'écran de connexion le dit.
+  const beforePasswordSignOut = useCallback(() => {
+    signingOut.current = true
+    setLoginNotice(PASSWORD_CHANGED)
   }, [])
 
   const chooseEmployee = useCallback((name: string) => {
@@ -137,12 +145,20 @@ export default function AppShell() {
         <SettingsScreen
           employee={employee}
           onChangeName={() => setOverlay('name')}
+          onChangePassword={() => setOverlay('password')}
           onSignOut={() => void signOut()}
           onBack={() => setOverlay(null)}
         />
       )}
       {overlay === 'name' && (
         <NameScreen onChosen={chooseEmployee} onSessionExpired={onSessionExpired} onCancel={() => setOverlay('settings')} />
+      )}
+      {overlay === 'password' && (
+        <ChangePasswordScreen
+          onDone={() => setOverlay(null)}
+          onCancel={() => setOverlay('settings')}
+          beforeLocalSignOut={beforePasswordSignOut}
+        />
       )}
     </>
   )

@@ -799,6 +799,78 @@ async function scenarioHistory(browser) {
   console.log('Scénario M (historique) : OK')
 }
 
+// Changement du mot de passe du tabac (jalon 3, §4.6) : tous les téléphones sont déconnectés.
+async function scenarioPassword(browser) {
+  const NEW_PASSWORD = 'nouveau-mot-de-passe'
+  const CHANGED = 'Mot de passe changé. Connecte-toi avec le nouveau mot de passe.'
+  const LABELS = ['Mot de passe actuel', 'Nouveau mot de passe', 'Retape le nouveau mot de passe']
+  const field = (page, label) => page.getByLabel(label, { exact: true })
+  const openPasswordScreen = async (page) => {
+    await page.getByRole('button', { name: 'Réglages' }).click()
+    await page.getByRole('button', { name: 'Changer le mot de passe du tabac' }).click()
+    await page.getByRole('heading', { name: 'Mot de passe du tabac' }).waitFor()
+  }
+  const submit = async (page, current, next, confirm) => {
+    await field(page, LABELS[0]).fill(current)
+    await field(page, LABELS[1]).fill(next)
+    await field(page, LABELS[2]).fill(confirm)
+    await page.getByRole('button', { name: 'Changer le mot de passe', exact: true }).click()
+  }
+  {
+    // 1. Saisies refusées : erreur sous le champ sans appel, puis mot de passe actuel faux.
+    const { context, page, fake } = await openApp(browser)
+    await signIn(page)
+    await openPasswordScreen(page)
+    for (const label of LABELS) assert.ok(await fieldHelp(field(page, label)), `aide sous « ${label} »`)
+    await submit(page, GOOD_PASSWORD, NEW_PASSWORD, `${NEW_PASSWORD}x`)
+    await page.getByText('Les deux saisies ne correspondent pas.').waitFor()
+    assert.deepEqual(fake.authCalls, ['token'], 'aucun appel pour une saisie refusée')
+    await submit(page, 'pas-le-bon-mot-de-passe', NEW_PASSWORD, NEW_PASSWORD)
+    await page.getByText('Mot de passe actuel incorrect.').waitFor()
+
+    // 2. Changement réussi : vérification, changement, tous les téléphones puis celui-ci déconnectés.
+    await submit(page, GOOD_PASSWORD, NEW_PASSWORD, NEW_PASSWORD)
+    await page.getByRole('status').filter({ hasText: CHANGED }).waitFor()
+    assert.deepEqual(fake.authCalls.slice(2), ['token', 'user', 'logout:global', 'logout:local'])
+    await page.getByLabel('Mot de passe').fill(GOOD_PASSWORD)
+    await page.getByRole('button', { name: 'Se connecter' }).click()
+    await page.getByText('Mot de passe incorrect.').waitFor()
+    await page.getByLabel('Mot de passe').fill(NEW_PASSWORD)
+    await page.getByRole('button', { name: 'Se connecter' }).click()
+    await page.getByRole('button', { name: 'Historique', exact: true }).waitFor()
+    await context.close()
+  }
+  {
+    // 3. Autre téléphone : sa session est fermée, même avec un jeton encore valide ; rien n'est enregistré.
+    const { context, page, fake } = await openApp(browser)
+    await signIn(page)
+    const card = confirmCard(page)
+    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    fake.revokeAllSessions()
+    const recorded = page.waitForResponse((response) => response.url().endsWith('/rest/v1/rpc/record_movement'))
+    await card.getByRole('button', { name: 'Valider' }).click()
+    assert.equal((await recorded).status(), 401, 'enregistrement refusé : session fermée')
+    await page.getByText('Ta session a expiré : reconnecte-toi.').waitFor()
+    await page.getByRole('button', { name: 'Se connecter' }).waitFor()
+    await context.close()
+  }
+  {
+    // 4. Réponse perdue au changement : champs figés, puis « Réessayer » finit le changement déjà fait.
+    const { context, page, fake } = await openApp(browser, { loseFirst: ['auth:user'] })
+    await signIn(page)
+    await openPasswordScreen(page)
+    await submit(page, GOOD_PASSWORD, NEW_PASSWORD, NEW_PASSWORD)
+    await page.getByText('Pas de connexion : changement non confirmé. Touche « Réessayer ».').waitFor()
+    for (const label of LABELS) assert.ok(await field(page, label).isDisabled(), `« ${label} » figé`)
+    const before = fake.authCalls.length
+    await page.getByRole('button', { name: 'Réessayer' }).click()
+    await page.getByRole('status').filter({ hasText: CHANGED }).waitFor()
+    assert.deepEqual(fake.authCalls.slice(before), ['token', 'token', 'logout:global', 'logout:local'])
+    await context.close()
+  }
+  console.log('Scénario N (mot de passe) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -828,6 +900,7 @@ try {
     ['K', scenarioStock],
     ['L', scenarioSheetEdits],
     ['M', scenarioHistory],
+    ['N', scenarioPassword],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

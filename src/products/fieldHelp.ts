@@ -1,7 +1,7 @@
 /**
- * fieldHelp.ts — Aides affichées sous les champs des fiches produit.
+ * fieldHelp.ts — Aides affichées sous les champs des fiches produit et du mot de passe.
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, RG-5 à RG-7)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §4.6, RG-5 à RG-7)
  *
  * Demandées par le porteur du projet après le test sur iPhone du jalon 1.
  */
@@ -16,4 +16,7 @@ export const FIELD_HELP = {
   countUnits: 'Canettes ou bouteilles en plus des packs entiers.',
   countUnitsOnly: 'Canettes ou bouteilles trouvées en réserve.',
   targetStock: "Le stock visé après les courses : l'app calcule les packs à acheter pour l'atteindre.",
+  passwordCurrent: "Celui que tu tapes aujourd'hui pour te connecter.",
+  passwordNew: "Au moins 8 caractères. Note-le avant de valider : toute l'équipe en aura besoin.",
+  passwordConfirm: 'Tape-le une seconde fois, pour éviter une faute de frappe.',
 } as const

@@ -1,5 +1,13 @@
 import { expect, test } from 'vitest'
-import { changePassword, classifyPasswordError, type PasswordAuth } from './changePassword'
+import {
+  changePassword,
+  classifyPasswordError,
+  isUncertainFailure,
+  passwordFailureMessage,
+  type PasswordAuth,
+  type PasswordFailureKind,
+  type PasswordStep,
+} from './changePassword'
 
 // Erreurs telles que supabase-js les rend.
 const REFUSED = { name: 'AuthApiError', status: 400, code: 'invalid_credentials', message: 'Invalid login credentials' }
@@ -80,3 +88,41 @@ test.each<[unknown, string]>([
   [new TypeError('Failed to fetch'), 'network'],
   [new Error('boom'), 'unknown'],
 ])('classifyPasswordError(%#) = %s', (error, kind) => expect(classifyPasswordError(error)).toBe(kind))
+
+test('le changement envoie aussi le mot de passe actuel (exigé si le projet le demande)', async () => {
+  const { auth } = fakeAuth({})
+  const updates: string[][] = []
+  auth.updatePassword = async (...args) => {
+    updates.push(args)
+    return { error: null }
+  }
+  await changePassword(auth, input, { afterUncertainFailure: false })
+  expect(updates).toEqual([['nouveau', 'ancien']])
+})
+
+const NOT_CONFIRMED = 'Pas de connexion : changement non confirmé. Touche « Réessayer ».'
+
+test.each<[PasswordStep, PasswordFailureKind, string]>([
+  ['verify', 'wrong_current', 'Mot de passe actuel incorrect.'],
+  ['update', 'weak', 'Mot de passe refusé : trop simple. Choisis-en un plus long ou moins courant.'],
+  ['update', 'same', "Le nouveau mot de passe doit être différent de l'actuel."],
+  ['verify', 'network', 'Pas de connexion. Réessaie quand le réseau revient.'],
+  ['update', 'network', NOT_CONFIRMED],
+  ['sign_out_everywhere', 'network', NOT_CONFIRMED],
+  ['verify', 'unknown', 'Changement impossible. Réessaie.'],
+  ['sign_out_everywhere', 'unknown', 'Changement impossible. Réessaie.'],
+])('message après un échec à l\'étape %s (%s)', (step, kind, message) => expect(passwordFailureMessage(step, kind)).toBe(message))
+
+// Incertain : le nouveau mot de passe est peut-être déjà enregistré. Les champs se figent et
+// « Réessayer » sait finir un changement déjà fait.
+test.each<[PasswordStep, PasswordFailureKind, boolean]>([
+  ['verify', 'wrong_current', false],
+  ['verify', 'network', false],
+  ['verify', 'unknown', false],
+  ['update', 'weak', false],
+  ['update', 'same', false],
+  ['update', 'network', true],
+  ['update', 'unknown', true],
+  ['sign_out_everywhere', 'network', true],
+  ['sign_out_everywhere', 'unknown', true],
+])('échec à l\'étape %s (%s) incertain : %s', (step, kind, uncertain) => expect(isUncertainFailure(step, kind)).toBe(uncertain))
