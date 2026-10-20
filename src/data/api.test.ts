@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest'
-import { createApi } from './api'
+import { createApi, HISTORY_PAGE_SIZE } from './api'
 
 // Faux client supabase-js : il enregistre les appels et renvoie des réponses
 // de la même forme que PostgREST ({ data, error, status }).
@@ -90,10 +90,43 @@ test('attachBarcode : code rattaché, ou déjà rattaché à un autre produit', 
   expect(rpc).toHaveBeenNthCalledWith(2, 'attach_barcode', { p_code: '5449000000996', p_product_id: 'p1', p_units: 6, p_move: true })
 })
 
-test('cancelMovement appelle cancel_movement et renvoie le stock', async () => {
-  const rpc = vi.fn(async () => ok({ stock: 24, product_id: 'p1' }))
-  await expect(createApi({ rpc, from: vi.fn() } as never).cancelMovement('m1', 'Sam')).resolves.toEqual({ stock: 24 })
+test("cancelMovement appelle cancel_movement et renvoie le stock, l'heure et l'auteur de l'annulation", async () => {
+  // Déjà annulé par Léa sur un autre téléphone : la base garde le premier auteur.
+  const rpc = vi.fn(async () => ok({ stock: 24, product_id: 'p1', cancelled_at: '2026-10-19T13:00:00+00:00', cancelled_by: 'Léa' }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).cancelMovement('m1', 'Sam'))
+    .resolves.toEqual({ stock: 24, cancelledAt: '2026-10-19T13:00:00+00:00', cancelledBy: 'Léa' })
   expect(rpc).toHaveBeenCalledWith('cancel_movement', { p_movement_id: 'm1', p_employee: 'Sam' })
+})
+
+// Ligne de list_history : la date garde ses microsecondes, comme la base l'envoie.
+const historyRow = (n: number) => ({ id: `m${n}`, kind: 'in', delta: 1, counted: null, employee: 'Sam',
+  created_at: `2026-10-19T12:00:00.${String(n).padStart(6, '0')}+00:00`, cancelled_at: null, cancelled_by: null,
+  product_id: 'p1', product_name: 'Lipton Pêche 50 cl' })
+
+test('listHistory lit la première page ; pleine, elle donne le curseur de sa dernière ligne', async () => {
+  const rows = Array.from({ length: 50 }, (_, i) => historyRow(50 - i))
+  const rpc = vi.fn(async () => ok(rows))
+  const page = await createApi({ rpc, from: vi.fn() } as never).listHistory(null)
+  expect(HISTORY_PAGE_SIZE).toBe(50)
+  expect(rpc).toHaveBeenCalledWith('list_history', { p_before_created_at: null, p_before_id: null, p_limit: 50 })
+  expect(page.movements).toHaveLength(50)
+  expect(page.movements[0]).toEqual({ id: 'm50', kind: 'in', delta: 1, counted: null, employee: 'Sam',
+    createdAt: '2026-10-19T12:00:00.000050+00:00', cancelledAt: null, cancelledBy: null, productId: 'p1', productName: 'Lipton Pêche 50 cl' })
+  // Le texte exact de la date : arrondie à la milliseconde, elle ferait sauter des lignes.
+  expect(page.next).toEqual({ createdAt: '2026-10-19T12:00:00.000001+00:00', id: 'm1' })
+})
+
+test("listHistory passe le curseur tel quel ; une page incomplète n'a pas de suite", async () => {
+  const rpc = vi.fn(async () => ok([historyRow(3), historyRow(2), historyRow(1)]))
+  const page = await createApi({ rpc, from: vi.fn() } as never).listHistory({ createdAt: '2026-10-19T12:00:00+00:00', id: 'm9' })
+  expect(rpc).toHaveBeenCalledWith('list_history', { p_before_created_at: '2026-10-19T12:00:00+00:00', p_before_id: 'm9', p_limit: 50 })
+  expect(page.movements.map((m) => m.id)).toEqual(['m3', 'm2', 'm1'])
+  expect(page.next).toBeNull()
+})
+
+test('listHistory : aucune ligne, ni page suivante', async () => {
+  const rpc = vi.fn(async () => ok([]))
+  await expect(createApi({ rpc, from: vi.fn() } as never).listHistory(null)).resolves.toEqual({ movements: [], next: null })
 })
 
 test('listEmployees renvoie les prénoms', async () => {

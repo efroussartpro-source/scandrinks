@@ -4,13 +4,13 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§6.3)
  *
  * Les noms et paramètres (p_…) sont ceux des fonctions SQL de
- * supabase/migrations/ (schéma initial, puis pilotage). Le client est passé
+ * supabase/migrations/ (schéma initial, pilotage, puis suivi). Le client est passé
  * en paramètre : les tests utilisent un faux client, l'app celui de
  * supabaseClient.ts. Toute erreur devient une ApiError (voir apiErrors.ts).
  * Les listes de produits sont triées dans l'ordre alphabétique français.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Movement, MovementKind } from '../domain/movements'
+import type { HistoryMovement, Movement, MovementKind } from '../domain/movements'
 import { sortByName } from '../domain/names'
 import type { NewProductInput } from '../domain/productDraft'
 import type { MoveMode } from '../domain/stock'
@@ -62,6 +62,27 @@ export interface InventoryResult {
   duplicate: boolean
 }
 
+// Une page de l'Historique (§4.5).
+export const HISTORY_PAGE_SIZE = 50
+
+// Dernière ligne affichée : la page suivante part d'elle. La date reste le texte
+// reçu de la base, à la microseconde : arrondie, elle ferait sauter des lignes.
+export interface HistoryCursor {
+  createdAt: string
+  id: string
+}
+
+export interface HistoryPage {
+  movements: HistoryMovement[]
+  next: HistoryCursor | null
+}
+
+export interface CancelResult {
+  stock: number
+  cancelledAt: string
+  cancelledBy: string
+}
+
 export interface MovementInput {
   id: string
   productId: string
@@ -96,6 +117,11 @@ interface MovementRow {
   cancelled_by: string | null
 }
 
+interface HistoryRow extends MovementRow {
+  product_id: string
+  product_name: string
+}
+
 interface QueryResult {
   data: unknown
   error: unknown
@@ -111,6 +137,12 @@ const toMovement = (row: MovementRow): Movement => ({
   createdAt: row.created_at,
   cancelledAt: row.cancelled_at,
   cancelledBy: row.cancelled_by,
+})
+
+const toHistoryMovement = (row: HistoryRow): HistoryMovement => ({
+  ...toMovement(row),
+  productId: row.product_id,
+  productName: row.product_name,
 })
 
 const toProduct = (row: ProductRow): Product => ({
@@ -250,11 +282,29 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
       return { delta: row.delta, stock: row.stock, counted: row.counted, duplicate: row.duplicate }
     },
 
-    async cancelMovement(movementId: string, employee: string): Promise<{ stock: number }> {
-      const row = await run<{ stock: number; product_id: string }>(
+    // Déjà annulé sur un autre téléphone : la base renvoie le premier auteur et son heure.
+    async cancelMovement(movementId: string, employee: string): Promise<CancelResult> {
+      const row = await run<{ stock: number; product_id: string; cancelled_at: string; cancelled_by: string }>(
         client.rpc('cancel_movement', { p_movement_id: movementId, p_employee: employee }),
       )
-      return { stock: row.stock }
+      return { stock: row.stock, cancelledAt: row.cancelled_at, cancelledBy: row.cancelled_by }
+    },
+
+    // Du plus récent au plus ancien, tous produits confondus. Une page pleine a peut-être une suite.
+    async listHistory(cursor: HistoryCursor | null): Promise<HistoryPage> {
+      const rows =
+        (await run<HistoryRow[] | null>(
+          client.rpc('list_history', {
+            p_before_created_at: cursor?.createdAt ?? null,
+            p_before_id: cursor?.id ?? null,
+            p_limit: HISTORY_PAGE_SIZE,
+          }),
+        )) ?? []
+      const last = rows[rows.length - 1]
+      return {
+        movements: rows.map(toHistoryMovement),
+        next: rows.length === HISTORY_PAGE_SIZE ? { createdAt: last.created_at, id: last.id } : null,
+      }
     },
 
     async listEmployees(): Promise<string[]> {

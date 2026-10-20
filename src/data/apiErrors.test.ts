@@ -6,6 +6,8 @@ test.each([
   [{ name: 'AuthRetryableFetchError', message: 'Load failed', status: 0 }, 'network'],
   [{ message: 'JWT expired', code: 'PGRST303', status: 401 }, 'session'], [{ message: 'Invalid Refresh Token', status: 401 }, 'session'],
   [{ message: 'permission denied for function lookup_barcode', code: '42501', status: 401 }, 'session'],
+  // Session fermée (mot de passe changé sur un autre téléphone), avec ou sans le statut HTTP.
+  [{ code: 'PT401', message: 'session_revoked', status: 401 }, 'session'], [{ code: 'PT401', message: 'session_revoked' }, 'session'],
   [{ message: 'new row violates row-level security policy', code: '42501', status: 403 }, 'forbidden'],
   [{ message: 'barcode_taken:3502110123091', code: 'P0001', status: 400 }, 'barcode_taken'],
   [{ message: 'duplicate key value violates unique constraint "barcodes_pkey"', code: '23505', status: 409 }, 'barcode_taken'],
