@@ -99,3 +99,5 @@ Task 8: Step 5 → `create_product` à 5 paramètres sans connexion : 42501 « p
 Task 8: Step 6-7 → documentation déjà envoyée (ab86101, voir Ruling plus haut) ; suite complète : 232/232, e2e A–L OK, build OK (paquet `index-COPXLhFN.js`).
 Task 8: Step 8 → préversion https://jalon-2.scandrinks.pages.dev : HTTP 200, même paquet que le build local (`index-COPXLhFN.js`) ; sans connexion, `record_inventory`, `update_product`, `set_product_archived` et `detach_barcode` répondent 42501 ; DELETE anonyme sur `barcodes` (code inexistant) : 42501 ; inscription : `signup_disabled` ; Playwright : adresse du compte pré-remplie, « Mot de passe incorrect. » affiché, aucune erreur de page.
 Task 8: Step 9 → en attente du test du porteur du projet sur iPhone (`docs/jalon-2-test.md`).
+Task 8: Step 9 → test du porteur du projet sur iPhone d'après `docs/jalon-2-test.md` : « tout fonctionne » ; accord donné pour la fusion dans `main` (Step 10).
+Task 8: complete (commits dbd3e0e..ded9e79, tests: bash -c 'set -o pipefail; npm test 2>&1 | grep -E "^ +Tests " && npm run e2e 2>&1 | tail -1 && npm run build >/dev/null 2>&1 && echo "build OK"' → build OK)
