@@ -1040,3 +1040,41 @@ Expected : `scandrinks.pages.dev` sert le jalon 2.
 - **À racheter :** chaque ligne ouvre la fiche du produit.
 - **Prénoms :** une seule orthographe par prénom (la première enregistrée) dans le choix du prénom.
 - **Tri :** ordre alphabétique français partout (accents et casse ignorés).
+
+## Bilan (20/10/2026)
+
+- **Validé** par le porteur du projet après son test sur iPhone (20/10/2026), puis fusionné dans `main`.
+- **Base réelle :** migration `pilotage` appliquée au projet `scandrinks`.
+  - Le connecteur Supabase attendait une confirmation qui n'arrivait pas jusqu'au porteur du projet. Celui-ci a donc exécuté le fichier dans l'éditeur SQL du tableau de bord.
+  - Le contenu a été vérifié identique au fichier par empreintes : corps des fonctions, contraintes, politiques et droits. La ligne d'historique `pilotage` a été inscrite à part.
+  - Tests SQL OK sur le vrai projet, données inchangées. L'app du jalon 1 est restée compatible pendant la mise en service.
+  - Conseils de Supabase : aucune alerte ERROR. Une alerte WARN : la protection contre les mots de passe divulgués est désactivée (réglage Auth).
+- **Relecture finale** par un relecteur neuf : « prête à fusionner après corrections ». Deux corrections faites, chacune avec un test vu en échec :
+  - après une réponse perdue pendant une création, le formulaire se fige et propose « Réessayer » ; avant, les corrections faites entre-temps étaient perdues sans le dire ;
+  - « Annuler » relit la liste du Stock, pour qu'une fiche créée malgré la réponse perdue ne soit pas recréée.
+- **Retour arrière** de la migration, testé en local mais jamais exécuté sur le vrai projet : `git show f5d6bb6:.superpowers/sdd/2026-10-20-jalon-2-pilotage/rollback-pilotage.sql`.
+- **Journal d'exécution :** retiré du dépôt à la fin du jalon. Il reste lisible dans l'historique Git : `git show f5d6bb6:.superpowers/sdd/2026-10-20-jalon-2-pilotage/progress.md`.
+
+### Points reportés par la relecture finale (20/10/2026)
+
+- **p1 — `NewProductForm.tsx` :** une canette qui appartient à un produit archivé, scannée pendant la création d'un pack, mène à « Ajouter ce pack à « X » » sans proposer la réactivation (RG-11). Le stock reste juste, mais le produit reste caché jusqu'au prochain scan de son code.
+- **p2 — `ProductSheet.tsx` :** pas de « Réessayer » quand la fiche n'arrive pas à lire ses codes et ses mouvements. Contournement : « Retour », puis rouvrir la fiche.
+- **p3 :** après « Archiver », si la relecture du catalogue échoue, le produit reste dans « Actifs » et dans le badge jusqu'à la relecture suivante. La liste affiche alors l'erreur de connexion.
+- **p4 — tests à compléter :**
+  - la confirmation d'archivage (texte exact, refus) dans l'e2e K ;
+  - la relecture au retour dans l'app (`visibilitychange`) ;
+  - un test SQL négatif du droit DELETE sur `barcodes` (anon, compte B). Un DELETE anonyme a été refusé à la mise en service.
+  - Les cas SQL 11 et 20 supposent qu'aucun prénom « sam » n'existe sous une autre casse dans la vraie base : prendre un prénom manifestement fictif.
+- **p5 — comptage vide :** « Valider » est grisé, sans message. Le plan se contredisait sur ce point (Review Focus 2 contre l'interface de `CountFields`).
+- **p6 — `AddCodeForm.tsx` :** le champ « Code-barres » ne sélectionne pas tout au toucher. Retaper un code refusé demande de l'effacer.
+- **p7 — `create_product` :** si un premier envoi est lent sans être perdu, un second envoi simultané avec le même `p_id` affiche « Ce code appartient déjà à un autre produit. ». Durcissement : `on conflict (id) do nothing`, comme `record_inventory`.
+- **p8 :** un défilement automatique peut placer un bouton du bas derrière la barre d'onglets (pas de `scroll-padding-bottom`). À la main, il reste atteignable.
+
+### À revoir plus tard
+
+- **Jalon 3 :** l'Historique s'appuiera sur l'index `movements_created_at_idx`, pas encore utilisé. Mise à jour en direct entre téléphones, si le besoin apparaît à l'usage.
+- **Jalon 4 :**
+  - la protection contre les mots de passe divulgués, si l'offre gratuite la permet ;
+  - l'historique des migrations Supabase : ses versions sont horodatées à l'application et ne correspondent pas aux noms des fichiers ;
+  - le guide d'une page, avec le chemin des réglages caméra du point m15.
+
