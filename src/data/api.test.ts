@@ -7,7 +7,23 @@ const ok = (data: unknown) => ({ data, error: null, status: 200 })
 const SQL_COCA = { id: 'p9', name: 'Coca-Cola 33 cl', pack_size: 24, alert_threshold: 24, target_stock: 48, archived: false,
   created_at: '2026-10-19T12:00:00Z', updated_at: '2026-10-19T12:00:00Z', stock: 0 }
 const COCA = { id: 'p9', name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 24, targetStock: 48, archived: false, stock: 0 }
-const NEW_COCA = { name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 24, targetStock: 48, barcodes: [{ code: '5449000000996', units: 24 }] }
+const NEW_COCA = { id: 'p-new', name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 24, targetStock: 48, barcodes: [{ code: '5449000000996', units: 24 }] }
+// Lignes de product_stock reçues dans l'ordre du serveur (tri différent du tri français).
+const SERVER_ORDER = ['Red Bull 25 cl', 'Évian 1,5 L', 'Coca-Cola 33 cl'].map((name, i) => ({ ...SQL_COCA, id: `p${i}`, name }))
+
+// Constructeur de requête supabase-js : chaque méthode note l'appel ; attendu, il renvoie les lignes.
+function queryBuilder(rows: unknown, calls: unknown[][]) {
+  const builder: Record<string, unknown> = {
+    then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(ok(rows)).then(resolve, reject),
+  }
+  for (const method of ['select', 'eq', 'order', 'limit']) {
+    builder[method] = (...args: unknown[]) => {
+      calls.push([method, ...args])
+      return builder
+    }
+  }
+  return builder
+}
 
 test('recordMovement appelle record_movement avec les paramètres SQL exacts', async () => {
   const rpc = vi.fn(async () => ({ data: { movement_id: 'm1', delta: 48, stock: 48, duplicate: false }, error: null, status: 200 }))
@@ -50,11 +66,11 @@ test('le statut HTTP de la réponse sert au classement : jeton refusé → sessi
   await expect(createApi({ rpc, from: vi.fn() } as never).lookupBarcode('1')).rejects.toMatchObject({ kind: 'session' })
 })
 
-test('createProduct envoie les codes en tableau et renvoie le Product', async () => {
+test("createProduct envoie l'identifiant du téléphone et les codes en tableau", async () => {
   const rpc = vi.fn(async () => ok(SQL_COCA))
   await expect(createApi({ rpc, from: vi.fn() } as never).createProduct(NEW_COCA)).resolves.toEqual(COCA)
   expect(rpc).toHaveBeenCalledWith('create_product', { p_name: 'Coca-Cola 33 cl', p_pack_size: 24, p_alert_threshold: 24, p_target_stock: 48,
-    p_barcodes: [{ code: '5449000000996', units: 24 }] })
+    p_barcodes: [{ code: '5449000000996', units: 24 }], p_id: 'p-new' })
 })
 
 test('createProduct : code déjà pris → ApiError barcode_taken avec le code', async () => {
@@ -86,15 +102,68 @@ test('listEmployees renvoie les prénoms', async () => {
   expect(rpc).toHaveBeenCalledWith('list_employees')
 })
 
-test('listProducts lit product_stock : produits actifs, par nom', async () => {
+test('listProducts lit les produits actifs de product_stock et les trie à la française', async () => {
   const calls: unknown[][] = []
-  const builder = {
-    select: (...args: unknown[]) => { calls.push(['select', ...args]); return builder },
-    eq: (...args: unknown[]) => { calls.push(['eq', ...args]); return builder },
-    order: (...args: unknown[]) => { calls.push(['order', ...args]); return Promise.resolve(ok([{ ...SQL_COCA, stock: 24 }])) },
-  }
-  const from = vi.fn(() => builder)
-  await expect(createApi({ rpc: vi.fn(), from } as never).listProducts()).resolves.toEqual([{ ...COCA, stock: 24 }])
+  const from = vi.fn(() => queryBuilder(SERVER_ORDER, calls))
+  const list = await createApi({ rpc: vi.fn(), from } as never).listProducts()
+  expect(list.map((p) => p.name)).toEqual(['Coca-Cola 33 cl', 'Évian 1,5 L', 'Red Bull 25 cl'])
+  expect(list[0]).toEqual({ ...COCA, id: 'p2' })
   expect(from).toHaveBeenCalledWith('product_stock')
   expect(calls).toEqual([['select', '*'], ['eq', 'archived', false], ['order', 'name']])
+})
+
+test('listCatalog lit tous les produits, archivés compris, triés à la française', async () => {
+  const calls: unknown[][] = []
+  const from = vi.fn(() => queryBuilder(SERVER_ORDER, calls))
+  const list = await createApi({ rpc: vi.fn(), from } as never).listCatalog()
+  expect(list.map((p) => p.name)).toEqual(['Coca-Cola 33 cl', 'Évian 1,5 L', 'Red Bull 25 cl'])
+  expect(from).toHaveBeenCalledWith('product_stock')
+  expect(calls).toEqual([['select', '*'], ['order', 'name']])
+})
+
+test('getProductDetail lit les codes et les 20 derniers mouvements', async () => {
+  const barcodeCalls: unknown[][] = []
+  const movementCalls: unknown[][] = []
+  const from = vi.fn((table: string) =>
+    table === 'barcodes'
+      ? queryBuilder([{ code: '2000000000015', units: 24 }], barcodeCalls)
+      : queryBuilder([{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', created_at: '2026-10-19T12:32:00Z',
+          cancelled_at: null, cancelled_by: null }], movementCalls),
+  )
+  await expect(createApi({ rpc: vi.fn(), from } as never).getProductDetail('p9')).resolves.toEqual({
+    barcodes: [{ code: '2000000000015', units: 24 }],
+    movements: [{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', createdAt: '2026-10-19T12:32:00Z',
+      cancelledAt: null, cancelledBy: null }],
+  })
+  expect(from).toHaveBeenCalledWith('barcodes')
+  expect(from).toHaveBeenCalledWith('movements')
+  expect(barcodeCalls).toEqual([['select', 'code, units'], ['eq', 'product_id', 'p9'], ['order', 'created_at']])
+  expect(movementCalls).toEqual([['select', 'id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by'],
+    ['eq', 'product_id', 'p9'], ['order', 'created_at', { ascending: false }], ['limit', 20]])
+})
+
+test('updateProduct appelle update_product', async () => {
+  const rpc = vi.fn(async () => ok({ ...SQL_COCA, alert_threshold: 30 }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).updateProduct({ id: 'p9', name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 30, targetStock: 48 }))
+    .resolves.toEqual({ ...COCA, alertThreshold: 30 })
+  expect(rpc).toHaveBeenCalledWith('update_product', { p_id: 'p9', p_name: 'Coca-Cola 33 cl', p_pack_size: 24, p_alert_threshold: 30, p_target_stock: 48 })
+})
+
+test('setArchived appelle set_product_archived', async () => {
+  const rpc = vi.fn(async () => ok({ ...SQL_COCA, archived: true }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).setArchived('p9', true)).resolves.toEqual({ ...COCA, archived: true })
+  expect(rpc).toHaveBeenCalledWith('set_product_archived', { p_product_id: 'p9', p_archived: true })
+})
+
+test('detachBarcode appelle detach_barcode', async () => {
+  const rpc = vi.fn(async () => ok({ status: 'detached' }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).detachBarcode('2000000000015')).resolves.toBeUndefined()
+  expect(rpc).toHaveBeenCalledWith('detach_barcode', { p_code: '2000000000015' })
+})
+
+test("recordInventory renvoie l'écart et le stock", async () => {
+  const rpc = vi.fn(async () => ok({ movement_id: 'i1', delta: -3, stock: 53, counted: 53, duplicate: false }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).recordInventory({ id: 'i1', productId: 'p9', counted: 53, employee: 'Sam' }))
+    .resolves.toEqual({ delta: -3, stock: 53, counted: 53, duplicate: false })
+  expect(rpc).toHaveBeenCalledWith('record_inventory', { p_id: 'i1', p_product_id: 'p9', p_counted: 53, p_employee: 'Sam' })
 })

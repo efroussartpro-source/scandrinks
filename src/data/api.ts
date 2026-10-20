@@ -4,11 +4,14 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§6.3)
  *
  * Les noms et paramètres (p_…) sont ceux des fonctions SQL de
- * supabase/migrations/20261019130000_initial_schema.sql. Le client est passé
+ * supabase/migrations/ (schéma initial, puis pilotage). Le client est passé
  * en paramètre : les tests utilisent un faux client, l'app celui de
  * supabaseClient.ts. Toute erreur devient une ApiError (voir apiErrors.ts).
+ * Les listes de produits sont triées dans l'ordre alphabétique français.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Movement, MovementKind } from '../domain/movements'
+import { sortByName } from '../domain/names'
 import type { NewProductInput } from '../domain/productDraft'
 import type { ScanMode } from '../domain/stock'
 import { classifyApiError } from './apiErrors'
@@ -26,6 +29,38 @@ export interface Product {
 export type LookupResult = { found: true; product: Product; units: number } | { found: false }
 
 export type AttachResult = { status: 'attached' } | { status: 'already_attached'; productId: string; productName: string }
+
+export interface BarcodeEntry {
+  code: string
+  units: number
+}
+
+export interface ProductDetail {
+  barcodes: BarcodeEntry[]
+  movements: Movement[]
+}
+
+export interface ProductFieldsInput {
+  id: string
+  name: string
+  packSize: number
+  alertThreshold: number
+  targetStock: number
+}
+
+export interface InventoryInput {
+  id: string
+  productId: string
+  counted: number
+  employee: string
+}
+
+export interface InventoryResult {
+  delta: number
+  stock: number
+  counted: number
+  duplicate: boolean
+}
 
 export interface MovementInput {
   id: string
@@ -50,11 +85,33 @@ interface ProductRow {
 
 type AttachRow = { status: 'attached' } | { status: 'already_attached'; product_id: string; product_name: string }
 
+interface MovementRow {
+  id: string
+  kind: MovementKind
+  delta: number
+  counted: number | null
+  employee: string
+  created_at: string
+  cancelled_at: string | null
+  cancelled_by: string | null
+}
+
 interface QueryResult {
   data: unknown
   error: unknown
   status?: number
 }
+
+const toMovement = (row: MovementRow): Movement => ({
+  id: row.id,
+  kind: row.kind,
+  delta: row.delta,
+  counted: row.counted,
+  employee: row.employee,
+  createdAt: row.created_at,
+  cancelledAt: row.cancelled_at,
+  cancelledBy: row.cancelled_by,
+})
 
 const toProduct = (row: ProductRow): Product => ({
   id: row.id,
@@ -96,10 +153,32 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
 
     async listProducts(): Promise<Product[]> {
       const rows = await run<ProductRow[] | null>(client.from('product_stock').select('*').eq('archived', false).order('name'))
-      return (rows ?? []).map(toProduct)
+      return sortByName((rows ?? []).map(toProduct))
     },
 
-    async createProduct(input: NewProductInput): Promise<Product> {
+    // Tous les produits, archivés compris : liste du stock, badge et À racheter.
+    async listCatalog(): Promise<Product[]> {
+      const rows = await run<ProductRow[] | null>(client.from('product_stock').select('*').order('name'))
+      return sortByName((rows ?? []).map(toProduct))
+    },
+
+    async getProductDetail(productId: string): Promise<ProductDetail> {
+      const [barcodes, movements] = await Promise.all([
+        run<BarcodeEntry[] | null>(client.from('barcodes').select('code, units').eq('product_id', productId).order('created_at')),
+        run<MovementRow[] | null>(
+          client
+            .from('movements')
+            .select('id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by')
+            .eq('product_id', productId)
+            .order('created_at', { ascending: false })
+            .limit(20),
+        ),
+      ])
+      return { barcodes: barcodes ?? [], movements: (movements ?? []).map(toMovement) }
+    },
+
+    // L'identifiant vient du téléphone : une création rejouée renvoie la fiche déjà créée.
+    async createProduct(input: NewProductInput & { id: string }): Promise<Product> {
       const row = await run<ProductRow>(
         client.rpc('create_product', {
           p_name: input.name,
@@ -107,9 +186,32 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
           p_alert_threshold: input.alertThreshold,
           p_target_stock: input.targetStock,
           p_barcodes: input.barcodes,
+          p_id: input.id,
         }),
       )
       return toProduct(row)
+    },
+
+    async updateProduct(input: ProductFieldsInput): Promise<Product> {
+      const row = await run<ProductRow>(
+        client.rpc('update_product', {
+          p_id: input.id,
+          p_name: input.name,
+          p_pack_size: input.packSize,
+          p_alert_threshold: input.alertThreshold,
+          p_target_stock: input.targetStock,
+        }),
+      )
+      return toProduct(row)
+    },
+
+    async setArchived(productId: string, archived: boolean): Promise<Product> {
+      const row = await run<ProductRow>(client.rpc('set_product_archived', { p_product_id: productId, p_archived: archived }))
+      return toProduct(row)
+    },
+
+    async detachBarcode(code: string): Promise<void> {
+      await run<{ status: 'detached' }>(client.rpc('detach_barcode', { p_code: code }))
     },
 
     async attachBarcode(input: { code: string; productId: string; units: number; move: boolean }): Promise<AttachResult> {
@@ -134,6 +236,18 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
         }),
       )
       return { delta: row.delta, stock: row.stock, duplicate: row.duplicate }
+    },
+
+    async recordInventory(input: InventoryInput): Promise<InventoryResult> {
+      const row = await run<{ movement_id: string; delta: number; stock: number; counted: number; duplicate: boolean }>(
+        client.rpc('record_inventory', {
+          p_id: input.id,
+          p_product_id: input.productId,
+          p_counted: input.counted,
+          p_employee: input.employee,
+        }),
+      )
+      return { delta: row.delta, stock: row.stock, counted: row.counted, duplicate: row.duplicate }
     },
 
     async cancelMovement(movementId: string, employee: string): Promise<{ stock: number }> {

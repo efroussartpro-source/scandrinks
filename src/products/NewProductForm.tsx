@@ -122,7 +122,7 @@ export default function NewProductForm(props: NewProductFormProps) {
     setCaptureState('idle')
     const barcodes = [{ code, units: checked.codeUnits }, ...(unitCode ? [{ code: unitCode, units: 1 }] : [])]
     try {
-      const product = await api.createProduct({ ...checked.product, barcodes })
+      const product = await api.createProduct({ ...checked.product, barcodes, id: crypto.randomUUID() })
       onReady({ product, units: checked.codeUnits, code })
     } catch (thrown) {
       const error = classifyApiError(thrown)
