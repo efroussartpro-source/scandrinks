@@ -38,11 +38,13 @@ async function waitForServer(url, timeoutMs = 15_000) {
   throw new Error(`Le serveur ${url} ne répond pas`)
 }
 
-async function openApp(browser, fakeOptions) {
+// initScript : fonction lancée dans la page avant l'app (par exemple un faux navigator.wakeLock).
+async function openApp(browser, fakeOptions, { initScript = null } = {}) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
+  if (initScript) await page.addInitScript(initScript)
   const fake = await installFakeSupabase(page, fakeOptions)
   await page.goto(`${BASE}/`)
   return { context, page, fake, pageErrors }
@@ -425,7 +427,14 @@ async function scenarioArchived(browser) {
 // Liste du stock et fiche produit (jalon 2, §4.4, RG-11).
 async function scenarioStock(browser) {
   const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage' })
-  page.on('dialog', (dialog) => void dialog.accept())
+  const dialogs = []
+  let declineNext = false
+  page.on('dialog', (dialog) => {
+    dialogs.push(dialog.message())
+    if (declineNext) void dialog.dismiss()
+    else void dialog.accept()
+    declineNext = false
+  })
   const tab = (name) => page.getByRole('button', { name, exact: true })
   await signIn(page)
   await tab('Stock').click()
@@ -458,7 +467,15 @@ async function scenarioStock(browser) {
   assert.match(lines[0], /— Léa — Sortie −38$/)
   assert.match(lines[1], /— Sam — Entrée \+48$/)
 
-  // 4. Archivage : confirmation, retour à la liste, badge à jour.
+  // 4. Archivage refusé une première fois (p4) : aucun appel, la fiche reste ouverte.
+  declineNext = true
+  await sheet.getByRole('button', { name: 'Archiver' }).click()
+  await page.waitForTimeout(300)
+  assert.deepEqual(dialogs, ['Archiver « Coca-Cola 33 cl » ? Il disparaîtra des listes ; son historique est gardé.'])
+  assert.equal(fake.calls.filter((call) => call.fn === 'set_product_archived').length, 0, 'aucun archivage sans accord')
+  await sheet.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
+
+  // Puis accepté : confirmation, retour à la liste, badge à jour.
   await sheet.getByRole('button', { name: 'Archiver' }).click()
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).waitFor({ state: 'detached' })
   await tab('À racheter (2)').waitFor()
@@ -871,6 +888,89 @@ async function scenarioPassword(browser) {
   console.log('Scénario N (mot de passe) : OK')
 }
 
+// Faux verrou d'écran (Wake Lock), installé avant l'app : il note chaque demande et chaque rendu.
+function fakeWakeLock() {
+  window.wakeLockLog = []
+  Object.defineProperty(navigator, 'wakeLock', {
+    configurable: true,
+    value: {
+      request: async (type) => {
+        window.wakeLockLog.push(`request:${type}`)
+        return {
+          release: async () => {
+            window.wakeLockLog.push('release')
+          },
+        }
+      },
+    },
+  })
+}
+
+// Finitions (jalon 3) : écran allumé au Scanner, « Réessayer » dans la fiche (p2), champ « Code-barres » (p6),
+// champ amené à l'écran au-dessus de la barre d'onglets (p8).
+async function scenarioFinishing(browser) {
+  const tab = (page, name) => page.getByRole('button', { name, exact: true })
+  const wakeLockLog = (page) => page.evaluate(() => window.wakeLockLog)
+  const waitForLog = (page, expected) =>
+    page.waitForFunction((value) => JSON.stringify(window.wakeLockLog) === value, JSON.stringify(expected), { timeout: SCAN_TIMEOUT })
+  {
+    // 1. Écran allumé : demandé quand la caméra tourne, rendu hors du Scanner, redemandé au retour.
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage' }, { initScript: fakeWakeLock })
+    await signIn(page)
+    await waitForLog(page, ['request:screen'])
+    await tab(page, 'Stock').click()
+    await waitForLog(page, ['request:screen', 'release'])
+    await tab(page, 'Scanner').click()
+    await waitForLog(page, ['request:screen', 'release', 'request:screen'])
+    assert.deepEqual(await wakeLockLog(page), ['request:screen', 'release', 'request:screen'])
+    await context.close()
+  }
+  {
+    // 2. Fiche produit (p2) : lecture coupée (le message vient après les relances de supabase-js),
+    // puis le réseau revient et « Réessayer » relit la fiche.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', cutReads: 'movements' })
+    await signIn(page)
+    await tab(page, 'Stock').click()
+    await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+    const sheet = page.getByRole('region', { name: 'Fiche produit' })
+    await sheet.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor({ timeout: SCAN_TIMEOUT })
+    fake.restoreReads()
+    await sheet.getByRole('button', { name: 'Réessayer' }).click()
+    await sheet.getByRole('list', { name: 'Derniers mouvements' }).waitFor()
+
+    // 3. « Code-barres » (p6) : toucher le champ sélectionne tout son contenu.
+    await sheet.getByRole('button', { name: 'Ajouter un code' }).click()
+    const addCode = page.getByRole('region', { name: 'Ajouter un code' })
+    await addCode.getByLabel('Code-barres').fill('12345')
+    await addCode.getByRole('button', { name: 'Continuer' }).click()
+    await addCode.getByText('Code invalide : vérifie les chiffres.').waitFor()
+    await addCode.getByLabel('Code-barres').click()
+    await page.waitForFunction(() => {
+      const input = document.activeElement
+      return input instanceof HTMLInputElement && input.value === '12345' && input.selectionStart === 0 && input.selectionEnd === 5
+    })
+    await context.close()
+  }
+  {
+    // 4. Barre d'onglets (p8) : un champ amené à l'écran ne passe pas dessous.
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage' })
+    await signIn(page)
+    await tab(page, 'Stock').click()
+    await page.setViewportSize({ width: 390, height: 600 })
+    await page.getByRole('button', { name: 'Nouveau produit' }).click()
+    await page.getByLabel('Stock idéal (unités)').focus()
+    assert.ok(
+      await page.evaluate(() => {
+        const field = document.activeElement.getBoundingClientRect()
+        return field.bottom <= document.querySelector('.tab-bar').getBoundingClientRect().top
+      }),
+      'le champ reste au-dessus de la barre d\'onglets',
+    )
+    await context.close()
+  }
+  console.log('Scénario O (finitions) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -901,6 +1001,7 @@ try {
     ['L', scenarioSheetEdits],
     ['M', scenarioHistory],
     ['N', scenarioPassword],
+    ['O', scenarioFinishing],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

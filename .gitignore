@@ -3,3 +3,4 @@ dist/
 dist-e2e/
 *.local
 .DS_Store
+dist-sans-config/

@@ -10,6 +10,11 @@
   box-sizing: border-box;
 }
 
+/* Un champ amené à l'écran (focus) s'arrête au-dessus de la barre d'onglets, fixée en bas. */
+html {
+  scroll-padding-bottom: 76px;
+}
+
 body {
   margin: 0;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))

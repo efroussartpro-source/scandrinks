@@ -102,15 +102,17 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.loseFirst : fonctions SQL (create_product, record_inventory…) dont le premier appel est enregistré, mais sa réponse
  *   se perd ; 'auth:user' fait de même pour le changement de mot de passe.
  * options.extraMovements : nombre d'entrées de +1 sur le Lipton ajoutées avant le catalogue, une par minute (Historique).
- * options.failFirstRead : 'movements' ou 'barcodes' : la première lecture de cette table est coupée (réseau perdu).
- * Renvoie { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere } :
+ * options.cutReads : 'movements' ou 'barcodes' : les lectures de cette table sont coupées (réseau perdu) jusqu'à
+ *   restoreReads(). Une seule coupure ne suffit pas : supabase-js relance seul une lecture jusqu'à trois fois.
+ * Renvoie { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
  * - calls : appels des fonctions SQL ; authCalls : 'token', 'user' et 'logout:<portée>', dans l'ordre ;
  * - addMovement et cancelElsewhere simulent un mouvement ou une annulation faits sur un autre téléphone ;
- * - revokeAllSessions ferme toutes les sessions, comme un changement de mot de passe sur un autre téléphone.
+ * - revokeAllSessions ferme toutes les sessions, comme un changement de mot de passe sur un autre téléphone ;
+ * - restoreReads rétablit les lectures coupées par cutReads.
  */
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
-    loseFirst = [], extraMovements = 0, failFirstRead = null } = options
+    loseFirst = [], extraMovements = 0, cutReads = null } = options
   const db = initialCatalogue(catalogue)
   addExtraMovements(db, extraMovements)
   const calls = []
@@ -120,7 +122,7 @@ export async function installFakeSupabase(page, options = {}) {
   let sessionCount = 0
   let currentPassword = GOOD_PASSWORD
   let recordFailuresLeft = failNextRecord ? 1 : 0
-  let readFailuresLeft = failFirstRead ? 1 : 0
+  let readsCut = cutReads !== null
   let hangLeft = hangFirst ? 1 : 0
   const responsesToLose = new Set(loseFirst)
   let createdCount = 0
@@ -286,11 +288,7 @@ export async function installFakeSupabase(page, options = {}) {
 
     const read = url.pathname.startsWith('/rest/v1/') && !url.pathname.startsWith('/rest/v1/rpc/')
     if (read && !signedIn()) return revoked()
-    if (read && url.pathname === `/rest/v1/${failFirstRead}` && readFailuresLeft > 0) {
-      // Première lecture coupée (réseau perdu).
-      readFailuresLeft -= 1
-      return route.abort('internetdisconnected')
-    }
+    if (read && readsCut && url.pathname === `/rest/v1/${cutReads}`) return route.abort('internetdisconnected')
 
     if (url.pathname === '/rest/v1/product_stock') {
       const activeOnly = url.searchParams.get('archived') === 'eq.false'
@@ -370,5 +368,9 @@ export async function installFakeSupabase(page, options = {}) {
 
   const revokeAllSessions = () => sessions.clear()
 
-  return { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere }
+  const restoreReads = () => {
+    readsCut = false
+  }
+
+  return { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere, restoreReads }
 }

@@ -6,9 +6,11 @@
  * Pour un code que la caméra ne lit pas. Les chiffres sont contrôlés (clé de
  * contrôle), puis ramenés à la forme d'un code scanné. La suite est celle du
  * Scanner : ce que vaut le code, puis l'ajout, ou le déplacement s'il
- * appartient déjà à un autre produit.
+ * appartient déjà à un autre produit. Toucher le champ sélectionne tout son
+ * contenu : un code refusé se retape d'un coup.
  */
 import { useState } from 'react'
+import { selectAllSoon } from '../app/selectAll'
 import { normalizeTypedCode } from '../codes/normalize'
 import type { Product } from '../data/api'
 import AttachForm from '../products/AttachForm'
@@ -52,6 +54,7 @@ export default function AddCodeForm({ product, onDone, onCancel, onSessionExpire
           pattern="[0-9]*"
           autoComplete="off"
           value={text}
+          onFocus={selectAllSoon}
           onChange={(event) => {
             setText(event.target.value)
             setError(null)

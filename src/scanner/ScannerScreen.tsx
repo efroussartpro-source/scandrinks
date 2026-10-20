@@ -20,6 +20,7 @@ import NewProductForm from '../products/NewProductForm'
 import '../products/Products.css'
 import { scannerErrorMessage } from '../scan/scannerErrors'
 import { useBarcodeScanner } from '../scan/useBarcodeScanner'
+import { useScreenWakeLock } from '../scan/useScreenWakeLock'
 import ArchivedCard from './ArchivedCard'
 import ConfirmCard from './ConfirmCard'
 import CountCard from './CountCard'
@@ -78,6 +79,9 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
     if (active) void startCamera()
     else stopCamera()
   }, [active, startCamera, stopCamera])
+
+  // L'écran reste allumé tant que le Scanner est à l'écran et que la caméra tourne.
+  useScreenWakeLock(active && scanner.status === 'running')
 
   // Code lu : recherche dans la base.
   const lookupCode = flow.step === 'looking_up' ? flow.code : null

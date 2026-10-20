@@ -8,7 +8,8 @@
  * actif, on le modifie, on gère ses codes et on corrige son stock : chaque
  * formulaire prend la place de la fiche, puis y revient. Ce qui vient d'être
  * enregistré s'affiche tout de suite, sans attendre la relecture du catalogue,
- * même si elle échoue. On archive au lieu de supprimer : le produit disparaît
+ * même si elle échoue. Une lecture impossible se relance avec « Réessayer ».
+ * On archive au lieu de supprimer : le produit disparaît
  * des listes, son historique reste, et il se réactive ici ou en scannant un
  * de ses codes. Un produit archivé se consulte sans se modifier.
  */
@@ -41,6 +42,9 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
   const [busy, setBusy] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
   const [codesVersion, setCodesVersion] = useState(0)
+  // Lecture des codes et des mouvements impossible : « Réessayer » la relance.
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   // Fiche renvoyée par le dernier enregistrement, valable tant que le catalogue n'a pas été relu.
   const [saved, setSaved] = useState<{ over: Product; product: Product } | null>(null)
   const catalogProduct = useRef(fromCatalog)
@@ -65,15 +69,24 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
         if (!active) return
         setDetail(loaded)
         setError(null)
+        setLoadFailed(false)
       },
       (thrown: unknown) => {
-        if (active) fail(thrown)
+        if (!active) return
+        setLoadFailed(true)
+        fail(thrown)
       },
     )
     return () => {
       active = false
     }
-  }, [product.id, product.stock, codesVersion, fail])
+  }, [product.id, product.stock, codesVersion, loadAttempt, fail])
+
+  function retryLoad() {
+    setLoadFailed(false)
+    setError(null)
+    setLoadAttempt((attempt) => attempt + 1)
+  }
 
   function show(next: Product) {
     setSaved({ over: catalogProduct.current, product: next })
@@ -162,6 +175,11 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
         <p role="alert" className="message message-error">
           {error}
         </p>
+      )}
+      {error && loadFailed && (
+        <button type="button" onClick={retryLoad}>
+          Réessayer
+        </button>
       )}
       {!product.archived && (
         <div className="sheet-actions">
