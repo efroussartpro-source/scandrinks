@@ -8,7 +8,8 @@
  * compris). Le filtre « Archivés » montre les produits archivés, que l'on
  * réactive depuis leur fiche. Une ligne ouvre la fiche du produit.
  * « Nouveau produit » crée une fiche sans scan, puis l'ouvre sans attendre
- * que le catalogue relu la contienne.
+ * que le catalogue relu la contienne. « Annuler » relit aussi la liste : une
+ * fiche créée malgré une réponse perdue y apparaît, et n'est pas refaite.
  */
 import { useState } from 'react'
 import type { Catalog } from '../app/useCatalog'
@@ -46,7 +47,10 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
           setCreating(false)
           onCatalogChanged()
         }}
-        onCancel={() => setCreating(false)}
+        onCancel={() => {
+          setCreating(false)
+          onCatalogChanged()
+        }}
         onSessionExpired={onSessionExpired}
       />
     )

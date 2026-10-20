@@ -8,13 +8,15 @@
  * fiche, l'app propose d'y ajouter le pack plutôt que de créer un doublon. Un
  * carton (ITF-14) ou un code long n'est pas pris pour une canette (m8).
  * L'identifiant de la fiche est tiré à l'ouverture : une création rejouée
- * après une réponse perdue renvoie la fiche déjà créée (m10).
+ * après une réponse perdue renvoie la fiche déjà créée (m10). Comme cette
+ * fiche est peut-être déjà enregistrée, le formulaire se fige alors :
+ * « Réessayer » renvoie exactement la même fiche.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
 import { isUnitFormat, normalizeScannedCode } from '../codes/normalize'
 import type { Product } from '../data/api'
-import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
+import { apiErrorMessage, classifyApiError, saveErrorMessage } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { newDraft, updateDraft, validateDraft, type DraftField, type ProductDraft } from '../domain/productDraft'
 import { lookupProduct, type OffLookupResult } from '../off/openFoodFacts'
@@ -52,6 +54,8 @@ export default function NewProductForm(props: NewProductFormProps) {
   const [unitCode, setUnitCode] = useState<string | null>(null)
   const [knownUnit, setKnownUnit] = useState<Product | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Réponse perdue : la fiche est peut-être créée, les champs ne changent plus.
+  const [unconfirmed, setUnconfirmed] = useState(false)
   const submittingRef = useRef(false)
   const unitHelpId = useId()
   const [productId] = useState(() => crypto.randomUUID())
@@ -142,6 +146,11 @@ export default function NewProductForm(props: NewProductFormProps) {
         onSessionExpired()
         return
       }
+      if (error.kind === 'network' || error.kind === 'unknown') {
+        setUnconfirmed(true)
+        setFormError(saveErrorMessage(error.kind))
+        return
+      }
       setFormError(apiErrorMessage(error.kind))
       if (error.kind === 'barcode_taken' && unitCode !== null && error.detail === unitCode) setUnitCode(null)
     } finally {
@@ -162,11 +171,12 @@ export default function NewProductForm(props: NewProductFormProps) {
           type="text"
           maxLength={80}
           value={draft.name}
+          disabled={unconfirmed}
           onChange={(event) => change('name', event.target.value)}
         />
 
         <div className="field">
-          <button type="button" aria-describedby={unitHelpId} disabled={capture !== 'idle'} onClick={startCapture}>
+          <button type="button" aria-describedby={unitHelpId} disabled={capture !== 'idle' || unconfirmed} onClick={startCapture}>
             Scanner une canette du pack
           </button>
           <span id={unitHelpId} className="field-help">
@@ -178,7 +188,7 @@ export default function NewProductForm(props: NewProductFormProps) {
         {knownUnit && (
           <div className="message message-warning">
             <p>Cette canette appartient déjà à « {knownUnit.name} ».</p>
-            <button type="button" className="primary" onClick={() => onAttachToExisting(knownUnit)}>
+            <button type="button" className="primary" disabled={unconfirmed} onClick={() => onAttachToExisting(knownUnit)}>
               Ajouter ce pack à « {knownUnit.name} »
             </button>
           </div>
@@ -194,6 +204,7 @@ export default function NewProductForm(props: NewProductFormProps) {
             inputMode="numeric"
             pattern="[0-9]*"
             value={draft[field]}
+            disabled={unconfirmed}
             onFocus={selectAllSoon}
             onChange={(event) => change(field, event.target.value)}
           />
@@ -206,7 +217,7 @@ export default function NewProductForm(props: NewProductFormProps) {
         )}
         <div className="card-actions">
           <button type="button" className="primary" disabled={submitting} onClick={() => void create()}>
-            {submitting ? 'Création…' : 'Créer le produit'}
+            {submitting ? 'Création…' : unconfirmed ? 'Réessayer' : 'Créer le produit'}
           </button>
           <button type="button" disabled={submitting} onClick={onCancel}>
             Annuler

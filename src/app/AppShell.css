@@ -93,6 +93,14 @@ button:disabled {
   color: #555555;
 }
 
+/* Champ figé (envoi en cours ou réponse perdue) : grisé, avec un texte lisible sur iPhone aussi. */
+.field input:disabled {
+  background: #f3f3f3;
+  color: #555555;
+  -webkit-text-fill-color: #555555;
+  opacity: 1;
+}
+
 .choices {
   display: flex;
   flex-wrap: wrap;

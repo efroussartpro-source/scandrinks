@@ -243,8 +243,11 @@ async function scenarioNewProduct(browser) {
     await page.getByRole('button', { name: 'Nouveau produit' }).click()
     await page.getByLabel('Ce code vaut (unités)').fill('24')
     await page.getByRole('button', { name: 'Créer le produit' }).click()
-    await page.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor()
-    await page.getByRole('button', { name: 'Créer le produit' }).click()
+    // La fiche est peut-être créée : les champs se figent, « Réessayer » renvoie exactement la même fiche.
+    await page.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor()
+    assert.ok(await page.getByLabel('Ce code vaut (unités)').isDisabled(), 'champs figés après une réponse perdue')
+    assert.ok(await page.getByRole('button', { name: 'Scanner une canette du pack' }).isDisabled(), 'capture figée')
+    await page.getByRole('button', { name: 'Réessayer' }).click()
     await confirmCard(page).getByText('Pack de 24 → +24').waitFor()
     const creates = fake.calls.filter((call) => call.fn === 'create_product')
     assert.equal(creates.length, 2, 'deux tentatives')
@@ -603,8 +606,9 @@ async function scenarioSheetEdits(browser) {
   )
   await page.route(isCatalogRead, cutCatalog)
   await create.getByRole('button', { name: 'Créer le produit' }).click()
-  await create.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor()
-  await create.getByRole('button', { name: 'Créer le produit' }).click()
+  await create.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor()
+  assert.ok(await create.getByLabel('Pack Metro (unités)').isDisabled(), 'champs figés après une réponse perdue')
+  await create.getByRole('button', { name: 'Réessayer' }).click()
   await sheet.getByRole('heading', { name: 'Schweppes Agrumes 33 cl' }).waitFor()
   await sheet.getByText('Aucun code : utilise « Saisie manuelle » au Scanner.').waitFor()
   await page.unroute(isCatalogRead, cutCatalog)
@@ -619,6 +623,22 @@ async function scenarioSheetEdits(browser) {
   await page.getByRole('list', { name: 'À racheter' }).getByRole('button', { name: /^Schweppes Agrumes 33 cl/ }).waitFor()
   await tab('À racheter (4)').waitFor()
   await context.close()
+  {
+    // « Annuler » après une réponse perdue : la liste est relue et montre la fiche créée, pour ne pas la refaire.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', loseFirst: ['create_product'] })
+    await signIn(page)
+    await page.getByRole('button', { name: 'Stock', exact: true }).click()
+    await page.getByRole('region', { name: 'Stock', exact: true }).getByRole('button', { name: 'Nouveau produit' }).click()
+    const create = page.getByRole('region', { name: 'Nouveau produit' })
+    await create.getByLabel('Nom').fill('Schweppes Agrumes 33 cl')
+    await create.getByLabel('Pack Metro (unités)').fill('24')
+    await create.getByRole('button', { name: 'Créer le produit' }).click()
+    await create.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor()
+    await create.getByRole('button', { name: 'Annuler' }).click()
+    await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Schweppes Agrumes 33 cl/ }).waitFor()
+    assert.equal(fake.calls.filter((call) => call.fn === 'create_product').length, 1, 'une seule création')
+    await context.close()
+  }
   console.log('Scénario L (modifications depuis la fiche) : OK')
 }
 

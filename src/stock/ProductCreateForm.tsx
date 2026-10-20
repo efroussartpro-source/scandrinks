@@ -7,10 +7,12 @@
  * Le seuil et le stock idéal suivent le pack Metro tant qu'on ne les a pas
  * touchés, comme au Scanner. L'identifiant est tiré à l'ouverture : une
  * création rejouée après une réponse perdue renvoie la fiche déjà créée.
+ * Comme cette fiche est peut-être déjà enregistrée, le formulaire se fige
+ * alors : « Réessayer » renvoie exactement la même fiche.
  */
 import { useRef, useState } from 'react'
 import type { Product } from '../data/api'
-import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
+import { apiErrorMessage, classifyApiError, saveErrorMessage } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { newDraft, updateDraft, validateProductFields, type ProductDraft, type ProductFields } from '../domain/productDraft'
 import ProductFieldInputs from './ProductFieldInputs'
@@ -26,6 +28,8 @@ export default function ProductCreateForm({ onCreated, onCancel, onSessionExpire
   const [errors, setErrors] = useState<Partial<Record<keyof ProductFields, string>>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // Réponse perdue : la fiche est peut-être créée, les champs ne changent plus.
+  const [unconfirmed, setUnconfirmed] = useState(false)
   const submittingRef = useRef(false)
   const [productId] = useState(() => crypto.randomUUID())
 
@@ -50,7 +54,10 @@ export default function ProductCreateForm({ onCreated, onCancel, onSessionExpire
     } catch (thrown) {
       const kind = classifyApiError(thrown).kind
       if (kind === 'session') onSessionExpired()
-      else setFormError(apiErrorMessage(kind))
+      else if (kind === 'network' || kind === 'unknown') {
+        setUnconfirmed(true)
+        setFormError(saveErrorMessage(kind))
+      } else setFormError(apiErrorMessage(kind))
     } finally {
       submittingRef.current = false
       setSubmitting(false)
@@ -62,7 +69,7 @@ export default function ProductCreateForm({ onCreated, onCancel, onSessionExpire
       <h2 className="card-title">Nouveau produit</h2>
       <p className="muted">Pour un produit dont le code ne se lit pas. Tu pourras taper ses chiffres ensuite, avec « Ajouter un code ».</p>
       <div className="form">
-        <ProductFieldInputs values={draft} errors={errors} disabled={submitting} onChange={change} />
+        <ProductFieldInputs values={draft} errors={errors} disabled={submitting || unconfirmed} onChange={change} />
         {formError && (
           <p role="alert" className="message message-error">
             {formError}
@@ -70,7 +77,7 @@ export default function ProductCreateForm({ onCreated, onCancel, onSessionExpire
         )}
         <div className="card-actions">
           <button type="button" className="primary" disabled={submitting} onClick={() => void create()}>
-            {submitting ? 'Création…' : 'Créer le produit'}
+            {submitting ? 'Création…' : unconfirmed ? 'Réessayer' : 'Créer le produit'}
           </button>
           <button type="button" disabled={submitting} onClick={onCancel}>
             Annuler
