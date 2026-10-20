@@ -29,14 +29,13 @@
   gap: 8px;
 }
 
-.shopping-list li {
+.shopping-list button {
+  width: 100%;
   padding: 12px;
-  border: 1px solid #dddddd;
-  border-radius: 12px;
-  font-size: 17px;
+  text-align: left;
 }
 
-.shopping-list li.out-of-stock {
+.shopping-list button.out-of-stock {
   border-color: #b91c1c;
   color: #8a1c13;
 }

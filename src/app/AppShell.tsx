@@ -21,6 +21,7 @@ import { shoppingList } from '../domain/restock'
 import ScannerScreen from '../scanner/ScannerScreen'
 import SettingsScreen from '../settings/SettingsScreen'
 import ShoppingScreen from '../shopping/ShoppingScreen'
+import StockScreen from '../stock/StockScreen'
 import { nextSessionState, type SessionState } from './authState'
 import TabBar, { type Tab } from './TabBar'
 import { useCatalog } from './useCatalog'
@@ -120,8 +121,12 @@ export default function AppShell() {
             onCatalogChanged={catalog.refresh}
           />
         </div>
-        {tab === 'shopping' && <ShoppingScreen catalog={catalog} />}
-        {tab === 'stock' && <p className="muted">Bientôt : la liste du stock.</p>}
+        {tab === 'shopping' && (
+          <ShoppingScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
+        )}
+        {tab === 'stock' && (
+          <StockScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
+        )}
         <TabBar tab={tab} shoppingCount={shoppingCount} onChange={changeTab} />
       </div>
       {overlay === 'settings' && (

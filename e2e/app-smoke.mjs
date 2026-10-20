@@ -419,6 +419,71 @@ async function scenarioArchived(browser) {
   console.log('Scénario J (produit archivé) : OK')
 }
 
+// Liste du stock et fiche produit (jalon 2, §4.4, RG-11).
+async function scenarioStock(browser) {
+  const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage' })
+  page.on('dialog', (dialog) => void dialog.accept())
+  const tab = (name) => page.getByRole('button', { name, exact: true })
+  await signIn(page)
+  await tab('Stock').click()
+
+  // 1. Liste triée à la française, stock en packs, produits à racheter en rouge.
+  const list = page.getByRole('list', { name: 'Produits' })
+  await list.waitFor()
+  assert.deepEqual(await list.locator('.product-name').allTextContents(), ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+  assert.deepEqual(await list.locator('.product-stock').allTextContents(), ['10', '4', '36 (3 packs)', '−3'])
+  assert.deepEqual(await list.locator('.product-row').evaluateAll((rows) => rows.map((row) => row.classList.contains('stock-low'))),
+    [true, true, false, true])
+
+  // 2. Recherche sans accents ni casse.
+  const search = page.getByLabel('Rechercher un produit')
+  await search.fill('evian')
+  assert.deepEqual(await list.locator('.product-name').allTextContents(), ['Évian 1,5 L'])
+  await search.fill('')
+
+  // 3. Fiche du Coca : chiffres, codes et derniers mouvements (le plus récent d'abord).
+  await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+  const sheet = page.getByRole('region', { name: 'Fiche produit' })
+  await sheet.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
+  await sheet.getByText('Stock : 10', { exact: true }).waitFor()
+  await sheet.getByText('Pack Metro : 24 · Seuil : 24 · Stock idéal : 48').waitFor()
+  await sheet.getByText('5449000000996 — 24 unités').waitFor()
+  const movements = sheet.getByRole('list', { name: 'Derniers mouvements' })
+  await movements.getByRole('listitem').first().waitFor()
+  const lines = await movements.getByRole('listitem').allTextContents()
+  assert.equal(lines.length, 2)
+  assert.match(lines[0], /— Léa — Sortie −38$/)
+  assert.match(lines[1], /— Sam — Entrée \+48$/)
+
+  // 4. Archivage : confirmation, retour à la liste, badge à jour.
+  await sheet.getByRole('button', { name: 'Archiver' }).click()
+  await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).waitFor({ state: 'detached' })
+  await tab('À racheter (2)').waitFor()
+
+  // 5. Archivés, puis réactivation depuis la fiche.
+  await page.getByRole('button', { name: 'Archivés' }).click()
+  await list.getByRole('button', { name: /^Oasis Tropical 33 cl/ }).waitFor()
+  assert.deepEqual(await list.locator('.product-name').allTextContents(), ['Coca-Cola 33 cl', 'Oasis Tropical 33 cl'])
+  await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+  await sheet.getByText('Ce produit est archivé.').waitFor()
+  await sheet.getByRole('button', { name: 'Réactiver' }).click()
+  await sheet.getByRole('button', { name: 'Archiver' }).waitFor()
+  assert.deepEqual(fake.calls.filter((call) => call.fn === 'set_product_archived').map((call) => call.body), [
+    { p_product_id: 'p-coca', p_archived: true },
+    { p_product_id: 'p-coca', p_archived: false },
+  ])
+  await sheet.getByRole('button', { name: 'Retour' }).click()
+  await page.getByRole('button', { name: 'Actifs' }).click()
+  await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).waitFor()
+
+  // 6. Depuis À racheter, une ligne ouvre la fiche du produit.
+  await tab('À racheter (3)').click()
+  await page.getByRole('list', { name: 'À racheter' }).getByRole('button', { name: /^Red Bull 25 cl/ }).click()
+  await sheet.getByRole('heading', { name: 'Red Bull 25 cl' }).waitFor()
+  await context.close()
+  console.log('Scénario K (stock et fiche produit) : OK')
+}
+
 async function scenarioStalledDatabase(browser) {
   // Recherche bloquée : « Annuler » rend la main tout de suite.
   {
@@ -504,6 +569,7 @@ try {
     ['H', scenarioTabs],
     ['I', scenarioInventory],
     ['J', scenarioArchived],
+    ['K', scenarioStock],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

@@ -44,3 +44,7 @@ Task 5: Ruling: `CountCard` reçoit `key={movementId}` : une nouvelle fiche repa
 Task 5: Ruling: en Inventaire sans nombre compté (impossible : « Valider » attend un comptage valide), l'envoi échoue en « invalid » au lieu de rester bloqué — coût si faux : aucun.
 Task 5: Step 3 → RED : 9 tests unitaires en échec (counted, étape archived, isUnitFormat, mode inventory) ; e2e (build sans tsc) : D attend la fiche après le nouvel essai (code déclaré pris), I attend « Inventaire = », J attend la carte « Produit archivé ».
 Task 5: contrôle visuel (capture 390 × 844) : trois boutons de mode sur une ligne, fiche d'inventaire lisible (stock connu, aides, total en bleu).
+Task 5: complete (commits b37a589..2527afe, tests: bash -c 'set -o pipefail; npm test 2>&1 | grep -E "^ +Tests " && npm run e2e 2>&1 | tail -1 && npm run build >/dev/null 2>&1 && echo "build OK"' → build OK)
+Task 6: Step 2 → RED : scénario K en échec en attendant la liste « Produits » (onglet Stock encore « Bientôt »).
+Task 6: Ruling: la fiche relit ses codes et ses mouvements à l'ouverture et quand le stock du produit change (dépendance `product.stock`) — couvre les corrections et les mouvements des autres téléphones sans bouton « Actualiser » — coût si faux : une lecture de plus.
+Task 6: Ruling: retouches d'affichage vues sur captures 390 × 844 : filtre choisi en foncé (Actifs/Archivés), « libellé : valeur » insécables dans la fiche (« Stock idéal : 48 » ne se coupe plus) ; texte inchangé — coût si faux : retouche d'affichage.

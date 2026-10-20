@@ -1,0 +1,90 @@
+/* Liste du stock et fiche produit. */
+.stock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stock h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.stock-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stock-error p {
+  margin: 0;
+}
+
+.stock-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.product-row .product-stock {
+  flex: none;
+  font-weight: 600;
+}
+
+.product-row.stock-low {
+  border-color: #b91c1c;
+  color: #8a1c13;
+}
+
+.product-sheet h3 {
+  margin: 6px 0 0;
+  font-size: 17px;
+}
+
+.sheet-stock {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.sheet-stock.stock-low {
+  color: #8a1c13;
+}
+
+/* Chaque « libellé : valeur » reste sur une ligne. */
+.sheet-figures span {
+  white-space: nowrap;
+}
+
+/* Filtre choisi (Actifs ou Archivés). */
+.stock .choices button[aria-pressed='true'] {
+  border-color: #1a1a1a;
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.code-list,
+.movement-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.movement-list li.cancelled {
+  color: #777777;
+  text-decoration: line-through;
+}
