@@ -3,7 +3,7 @@
 Gestion du stock de boissons d'un bureau de tabac par scan de code-barres, depuis un iPhone (app web installable, sans App Store).
 
 - **Cahier des charges** : [docs/superpowers/specs/2026-10-19-scandrinks-design.md](docs/superpowers/specs/2026-10-19-scandrinks-design.md)
-- **Statut** : jalon 1 (le cœur de l'app) en cours de mise en service. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md).
+- **Statut** : jalon 1 (le cœur de l'app) en service ; jalon 2 (le pilotage) en cours de mise en service. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md).
 
 ## Jalon 1 — le cœur
 
@@ -14,6 +14,17 @@ Ce jalon apporte :
 - l'ajout d'un code à un produit existant, et la saisie manuelle.
 
 Le protocole de test sur iPhone est dans [docs/jalon-1-test.md](docs/jalon-1-test.md). Le test du scan du jalon 0 est décrit dans [docs/jalon-0-test-scan.md](docs/jalon-0-test-scan.md).
+
+## Jalon 2 — le pilotage
+
+Ce jalon apporte :
+- une barre d'onglets : Scanner, À racheter et Stock. Les Réglages s'ouvrent par-dessus, sans perdre une fiche en cours ;
+- la liste « À racheter », en packs Metro, avec un badge sur son onglet ;
+- le mode Inventaire du Scanner (« packs + unités », avec l'écart avant de valider) ;
+- la liste du stock et la fiche produit : modifier, gérer les codes, corriger le stock, archiver et réactiver ;
+- la création d'un produit sans scan, pour un code illisible.
+
+Le protocole de test sur iPhone est dans [docs/jalon-2-test.md](docs/jalon-2-test.md).
 
 ## Développement
 
@@ -38,19 +49,24 @@ Ces fichiers ne contiennent que des valeurs publiques :
 
 ### Base de données (Supabase, Paris)
 
-- `supabase/migrations/` : schéma, droits, Row Level Security et fonctions de l'app (`lookup_barcode`, `create_product`, `attach_barcode`, `record_movement`, `cancel_movement`, `list_employees`).
+- `supabase/migrations/` : schéma, droits, Row Level Security et fonctions de l'app.
+  - Jalon 1 : `lookup_barcode`, `create_product`, `attach_barcode`, `record_movement`, `cancel_movement`, `list_employees`.
+  - Jalon 2 (`20261020100000_pilotage.sql`) : `record_inventory`, `update_product`, `set_product_archived` et `detach_barcode` ; `create_product` reçoit l'identifiant de la fiche (`p_id`), pour qu'une création rejouée ne fasse pas de doublon. Les droits de modification sont donnés colonne par colonne.
 - `supabase/tests/database.test.sql` : tests de la base, dans une transaction annulée à la fin. On les lance sur le vrai projet avec l'outil `execute_sql`, ou en local avec `run-local.sh`.
 - Le compte du tabac est créé dans le tableau de bord Supabase, inscriptions désactivées. Il est ensuite inscrit dans `allowed_users`.
 
 ### Organisation du code
 
-- `src/app/` : enchaînement des écrans, stockage local protégé.
+- `src/app/` : enchaînement des écrans, onglets, catalogue partagé, stockage local protégé.
 - `src/auth/` : connexion et prénom.
-- `src/scanner/` : écran Scanner et son automate (`scanFlow.ts`).
+- `src/scanner/` : écran Scanner et son automate (`scanFlow.ts`), modes Entrée, Sortie et Inventaire.
+- `src/shopping/` : liste « À racheter ».
+- `src/stock/` : liste du stock, fiche produit et ses formulaires.
+- `src/inventory/` : saisie d'un comptage (packs + unités) et « Corriger le stock ».
 - `src/products/` : code inconnu (nouveau produit, ajout d'un code), saisie manuelle, recherche.
 - `src/settings/` : réglages.
 - `src/data/` : client Supabase, appels typés, classement des erreurs.
-- `src/domain/` : règles de gestion (stock, fiche produit).
+- `src/domain/` : règles de gestion (stock, fiche produit, À racheter, inventaire, mouvements, tri des noms).
 - `src/codes/` : normalisation des codes lus (RG-13).
 - `src/scan/` : lecture des codes-barres (caméra, moteur natif ou ZXing, anti-doublon).
 - `src/off/` : client Open Food Facts.

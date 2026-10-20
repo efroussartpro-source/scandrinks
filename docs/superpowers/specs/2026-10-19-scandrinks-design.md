@@ -243,8 +243,11 @@ déploiement automatique depuis GitHub
 - `record_movement(id, code ou product_id, kind, quantity, employee)` : calcule delta = ± unités du code × quantité.
 - `record_inventory(id, product_id, counted, employee)` : calcule l'écart par rapport au stock du moment.
 - `cancel_movement(movement_id, employee)`.
-- `create_product(name, pack_size, alert_threshold, target_stock, barcodes)` : crée la fiche et son ou ses codes en une seule fois. `barcodes` est une liste de paires (code, unités).
+- `create_product(name, pack_size, alert_threshold, target_stock, barcodes, id)` : crée la fiche et son ou ses codes en une seule fois. `barcodes` est une liste de paires (code, unités), vide pour un produit créé sans scan. `id` est tiré par le téléphone : rejouée, la création renvoie la fiche déjà créée.
+- `update_product(id, name, pack_size, alert_threshold, target_stock)` : modifie la fiche, avec les mêmes règles qu'à la création.
+- `set_product_archived(product_id, archived)` : archive ou réactive un produit.
 - `attach_barcode(code, product_id, units, move)` : associe un code à un produit, ou le déplace si `move` est vrai.
+- `detach_barcode(code)` : retire un code de son produit. Les mouvements passés gardent le code en texte.
 
 Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une action ne crée pas de doublon.
 
@@ -260,7 +263,7 @@ Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une ac
 
 | Élément | Service | Coût |
 |---|---|---|
-| Base de données et connexion | Supabase : nouveau projet `scandrinks` dans l'organisation « Webia » (offre gratuite, 2ᵉ projet actif sur les 2 autorisés), région Paris (eu-west-3) | 0 € |
+| Base de données et connexion | Supabase : projet `scandrinks` dans l'organisation « ScanDrinks » (offre gratuite), région Paris (eu-west-3) | 0 € |
 | Fichiers de l'app | Cloudflare Pages, relié au dépôt GitHub, en https | 0 € |
 | Noms des produits | API Open Food Facts | 0 € |
 | Code source | GitHub, dépôt privé | 0 € |
@@ -269,7 +272,7 @@ Limites connues :
 
 - L'offre gratuite de Supabase donne 500 Mo de base, ce qui suffit largement.
 - Supabase **met le projet en pause après 7 jours sans utilisation**. Les données sont conservées, et on le relance à la main depuis le tableau de bord (procédure dans le guide).
-- L'organisation « Webia » n'aura plus de place pour un 3ᵉ projet gratuit.
+- Le projet a sa propre organisation, « ScanDrinks » : l'organisation « Webia » n'est pas touchée.
 
 ### 6.6 Open Food Facts
 
@@ -367,6 +370,16 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 | 19/10/2026 | Normalisation des codes (RG-13) | Étiquettes réelles : le pack Lipton porte deux codes (EAN-13 et code long GS1 avec DLUO et lot), le pack Red Bull a un code de lot à part |
 | 19/10/2026 | Un plan d'implémentation par jalon | Chaque jalon est validé sur iPhone avant d'écrire le suivant |
 | 19/10/2026 | Après une coupure : « enregistrement non confirmé », et non plus « rien n'a été enregistré » | Relecture du jalon 1 : la réponse peut se perdre alors que la base a enregistré. « Réessayer » ne crée pas de doublon |
+| 20/10/2026 | Projet Supabase dans sa propre organisation, « ScanDrinks » | Choix du porteur du projet ; l'organisation « Webia » reste à part |
+| 20/10/2026 | Onglets Scanner, À racheter et Stock ; le Scanner s'ouvre au démarrage ; l'Historique arrive au jalon 3 | Le scan reste le geste principal ; les autres écrans sont à un doigt |
+| 20/10/2026 | Les Réglages s'affichent par-dessus l'app ; une fiche en cours survit à un changement d'onglet (m9) | Ne jamais perdre un enregistrement en attente ni son « Réessayer » |
+| 20/10/2026 | Listes relues à l'ouverture d'un onglet, au retour dans l'app et après chaque action, avec « Mis à jour à HH:MM » ; pas de mise à jour en direct | Moins de 30 produits : une relecture suffit, sans complexité en plus |
+| 20/10/2026 | Date des mouvements : « lun. 14:32 » pendant 7 jours, puis « 13/10 10:05 », puis l'année si elle diffère ; heure de Paris | Lisible d'un coup d'œil dans la fiche |
+| 20/10/2026 | Inventaire : un comptage égal au stock est enregistré (écart 0) ; les champs démarrent vides | Garder la trace du contrôle ; ne pas influencer le comptage |
+| 20/10/2026 | En modification, le seuil et le stock idéal ne suivent plus le pack Metro | Ne pas écraser des valeurs déjà choisies |
+| 20/10/2026 | Code ajouté depuis la fiche : tapé en chiffres, clé de contrôle vérifiée ; retirer un code supprime l'association, les mouvements gardent le code en texte | Éviter les fautes de frappe ; garder l'historique intact |
+| 20/10/2026 | Chaque ligne d'« À racheter » ouvre la fiche du produit | Corriger le stock d'un produit à vérifier sans le chercher |
+| 20/10/2026 | Une seule orthographe par prénom (la première enregistrée) dans le choix du prénom ; ordre alphabétique français partout (accents et casse ignorés) | Une liste propre, triée comme on l'attend |
 
 ## 12. Glossaire
 
