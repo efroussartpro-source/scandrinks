@@ -14,6 +14,8 @@ import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { parseIntInRange } from '../domain/productDraft'
 import type { ConfirmTarget } from '../scanner/scanFlow'
+import { FIELD_HELP } from './fieldHelp'
+import HelpField from './HelpField'
 import ProductPicker from './ProductPicker'
 import { suggestSearchTerm } from './search'
 
@@ -85,20 +87,19 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
       <p className="muted">Code : {code}</p>
       {conflict === null ? (
         <div className="form">
-          <label className="field">
-            <span>Ce code vaut (unités)</span>
-            <input
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={units}
-              onFocus={selectAllSoon}
-              onChange={(event) => {
-                setUnits(event.target.value)
-                setUnitsError(null)
-              }}
-            />
-            {unitsError && <span className="field-error">{unitsError}</span>}
-          </label>
+          <HelpField
+            label="Ce code vaut (unités)"
+            help={FIELD_HELP.codeUnits}
+            error={unitsError ?? undefined}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={units}
+            onFocus={selectAllSoon}
+            onChange={(event) => {
+              setUnits(event.target.value)
+              setUnitsError(null)
+            }}
+          />
           {formError && (
             <p role="alert" className="message message-error">
               {formError}

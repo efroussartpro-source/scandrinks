@@ -7,7 +7,7 @@
  * du pack » enregistre aussi le code de l'unité ; si cette canette a déjà sa
  * fiche, l'app propose d'y ajouter le pack plutôt que de créer un doublon.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
 import { normalizeScannedCode } from '../codes/normalize'
 import type { Product } from '../data/api'
@@ -16,6 +16,8 @@ import { api } from '../data/supabaseClient'
 import { newDraft, updateDraft, validateDraft, type DraftField, type ProductDraft } from '../domain/productDraft'
 import { lookupProduct, type OffLookupResult } from '../off/openFoodFacts'
 import type { ConfirmTarget } from '../scanner/scanFlow'
+import { FIELD_HELP } from './fieldHelp'
+import HelpField from './HelpField'
 
 type CaptureHandler = (rawValue: string, format: string) => void
 
@@ -29,11 +31,11 @@ interface NewProductFormProps {
   onSessionExpired: () => void
 }
 
-const NUMBER_FIELDS: Array<{ field: DraftField; label: string }> = [
-  { field: 'codeUnits', label: 'Ce code vaut (unités)' },
-  { field: 'packSize', label: 'Pack Metro (unités)' },
-  { field: 'alertThreshold', label: "Seuil d'alerte (unités)" },
-  { field: 'targetStock', label: 'Stock idéal (unités)' },
+const NUMBER_FIELDS: Array<{ field: DraftField; label: string; help: string }> = [
+  { field: 'codeUnits', label: 'Ce code vaut (unités)', help: FIELD_HELP.codeUnits },
+  { field: 'packSize', label: 'Pack Metro (unités)', help: FIELD_HELP.packSize },
+  { field: 'alertThreshold', label: "Seuil d'alerte (unités)", help: FIELD_HELP.alertThreshold },
+  { field: 'targetStock', label: 'Stock idéal (unités)', help: FIELD_HELP.targetStock },
 ]
 
 export default function NewProductForm(props: NewProductFormProps) {
@@ -46,6 +48,7 @@ export default function NewProductForm(props: NewProductFormProps) {
   const [knownUnit, setKnownUnit] = useState<Product | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const unitHelpId = useId()
 
   // Le nom d'Open Food Facts peut arriver après l'ouverture du formulaire.
   useEffect(() => {
@@ -140,15 +143,24 @@ export default function NewProductForm(props: NewProductFormProps) {
       <h2 className="card-title">Nouveau produit</h2>
       <p className="muted">Code : {code}</p>
       <div className="form">
-        <label className="field">
-          <span>Nom</span>
-          <input type="text" maxLength={80} value={draft.name} onChange={(event) => change('name', event.target.value)} />
-          {errors.name && <span className="field-error">{errors.name}</span>}
-        </label>
+        <HelpField
+          label="Nom"
+          help={FIELD_HELP.name}
+          error={errors.name}
+          type="text"
+          maxLength={80}
+          value={draft.name}
+          onChange={(event) => change('name', event.target.value)}
+        />
 
-        <button type="button" disabled={capture !== 'idle'} onClick={startCapture}>
-          Scanner une canette du pack
-        </button>
+        <div className="field">
+          <button type="button" aria-describedby={unitHelpId} disabled={capture !== 'idle'} onClick={startCapture}>
+            Scanner une canette du pack
+          </button>
+          <span id={unitHelpId} className="field-help">
+            {FIELD_HELP.unitCapture}
+          </span>
+        </div>
         {capture === 'capturing' && <p className="message">Vise une canette ou une bouteille du pack…</p>}
         {capture === 'checking' && <p className="muted">Recherche de la canette…</p>}
         {knownUnit && (
@@ -161,18 +173,18 @@ export default function NewProductForm(props: NewProductFormProps) {
         )}
         {unitCode && <p className="message">Canette : {unitCode} (1 unité)</p>}
 
-        {NUMBER_FIELDS.map(({ field, label }) => (
-          <label key={field} className="field">
-            <span>{label}</span>
-            <input
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={draft[field]}
-              onFocus={selectAllSoon}
-              onChange={(event) => change(field, event.target.value)}
-            />
-            {errors[field] && <span className="field-error">{errors[field]}</span>}
-          </label>
+        {NUMBER_FIELDS.map(({ field, label, help }) => (
+          <HelpField
+            key={field}
+            label={label}
+            help={help}
+            error={errors[field]}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={draft[field]}
+            onFocus={selectAllSoon}
+            onChange={(event) => change(field, event.target.value)}
+          />
         ))}
 
         {formError && (

@@ -59,6 +59,18 @@ async function signIn(page) {
 const confirmCard = (page) => page.getByRole('region', { name: 'Fiche de confirmation' })
 const recordCalls = (fake) => fake.calls.filter((call) => call.fn === 'record_movement')
 
+// Aide affichée sous un champ : les textes visibles que le champ désigne par aria-describedby.
+async function fieldHelp(locator) {
+  return locator.evaluate((element) =>
+    (element.getAttribute('aria-describedby') ?? '')
+      .split(/\s+/)
+      .map((id) => document.getElementById(id))
+      .filter((node) => node !== null && node.checkVisibility())
+      .map((node) => node.textContent.trim())
+      .join(' '),
+  )
+}
+
 async function scenarioMain(browser) {
   const { context, page, fake, pageErrors } = await openApp(browser)
   const requests = []
@@ -194,6 +206,19 @@ async function scenarioNewProduct(browser) {
   await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor()
   await page.getByRole('button', { name: 'Nouveau produit' }).click()
   assert.equal(await page.getByLabel('Nom').inputValue(), 'Coca-Cola 330 ml')
+  const helps = [
+    await fieldHelp(page.getByLabel('Nom')),
+    await fieldHelp(page.getByRole('button', { name: 'Scanner une canette du pack' })),
+    await fieldHelp(page.getByLabel('Ce code vaut (unités)')),
+    await fieldHelp(page.getByLabel('Pack Metro (unités)')),
+    await fieldHelp(page.getByLabel("Seuil d'alerte (unités)")),
+    await fieldHelp(page.getByLabel('Stock idéal (unités)')),
+  ]
+  assert.ok(
+    helps.every((help) => help !== ''),
+    `une aide visible sous chaque champ : ${JSON.stringify(helps)}`,
+  )
+  assert.equal(new Set(helps).size, helps.length, 'chaque champ a sa propre aide')
   await page.getByLabel('Ce code vaut (unités)').fill('24')
   assert.deepEqual(
     [
@@ -222,6 +247,7 @@ async function scenarioAttach(browser) {
   assert.equal(await page.getByRole('button', { name: 'Lipton Pêche 50 cl' }).count(), 0, 'la liste est filtrée')
   await page.getByRole('button', { name: 'Coca-Cola 33 cl' }).click()
   assert.equal(await page.getByLabel('Ce code vaut (unités)').inputValue(), '1')
+  assert.notEqual(await fieldHelp(page.getByLabel('Ce code vaut (unités)')), '', 'aide sous « Ce code vaut »')
   await page.getByRole('button', { name: 'Ajouter le code' }).click()
   await confirmCard(page).getByText("À l'unité → +1").waitFor()
   const attach = fake.calls.find((call) => call.fn === 'attach_barcode')

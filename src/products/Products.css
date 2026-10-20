@@ -24,6 +24,12 @@
   font-size: 14px;
 }
 
+.field-help {
+  color: #666666;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .message-warning {
   display: flex;
   flex-direction: column;
