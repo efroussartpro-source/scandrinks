@@ -236,7 +236,7 @@ async function scenarioNewProduct(browser) {
   await context.close()
   {
     // Réponse perdue pendant la création (m10) : le nouvel essai garde l'identifiant, sans doublon.
-    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', loseFirstCreate: true })
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', loseFirst: ['create_product'] })
     await signIn(page)
     await page.getByText(`Code inconnu : ${COCA_CODE}`).waitFor({ timeout: SCAN_TIMEOUT })
     await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor()
@@ -484,6 +484,144 @@ async function scenarioStock(browser) {
   console.log('Scénario K (stock et fiche produit) : OK')
 }
 
+// Modifications depuis la fiche : chiffres, codes, stock corrigé, nouveau produit sans scan.
+async function scenarioSheetEdits(browser) {
+  const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', loseFirst: ['record_inventory', 'create_product'] })
+  const dialogs = []
+  page.on('dialog', (dialog) => {
+    dialogs.push(dialog.message())
+    void dialog.accept()
+  })
+  const tab = (name) => page.getByRole('button', { name, exact: true })
+  const bodies = (fn) => fake.calls.filter((call) => call.fn === fn).map((call) => call.body)
+  // Relecture du catalogue impossible (réseau perdu juste après un enregistrement).
+  const isCatalogRead = (url) => url.pathname === '/rest/v1/product_stock'
+  const cutCatalog = (route) => route.abort('internetdisconnected')
+  await signIn(page)
+  await tab('Stock').click()
+  await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+  const sheet = page.getByRole('region', { name: 'Fiche produit' })
+  const codes = sheet.getByRole('list', { name: 'Codes' })
+  await codes.getByText('5449000000996 — 24 unités').waitFor()
+
+  // 1. Modifier : champs pré-remplis, le seuil ne suit pas le pack, RG-7 vérifiée avant l'envoi.
+  await sheet.getByRole('button', { name: 'Modifier', exact: true }).click()
+  const edit = page.getByRole('region', { name: 'Modifier le produit' })
+  const editValues = async () => [
+    await edit.getByLabel('Nom').inputValue(),
+    await edit.getByLabel('Pack Metro (unités)').inputValue(),
+    await edit.getByLabel("Seuil d'alerte (unités)").inputValue(),
+    await edit.getByLabel('Stock idéal (unités)').inputValue(),
+  ]
+  assert.deepEqual(await editValues(), ['Coca-Cola 33 cl', '24', '24', '48'])
+  await edit.getByLabel("Seuil d'alerte (unités)").fill('30')
+  await edit.getByLabel('Stock idéal (unités)').fill('30')
+  await edit.getByLabel('Pack Metro (unités)').fill('12')
+  assert.deepEqual(await editValues(), ['Coca-Cola 33 cl', '12', '30', '30'])
+  await edit.getByLabel('Pack Metro (unités)').fill('24')
+  await edit.getByRole('button', { name: 'Enregistrer' }).click()
+  await edit.getByText('Le stock idéal doit être supérieur au seuil.').waitFor()
+  assert.equal(bodies('update_product').length, 0, 'rien n’est envoyé')
+  // La fiche montre ce qui vient d'être enregistré, même si le catalogue ne se relit pas.
+  await page.route(isCatalogRead, cutCatalog)
+  await edit.getByLabel('Stock idéal (unités)').fill('48')
+  await edit.getByRole('button', { name: 'Enregistrer' }).click()
+  await sheet.getByText('Pack Metro : 24 · Seuil : 30 · Stock idéal : 48').waitFor()
+  await page.unroute(isCatalogRead, cutCatalog)
+  assert.deepEqual(bodies('update_product'), [
+    { p_id: 'p-coca', p_name: 'Coca-Cola 33 cl', p_pack_size: 24, p_alert_threshold: 30, p_target_stock: 48 },
+  ])
+
+  // 2. Unités d'un code.
+  await codes.getByRole('button', { name: 'Modifier le code 5449000000996' }).click()
+  assert.equal(await codes.getByLabel('Ce code vaut (unités)').inputValue(), '24')
+  await codes.getByLabel('Ce code vaut (unités)').fill('12')
+  await codes.getByRole('button', { name: 'Enregistrer' }).click()
+  await codes.getByText('5449000000996 — 12 unités').waitFor()
+  assert.deepEqual(bodies('attach_barcode'), [{ p_code: '5449000000996', p_product_id: 'p-coca', p_units: 12, p_move: false }])
+
+  // 3. Ajouter un code tapé à la main : la clé de contrôle est vérifiée.
+  await sheet.getByRole('button', { name: 'Ajouter un code' }).click()
+  const addCode = page.getByRole('region', { name: 'Ajouter un code' })
+  assert.match(await fieldHelp(addCode.getByLabel('Code-barres')), /^Les chiffres sous les barres\./)
+  await addCode.getByLabel('Code-barres').fill('4006381333932')
+  await addCode.getByRole('button', { name: 'Continuer' }).click()
+  await addCode.getByText('Code invalide : vérifie les chiffres.').waitFor()
+  await addCode.getByLabel('Code-barres').fill('4006381333931')
+  await addCode.getByRole('button', { name: 'Continuer' }).click()
+  const attach = page.getByRole('region', { name: 'Ajouter à un produit existant' })
+  await attach.getByLabel('Ce code vaut (unités)').fill('1')
+  await attach.getByRole('button', { name: 'Ajouter le code' }).click()
+  await codes.getByText('4006381333931 — 1 unité').waitFor()
+  assert.deepEqual(bodies('attach_barcode').at(-1), { p_code: '4006381333931', p_product_id: 'p-coca', p_units: 1, p_move: false })
+
+  // 4. Retirer un code : confirmation, puis la ligne disparaît.
+  await codes.getByRole('button', { name: 'Retirer le code 4006381333931' }).click()
+  await codes.getByText('4006381333931 — 1 unité').waitFor({ state: 'detached' })
+  assert.deepEqual(bodies('detach_barcode'), [{ p_code: '4006381333931' }])
+  assert.equal(dialogs.at(-1), 'Retirer le code 4006381333931 ? Les mouvements passés ne changent pas.')
+
+  // 5. Corriger le stock : la première réponse se perd ; « Réessayer » renvoie le même comptage, même identifiant.
+  await sheet.getByRole('button', { name: 'Corriger le stock' }).click()
+  const correct = page.getByRole('region', { name: 'Corriger le stock' })
+  await correct.getByLabel('Packs de 24').fill('1')
+  await correct.getByLabel('Unités en plus').fill('2')
+  await correct.getByText('= 26 (1 pack + 2) — écart : +16').waitFor()
+  await correct.getByRole('button', { name: 'Valider' }).click()
+  await correct.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor()
+  assert.ok(await correct.getByLabel('Packs de 24').isDisabled(), 'comptage figé après un échec')
+  await correct.getByRole('button', { name: 'Réessayer' }).click()
+  await sheet.getByText('Stock corrigé : 26 (1 pack + 2)').waitFor()
+  await sheet.getByText('Stock : 26 (1 pack + 2)', { exact: true }).waitFor()
+  const inventories = bodies('record_inventory')
+  assert.equal(inventories.length, 2, 'deux tentatives')
+  assert.match(inventories[0].p_id, UUID)
+  assert.deepEqual(inventories[1], inventories[0], 'le nouvel essai renvoie le même comptage avec le même identifiant')
+  assert.deepEqual({ ...inventories[0], p_id: undefined }, { p_id: undefined, p_product_id: 'p-coca', p_counted: 26, p_employee: 'Sam' })
+  const movements = sheet.getByRole('list', { name: 'Derniers mouvements' }).getByRole('listitem')
+  await movements.first().filter({ hasText: 'Inventaire' }).waitFor()
+  assert.match(await movements.first().textContent(), /— Sam — Inventaire : 26 comptés \(\+16\)$/)
+  assert.equal(await movements.count(), 3, 'un seul inventaire enregistré')
+
+  // 6. Nouveau produit sans scan : seuil et stock idéal suivent le pack ; création rejouée sans doublon ;
+  //    la fiche créée s'ouvre même si le catalogue ne se relit pas.
+  await sheet.getByRole('button', { name: 'Retour' }).click()
+  await page.getByRole('region', { name: 'Stock', exact: true }).getByRole('button', { name: 'Nouveau produit' }).click()
+  const create = page.getByRole('region', { name: 'Nouveau produit' })
+  const helps = [
+    await fieldHelp(create.getByLabel('Nom')),
+    await fieldHelp(create.getByLabel('Pack Metro (unités)')),
+    await fieldHelp(create.getByLabel("Seuil d'alerte (unités)")),
+    await fieldHelp(create.getByLabel('Stock idéal (unités)')),
+  ]
+  assert.ok(helps.every((help) => help !== ''), `une aide sous chaque champ : ${JSON.stringify(helps)}`)
+  await create.getByLabel('Nom').fill('Schweppes Agrumes 33 cl')
+  await create.getByLabel('Pack Metro (unités)').fill('24')
+  assert.deepEqual(
+    [await create.getByLabel("Seuil d'alerte (unités)").inputValue(), await create.getByLabel('Stock idéal (unités)').inputValue()],
+    ['24', '48'],
+  )
+  await page.route(isCatalogRead, cutCatalog)
+  await create.getByRole('button', { name: 'Créer le produit' }).click()
+  await create.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor()
+  await create.getByRole('button', { name: 'Créer le produit' }).click()
+  await sheet.getByRole('heading', { name: 'Schweppes Agrumes 33 cl' }).waitFor()
+  await sheet.getByText('Aucun code : utilise « Saisie manuelle » au Scanner.').waitFor()
+  await page.unroute(isCatalogRead, cutCatalog)
+  const creates = bodies('create_product')
+  assert.equal(creates.length, 2, 'deux tentatives')
+  assert.deepEqual(creates[1], creates[0], 'le nouvel essai garde le même identifiant')
+  const { p_id: createdId, ...created } = creates[0]
+  assert.match(createdId, UUID)
+  assert.deepEqual(created, { p_name: 'Schweppes Agrumes 33 cl', p_pack_size: 24, p_alert_threshold: 24, p_target_stock: 48, p_barcodes: [] })
+  // Le catalogue relu au changement d'onglet : le nouveau produit est à racheter.
+  await tab('À racheter (3)').click()
+  await page.getByRole('list', { name: 'À racheter' }).getByRole('button', { name: /^Schweppes Agrumes 33 cl/ }).waitFor()
+  await tab('À racheter (4)').waitFor()
+  await context.close()
+  console.log('Scénario L (modifications depuis la fiche) : OK')
+}
+
 async function scenarioStalledDatabase(browser) {
   // Recherche bloquée : « Annuler » rend la main tout de suite.
   {
@@ -570,6 +708,7 @@ try {
     ['I', scenarioInventory],
     ['J', scenarioArchived],
     ['K', scenarioStock],
+    ['L', scenarioSheetEdits],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

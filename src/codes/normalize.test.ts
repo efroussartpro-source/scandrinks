@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { isUnitFormat, isValidGtin, normalizeScannedCode } from './normalize'
+import { isUnitFormat, isValidGtin, normalizeScannedCode, normalizeTypedCode } from './normalize'
 
 const product = (code: string) => ({ kind: 'product', code })
 const ignored = (reason: string) => ({ kind: 'ignored', reason })
@@ -34,4 +34,14 @@ test.each([['3502110123091', true], ['3502110123092', false], ['96385074', true]
 
 test("isUnitFormat : seuls les formats d'une canette ou d'une bouteille", () => {
   expect(['ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'code_128'].map(isUnitFormat)).toEqual([true, true, true, true, false, false])
+})
+
+test('code tapé à la main : clé contrôlée, espaces ignorés, formes ramenées à 13 chiffres', () => {
+  expect(normalizeTypedCode('4006381333931')).toEqual({ kind: 'product', code: '4006381333931' })
+  expect(normalizeTypedCode('4006 3813 3393 1')).toEqual({ kind: 'product', code: '4006381333931' })
+  expect(normalizeTypedCode('036000291452')).toEqual({ kind: 'product', code: '0036000291452' })
+  expect(normalizeTypedCode('05449000000996')).toEqual({ kind: 'product', code: '5449000000996' })
+  expect(normalizeTypedCode('96385074')).toEqual({ kind: 'product', code: '96385074' })
+  expect(['4006381333932', 'abc', '', '12345'].map(normalizeTypedCode))
+    .toEqual(Array(4).fill({ kind: 'ignored', reason: 'invalid_check_digit' }))
 })

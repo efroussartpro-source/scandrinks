@@ -75,7 +75,41 @@
   color: #ffffff;
 }
 
-.code-list,
+/* Corriger le stock et Modifier, côte à côte sous les chiffres. */
+.sheet-actions {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 8px;
+}
+
+/* Un code par ligne ; ses boutons passent dessous quand la place manque. */
+.code-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.code-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.code-edit {
+  width: 100%;
+}
+
 .movement-list {
   margin: 0;
   padding-left: 18px;

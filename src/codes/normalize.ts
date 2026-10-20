@@ -7,7 +7,9 @@
  * de pack désignent le même produit. Un UPC-A devient son EAN-13, un GTIN-14
  * qui commence par 0 est ramené à 13 chiffres. Un code sans identifiant
  * produit (lot, date) est ignoré avec un message ; une lecture dont la clé de
- * contrôle est fausse est une lecture parasite, ignorée sans message.
+ * contrôle est fausse est une lecture parasite, ignorée sans message. Un code
+ * tapé à la main (fiche produit) est ramené aux mêmes formes, clé de contrôle
+ * comprise.
  */
 
 export type IgnoredReason = 'not_a_product' | 'invalid_check_digit'
@@ -72,4 +74,12 @@ export function normalizeScannedCode(rawValue: string, format: string): Normaliz
     default:
       return ignored('not_a_product')
   }
+}
+
+export function normalizeTypedCode(text: string): NormalizedCode {
+  const digits = text.replace(/\s+/g, '')
+  if (!isValidGtin(digits)) return ignored('invalid_check_digit')
+  if (digits.length === 12) return product('0' + digits)
+  if (digits.length === 14) return product(dropLeadingZero(digits))
+  return product(digits)
 }

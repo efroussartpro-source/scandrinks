@@ -11,3 +11,8 @@
   font-weight: 700;
   color: #1d4ed8;
 }
+
+/* « Corriger le stock » : même repère bleu que le mode Inventaire du Scanner. */
+.card.correct-stock {
+  border-left: 6px solid #1d4ed8;
+}

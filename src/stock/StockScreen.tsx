@@ -7,13 +7,17 @@
  * en rouge quand ils sont à racheter (stock au seuil ou en dessous, négatif
  * compris). Le filtre « Archivés » montre les produits archivés, que l'on
  * réactive depuis leur fiche. Une ligne ouvre la fiche du produit.
+ * « Nouveau produit » crée une fiche sans scan, puis l'ouvre sans attendre
+ * que le catalogue relu la contienne.
  */
 import { useState } from 'react'
 import type { Catalog } from '../app/useCatalog'
+import type { Product } from '../data/api'
 import { apiErrorMessage } from '../data/apiErrors'
 import { isLow } from '../domain/restock'
 import { formatStock } from '../domain/stock'
 import { filterProducts } from '../products/search'
+import ProductCreateForm from './ProductCreateForm'
 import ProductSheet from './ProductSheet'
 import './Stock.css'
 
@@ -28,9 +32,28 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
   const [query, setQuery] = useState('')
   const [archived, setArchived] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  // Fiche tout juste créée : le catalogue ne la contient qu'après sa prochaine lecture.
+  const [created, setCreated] = useState<Product | null>(null)
   const { products, errorKind, refresh } = catalog
 
-  const opened = openId === null ? null : (products?.find((product) => product.id === openId) ?? null)
+  if (creating) {
+    return (
+      <ProductCreateForm
+        onCreated={(product) => {
+          setCreated(product)
+          setOpenId(product.id)
+          setCreating(false)
+          onCatalogChanged()
+        }}
+        onCancel={() => setCreating(false)}
+        onSessionExpired={onSessionExpired}
+      />
+    )
+  }
+
+  const opened =
+    openId === null ? null : (products?.find((product) => product.id === openId) ?? (created?.id === openId ? created : null))
   if (opened) {
     return (
       <ProductSheet
@@ -53,6 +76,9 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
         <span>Rechercher un produit</span>
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
+      <button type="button" onClick={() => setCreating(true)}>
+        Nouveau produit
+      </button>
       <div className="choices" role="group" aria-label="Filtre">
         <button type="button" aria-pressed={!archived} onClick={() => setArchived(false)}>
           Actifs

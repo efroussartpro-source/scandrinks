@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { newDraft, parseIntInRange, updateDraft, validateDraft, type DraftField } from './productDraft'
+import { type DraftField, newDraft, parseIntInRange, updateDraft, validateDraft, validateProductFields } from './productDraft'
 
 test.each([[' 24 ', 1, 999, 24], ['0', 1, 999, null], ['1000', 1, 999, null], ['12.5', 1, 999, null], ['', 0, 9999, null], ['abc', 1, 999, null]])(
   'parseIntInRange(%j, %i, %i) = %j', (raw, min, max, expected) => { expect(parseIntInRange(raw, min, max)).toBe(expected) })
@@ -44,4 +44,13 @@ test.each([
   const base = updateDraft(newDraft('Coca-Cola 33 cl'), 'codeUnits', '24')
   const result = validateDraft(updateDraft(base, field as DraftField, value))
   expect(result).toMatchObject({ ok: false, errors: { [field]: message } })
+})
+
+test('validateProductFields : RG-7, sans unités de code', () => {
+  expect(validateProductFields({ name: ' Coca ', packSize: '24', alertThreshold: '24', targetStock: '48' }))
+    .toEqual({ ok: true, product: { name: 'Coca', packSize: 24, alertThreshold: 24, targetStock: 48 } })
+  expect(validateProductFields({ name: 'Coca', packSize: '24', alertThreshold: '24', targetStock: '24' }))
+    .toEqual({ ok: false, errors: { targetStock: 'Le stock idéal doit être supérieur au seuil.' } })
+  expect(validateProductFields({ name: 'Coca', packSize: '0', alertThreshold: '24', targetStock: '48' }))
+    .toEqual({ ok: false, errors: { packSize: 'Entre 1 et 999.' } })
 })

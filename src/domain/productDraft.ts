@@ -6,7 +6,8 @@
  * Les champs restent des chaînes, comme dans le formulaire. Le pack Metro suit
  * les unités du code quand elles dépassent 1 ; le seuil et le stock idéal
  * valent 1 et 2 packs Metro. Chacun cesse de suivre dès qu'on le modifie à la
- * main.
+ * main. Les mêmes règles valident une fiche modifiée depuis le Stock, sans
+ * unités de code.
  */
 
 export type DraftField = 'name' | 'codeUnits' | 'packSize' | 'alertThreshold' | 'targetStock'
@@ -28,6 +29,17 @@ export interface NewProductInput {
   targetStock: number
   barcodes: Array<{ code: string; units: number }>
 }
+
+export interface ProductFields {
+  name: string
+  packSize: string
+  alertThreshold: string
+  targetStock: string
+}
+
+export type FieldsValidation =
+  | { ok: true; product: Omit<NewProductInput, 'barcodes'> }
+  | { ok: false; errors: Partial<Record<keyof ProductFields, string>> }
 
 export type DraftValidation =
   | { ok: true; codeUnits: number; product: Omit<NewProductInput, 'barcodes'> }
@@ -83,26 +95,35 @@ export function updateDraft(draft: ProductDraft, field: DraftField, value: strin
   return applyDefaults(next)
 }
 
-export function validateDraft(draft: ProductDraft): DraftValidation {
-  const errors: Partial<Record<DraftField, string>> = {}
+export function validateProductFields(fields: ProductFields): FieldsValidation {
+  const errors: Partial<Record<keyof ProductFields, string>> = {}
 
-  const name = draft.name.trim()
+  const name = fields.name.trim()
   // Longueur en caractères, comme char_length côté base.
   const nameLength = [...name].length
   if (nameLength < 1 || nameLength > NAME_MAX_LENGTH) errors.name = MESSAGES.name
 
-  const codeUnits = parseIntInRange(draft.codeUnits, 1, 999)
-  if (codeUnits === null) errors.codeUnits = MESSAGES.units
-  const packSize = parseIntInRange(draft.packSize, 1, 999)
+  const packSize = parseIntInRange(fields.packSize, 1, 999)
   if (packSize === null) errors.packSize = MESSAGES.units
-  const alertThreshold = parseIntInRange(draft.alertThreshold, 0, 9999)
+  const alertThreshold = parseIntInRange(fields.alertThreshold, 0, 9999)
   if (alertThreshold === null) errors.alertThreshold = MESSAGES.alertThreshold
-  const targetStock = parseIntInRange(draft.targetStock, 1, 99999)
+  const targetStock = parseIntInRange(fields.targetStock, 1, 99999)
   if (targetStock === null) errors.targetStock = MESSAGES.targetStock
   else if (alertThreshold !== null && targetStock <= alertThreshold) errors.targetStock = MESSAGES.targetAboveThreshold
 
-  if (Object.keys(errors).length > 0 || codeUnits === null || packSize === null || alertThreshold === null || targetStock === null) {
+  if (Object.keys(errors).length > 0 || packSize === null || alertThreshold === null || targetStock === null) {
     return { ok: false, errors }
   }
-  return { ok: true, codeUnits, product: { name, packSize, alertThreshold, targetStock } }
+  return { ok: true, product: { name, packSize, alertThreshold, targetStock } }
+}
+
+export function validateDraft(draft: ProductDraft): DraftValidation {
+  const fields = validateProductFields(draft)
+  const codeUnits = parseIntInRange(draft.codeUnits, 1, 999)
+  if (!fields.ok || codeUnits === null) {
+    const errors: Partial<Record<DraftField, string>> = fields.ok ? {} : { ...fields.errors }
+    if (codeUnits === null) errors.codeUnits = MESSAGES.units
+    return { ok: false, errors }
+  }
+  return { ok: true, codeUnits, product: fields.product }
 }
