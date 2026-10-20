@@ -1,5 +1,7 @@
 # ScanDrinks — Jalon 1 — Note de reprise (19/10/2026)
 
+> **Note close (20/10/2026) :** le jalon 1 est terminé et fusionné dans `main`. Ne plus suivre cette note ; le bilan est à la fin du [plan du jalon 1](2026-10-19-jalon-1-coeur.md).
+
 Cette note permet à une nouvelle session de reprendre le jalon 1 exactement où il s'est arrêté.
 
 **Pourquoi une nouvelle session :** le connecteur Supabase de la session précédente ne voyait que l'organisation « Webia ». Le porteur du projet a créé une organisation « Scandrinks » et reconnecte le connecteur pour y donner accès. Les connecteurs sont lus au démarrage d'une session.

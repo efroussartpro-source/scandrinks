@@ -1280,3 +1280,33 @@ Expected : `scandrinks.pages.dev` sert le jalon 1.
 - **Performance.** Aucun réglage de performance : la lecture est rapide (test du 19/10/2026). Le maintien de l'écran allumé (Wake Lock) sera revu au jalon 3, si l'équipe le demande.
 - **Réponses de la base.** Toutes les fonctions SQL renvoient du `jsonb`. La forme des réponses est donc uniforme, et le backend simulé du test e2e la reproduit à l'identique.
 - **Données de test.** Les données saisies pendant les jalons 1 à 3 servent aux essais. La base sera remise à zéro avant l'inventaire du premier jour (jalon 4).
+
+---
+
+## Bilan (20/10/2026)
+
+- **Validé** par le porteur du projet après son test sur iPhone (20/10/2026), puis fusionné dans `main`.
+- **Base réelle :** projet Supabase `scandrinks` (`ubddiqqjdwcntdbrsrzr`, Paris, offre gratuite, PostgreSQL 17). Migration `initial_schema` appliquée, tests SQL OK sur le vrai projet, aucune alerte ERROR ni WARN dans les conseils de Supabase. Inscriptions fermées ; seul le compte du tabac existe, inscrit dans `allowed_users`.
+- **Ajout après le test :** une aide sous chaque champ des fiches produit, demandée par le porteur du projet.
+- **Journal d'exécution :** retiré du dépôt à la fin du jalon. Il reste lisible dans l'historique Git : `git show 4bd3b83:.superpowers/sdd/2026-10-19-jalon-1-coeur/progress.md`.
+
+### Points reportés par la relecture finale (19/10/2026), à traiter au jalon 2
+
+- **m5 — `AppShell.tsx` :** l'alerte « Déconnexion impossible » s'affiche à tort quand la déconnexion sans réseau a en fait réussi (supabase-js 2.117.2 déconnecte le téléphone même si l'appel échoue). Correctif : n'alerter que si `getSession()` garde une session.
+- **m6 — `AppShell.tsx` :** `TOKEN_REFRESHED` est ignoré. Ouverte hors réseau après plus d'une heure, l'app reste sur l'écran de connexion alors que la session se rétablit seule.
+- **m8 — `NewProductForm.tsx` :** « Scanner une canette du pack » accepte n'importe quel autre code (ITF-14 d'un carton, pack voisin) comme 1 unité.
+- **m9 :** le bouton ⚙ reste actif pendant une recherche, un envoi ou après un échec. Ouvrir les Réglages perd alors le résultat, ou le nouvel essai avec le même identifiant.
+- **m10 :** nouvel essai de création après une réponse perdue : « Ce code appartient déjà à un autre produit », alors que c'est la fiche qui vient d'être créée.
+- **m11 — durcissement SQL :** droits de mise à jour par colonne (`movements.cancelled_at`/`cancelled_by`, `barcodes.product_id`/`units`) et contrainte liant le signe de `delta` à `in`/`out`. Aujourd'hui, le compte du tabac peut écrire en direct en contournant les fonctions.
+- **m12 — tests SQL à compléter :** `allowed_users` ni lisible ni modifiable par A et B ; écritures directes de B refusées ; B refusé sur `attach_barcode` et `cancel_movement` ; `anon` refusé sur les fonctions d'écriture. Le relecteur a vérifié que ces propriétés sont vraies.
+- **m13 :** page blanche si `.env.production` manque (erreur levée avant le rendu React), par exemple pour une préversion construite sans configuration.
+- **m14 :** un code vu pendant qu'une fiche ou un formulaire est ouvert est « consommé » par l'anti-doublon : le pack identique suivant n'est lu qu'après 2 s hors du champ. Ajouter un conseil dans le guide : utiliser la quantité, ou détourner la caméra.
+- **m15 :** le chemin « Réglages › Apps › Safari » des réglages caméra n'est valable qu'à partir d'iOS 18 ; sur iOS 16 et 17, c'est « Réglages › Safari » (`scannerErrors.ts` et protocole).
+- **m16 :** un compte absent de `allowed_users` ressemble à un catalogue vide (« Code inconnu » partout) jusqu'à une création refusée. Envisager l'erreur 42501 aussi dans `lookup_barcode`.
+- **Recommandation :** un test e2e de la capture d'une canette, avec une vidéo qui alterne deux codes.
+
+### À revoir plus tard (décisions provisoires du jalon 1)
+
+- **Jalon 2 :** tri français des noms (`order('name')`) avec la liste du Stock ; variantes de casse des prénoms dans `list_employees` ; stock qui ne se met pas à jour en direct entre deux téléphones.
+- **Jalon 3 :** maintien de l'écran allumé (Wake Lock) et performance du décodage.
+- **Jalon 4 :** message « Base injoignable » avec renvoi au guide ; le message affiché pour un projet Supabase en pause reste à vérifier sur le vrai projet.
