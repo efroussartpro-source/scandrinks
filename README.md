@@ -34,7 +34,7 @@ Ce jalon apporte :
 - le changement du mot de passe du tabac dans les Réglages : tous les téléphones sont déconnectés tout de suite, celui-ci compris ;
 - des finitions : l'icône de l'app, l'écran qui reste allumé au Scanner, un message (et « Recharger ») si l'app ne peut pas démarrer, et les points reportés du jalon 2.
 
-Les anciennes adresses de test du jalon 1 affichent maintenant une page qui renvoie vers l'app. Le protocole de test sur iPhone est dans [docs/jalon-3-test.md](docs/jalon-3-test.md).
+Les anciennes adresses de test des jalons 1 et 2 affichent maintenant une page qui renvoie vers l'app. Le protocole de test sur iPhone est dans [docs/jalon-3-test.md](docs/jalon-3-test.md).
 
 ## Développement
 

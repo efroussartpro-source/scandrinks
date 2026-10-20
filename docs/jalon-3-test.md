@@ -47,7 +47,7 @@
    - Sur le second iPhone, touche un onglet ou valide une fiche : retour à la connexion avec « Ta session a expiré : reconnecte-toi. ».
    - L'ancien mot de passe ne marche plus, le nouveau oui. Donne-le ensuite à l'équipe.
 6. **L'icône.** Dans Safari, touche Partager puis « Sur l'écran d'accueil » : l'aperçu montre l'icône verte au code-barres et le nom « ScanDrinks ». Touche « Annuler » : on n'installe pas la préversion.
-7. **L'ancienne adresse de test.** Si l'icône installée au jalon 1 est encore là, ouvre-la : elle affiche « ScanDrinks — adresse de test fermée » et un bouton « Ouvrir ScanDrinks ». Supprime cette icône, puis installe l'app depuis https://scandrinks.pages.dev (Partager → « Sur l'écran d'accueil »). Cette icône passera au jalon 3 dès la fusion.
+7. **Les anciennes adresses de test.** Si une icône installée depuis une préversion (jalon 1 ou jalon 2) est encore là, ouvre-la : elle affiche « ScanDrinks — adresse de test fermée » et un bouton « Ouvrir ScanDrinks ». Supprime cette icône, puis installe l'app depuis https://scandrinks.pages.dev (Partager → « Sur l'écran d'accueil »). Cette icône passera au jalon 3 dès la fusion.
 
 ## Après la fusion, avec l'icône de l'écran d'accueil
 
