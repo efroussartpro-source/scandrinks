@@ -2,13 +2,56 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#1f6f3f" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <title>ScanDrinks</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>ScanDrinks — adresse de test fermée</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #1a1a1a;
+        background: #ffffff;
+      }
+      main {
+        max-width: 560px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 26px;
+      }
+      p {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.4;
+      }
+      a {
+        display: block;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: #1f6f3f;
+        color: #ffffff;
+        font-size: 17px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Ancienne adresse de test (jalon 2) : plus d'application ici, seulement un renvoi vers l'app en service. -->
+    <main>
+      <h1>ScanDrinks — adresse de test fermée</h1>
+      <p>Cette adresse servait aux tests. L'app ScanDrinks est maintenant sur scandrinks.pages.dev.</p>
+      <p>
+        Pour la réinstaller : supprime cette icône de l'écran d'accueil, ouvre le lien ci-dessous dans Safari, puis Partager →
+        « Sur l'écran d'accueil ».
+      </p>
+      <a href="https://scandrinks.pages.dev">Ouvrir ScanDrinks</a>
+    </main>
   </body>
 </html>
