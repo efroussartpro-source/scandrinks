@@ -5,11 +5,14 @@
  *
  * Le nom vient d'Open Food Facts quand il le connaît. « Scanner une canette
  * du pack » enregistre aussi le code de l'unité ; si cette canette a déjà sa
- * fiche, l'app propose d'y ajouter le pack plutôt que de créer un doublon.
+ * fiche, l'app propose d'y ajouter le pack plutôt que de créer un doublon. Un
+ * carton (ITF-14) ou un code long n'est pas pris pour une canette (m8).
+ * L'identifiant de la fiche est tiré à l'ouverture : une création rejouée
+ * après une réponse perdue renvoie la fiche déjà créée (m10).
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
-import { normalizeScannedCode } from '../codes/normalize'
+import { isUnitFormat, normalizeScannedCode } from '../codes/normalize'
 import type { Product } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
@@ -20,6 +23,8 @@ import { FIELD_HELP } from './fieldHelp'
 import HelpField from './HelpField'
 
 type CaptureHandler = (rawValue: string, format: string) => void
+
+const NOT_A_UNIT_MESSAGE = "Vise le code d'une canette ou d'une bouteille, pas celui d'un carton."
 
 interface NewProductFormProps {
   code: string
@@ -49,6 +54,7 @@ export default function NewProductForm(props: NewProductFormProps) {
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
   const unitHelpId = useId()
+  const [productId] = useState(() => crypto.randomUUID())
 
   // Le nom d'Open Food Facts peut arriver après l'ouverture du formulaire.
   useEffect(() => {
@@ -70,6 +76,12 @@ export default function NewProductForm(props: NewProductFormProps) {
     (rawValue: string, format: string) => {
       const normalized = normalizeScannedCode(rawValue, format)
       if (normalized.kind !== 'product' || normalized.code === code) return
+      if (!isUnitFormat(format)) {
+        // La capture continue : l'employé vise ensuite une canette.
+        setFormError(NOT_A_UNIT_MESSAGE)
+        return
+      }
+      setFormError(null)
       setCapture(null)
       setCaptureState('checking')
       api.lookupBarcode(normalized.code).then(
@@ -122,7 +134,7 @@ export default function NewProductForm(props: NewProductFormProps) {
     setCaptureState('idle')
     const barcodes = [{ code, units: checked.codeUnits }, ...(unitCode ? [{ code: unitCode, units: 1 }] : [])]
     try {
-      const product = await api.createProduct({ ...checked.product, barcodes, id: crypto.randomUUID() })
+      const product = await api.createProduct({ ...checked.product, barcodes, id: productId })
       onReady({ product, units: checked.codeUnits, code })
     } catch (thrown) {
       const error = classifyApiError(thrown)

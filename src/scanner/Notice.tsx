@@ -4,8 +4,10 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2)
  *
  * Après « Valider », le message donne le nouveau stock et propose « Annuler »
- * pendant 5 secondes.
+ * pendant 5 secondes. Après un inventaire, il rappelle le nombre compté et
+ * l'écart : « ✓ Inventaire : 53 comptés (+29) … ».
  */
+import { describeInventory } from '../domain/inventory'
 import { formatDelta, formatStock } from '../domain/stock'
 import { NOT_A_PRODUCT_MESSAGE, type Notice as FlowNotice } from './scanFlow'
 
@@ -17,17 +19,19 @@ interface NoticeProps {
 
 export default function Notice({ notice, undoing, onUndo }: NoticeProps) {
   switch (notice.kind) {
-    case 'saved':
+    case 'saved': {
+      const what = notice.counted === null ? formatDelta(notice.delta) : describeInventory(notice.counted, notice.delta)
       return (
         <div role="status" className="message message-ok notice">
           <span>
-            ✓ {formatDelta(notice.delta)} {notice.productName} — stock : {formatStock(notice.stock, notice.packSize)}
+            ✓ {what} {notice.productName} — stock : {formatStock(notice.stock, notice.packSize)}
           </span>
           <button type="button" disabled={undoing} onClick={onUndo}>
             {undoing ? 'Annulation…' : 'Annuler'}
           </button>
         </div>
       )
+    }
     case 'cancelled':
       return (
         <p role="status" className="message notice">

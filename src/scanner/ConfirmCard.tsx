@@ -11,12 +11,12 @@ import { useEffect, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
 import { saveErrorMessage } from '../data/apiErrors'
 import { parseIntInRange } from '../domain/productDraft'
-import { describeConfirm, QUANTITY_MAX, QUANTITY_MIN, type ScanMode } from '../domain/stock'
+import { describeConfirm, QUANTITY_MAX, QUANTITY_MIN, type MoveMode } from '../domain/stock'
 import type { ConfirmState } from './scanFlow'
 
 interface ConfirmCardProps {
   state: ConfirmState
-  mode: ScanMode
+  mode: MoveMode
   onQuantity: (quantity: number) => void
   onValidate: () => void
   onClose: () => void

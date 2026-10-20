@@ -13,7 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Movement, MovementKind } from '../domain/movements'
 import { sortByName } from '../domain/names'
 import type { NewProductInput } from '../domain/productDraft'
-import type { ScanMode } from '../domain/stock'
+import type { MoveMode } from '../domain/stock'
 import { classifyApiError } from './apiErrors'
 
 export interface Product {
@@ -66,7 +66,7 @@ export interface MovementInput {
   id: string
   productId: string
   code: string | null
-  mode: ScanMode
+  mode: MoveMode
   units: number
   quantity: number
   employee: string

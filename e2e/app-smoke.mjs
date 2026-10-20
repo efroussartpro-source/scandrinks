@@ -57,6 +57,7 @@ async function signIn(page) {
 }
 
 const confirmCard = (page) => page.getByRole('region', { name: 'Fiche de confirmation' })
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const recordCalls = (fake) => fake.calls.filter((call) => call.fn === 'record_movement')
 
 // Aide affichée sous un champ : les textes visibles que le champ désigne par aria-describedby.
@@ -233,6 +234,23 @@ async function scenarioNewProduct(browser) {
   const create = fake.calls.find((call) => call.fn === 'create_product')
   assert.deepEqual(create?.body.p_barcodes, [{ code: COCA_CODE, units: 24 }])
   await context.close()
+  {
+    // Réponse perdue pendant la création (m10) : le nouvel essai garde l'identifiant, sans doublon.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', loseFirstCreate: true })
+    await signIn(page)
+    await page.getByText(`Code inconnu : ${COCA_CODE}`).waitFor({ timeout: SCAN_TIMEOUT })
+    await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor()
+    await page.getByRole('button', { name: 'Nouveau produit' }).click()
+    await page.getByLabel('Ce code vaut (unités)').fill('24')
+    await page.getByRole('button', { name: 'Créer le produit' }).click()
+    await page.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor()
+    await page.getByRole('button', { name: 'Créer le produit' }).click()
+    await confirmCard(page).getByText('Pack de 24 → +24').waitFor()
+    const creates = fake.calls.filter((call) => call.fn === 'create_product')
+    assert.equal(creates.length, 2, 'deux tentatives')
+    assert.equal(creates[0].body.p_id, creates[1].body.p_id, 'le nouvel essai garde le même identifiant')
+    await context.close()
+  }
   console.log('Scénario D (nouveau produit) : OK')
 }
 
@@ -336,6 +354,71 @@ async function scenarioTabs(browser) {
   console.log('Scénario H (onglets et À racheter) : OK')
 }
 
+// Mode Inventaire (jalon 2, RG-4).
+async function scenarioInventory(browser) {
+  {
+    const { context, page, fake } = await openApp(browser)
+    await signIn(page)
+    await page.getByRole('button', { name: 'Inventaire =' }).click()
+    const card = confirmCard(page)
+    await card.getByText('Stock connu : 24 (1 pack)').waitFor({ timeout: SCAN_TIMEOUT })
+    assert.equal(await card.getAttribute('data-mode'), 'inventory')
+    await card.getByLabel('Packs de 24').fill('2')
+    await card.getByLabel('Unités en plus').fill('5')
+    await card.getByText('= 53 (2 packs + 5) — écart : +29').waitFor()
+    await card.getByRole('button', { name: 'Valider' }).click()
+    await page.getByText('✓ Inventaire : 53 comptés (+29) Coca-Cola 33 cl — stock : 53 (2 packs + 5)').waitFor()
+    const inventories = fake.calls.filter((call) => call.fn === 'record_inventory')
+    assert.equal(inventories.length, 1, 'un seul record_inventory')
+    assert.match(inventories[0].body.p_id, UUID, 'identifiant généré par le téléphone')
+    assert.deepEqual({ ...inventories[0].body, p_id: undefined }, { p_id: undefined, p_product_id: 'p-coca', p_counted: 53, p_employee: 'Sam' })
+
+    // Annuler : vise l'inventaire enregistré.
+    await page.getByRole('status').getByRole('button', { name: 'Annuler' }).click()
+    await page.getByText('Annulé — stock : 24 (1 pack)').waitFor()
+    assert.equal(fake.calls.find((call) => call.fn === 'cancel_movement')?.body.p_movement_id, inventories[0].body.p_id)
+
+    // Saisie manuelle en Inventaire : directement la saisie du comptage.
+    await page.getByRole('button', { name: 'Saisie manuelle' }).click()
+    await page.getByRole('region', { name: 'Saisie manuelle' }).getByRole('button', { name: 'Coca-Cola 33 cl' }).click()
+    await card.getByText('Stock connu : 24 (1 pack)').waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Par pack de 24' }).count(), 0)
+
+    // Le mode est gardé par le téléphone.
+    await page.reload()
+    await page.getByRole('button', { name: 'Inventaire =' }).waitFor()
+    assert.equal(await page.getByRole('button', { name: 'Inventaire =' }).getAttribute('aria-pressed'), 'true')
+    await context.close()
+  }
+  {
+    // Premier jour (spec §4.2) : fiche créée en Inventaire, puis saisie du comptage.
+    const { context, page } = await openApp(browser, { catalogue: 'empty' })
+    await signIn(page)
+    await page.getByRole('button', { name: 'Inventaire =' }).click()
+    await page.getByText(`Code inconnu : ${COCA_CODE}`).waitFor({ timeout: SCAN_TIMEOUT })
+    await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor()
+    await page.getByRole('button', { name: 'Nouveau produit' }).click()
+    await page.getByLabel('Ce code vaut (unités)').fill('24')
+    await page.getByRole('button', { name: 'Créer le produit' }).click()
+    await confirmCard(page).getByText('Stock connu : 0').waitFor()
+    await context.close()
+  }
+  console.log('Scénario I (inventaire) : OK')
+}
+
+// Produit archivé scanné : proposition de réactivation (RG-11).
+async function scenarioArchived(browser) {
+  const { context, page, fake } = await openApp(browser, { catalogue: 'coca_archived' })
+  await signIn(page)
+  const archived = page.getByRole('region', { name: 'Produit archivé' })
+  await archived.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor({ timeout: SCAN_TIMEOUT })
+  await archived.getByRole('button', { name: 'Réactiver' }).click()
+  await confirmCard(page).getByText('Pack de 24 → +24').waitFor()
+  assert.deepEqual(fake.calls.find((call) => call.fn === 'set_product_archived')?.body, { p_product_id: 'p-coca', p_archived: false })
+  await context.close()
+  console.log('Scénario J (produit archivé) : OK')
+}
+
 async function scenarioStalledDatabase(browser) {
   // Recherche bloquée : « Annuler » rend la main tout de suite.
   {
@@ -419,6 +502,8 @@ try {
     ['F', scenarioReaderAndCamera],
     ['G', scenarioStalledDatabase],
     ['H', scenarioTabs],
+    ['I', scenarioInventory],
+    ['J', scenarioArchived],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

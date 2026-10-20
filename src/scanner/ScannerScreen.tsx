@@ -1,5 +1,5 @@
 /**
- * ScannerScreen.tsx — Écran principal : viseur, modes Entrée/Sortie, fiche et messages.
+ * ScannerScreen.tsx — Écran principal : viseur, modes Entrée/Sortie/Inventaire, fiche et messages.
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §7)
  *
@@ -20,7 +20,9 @@ import NewProductForm from '../products/NewProductForm'
 import '../products/Products.css'
 import { scannerErrorMessage } from '../scan/scannerErrors'
 import { useBarcodeScanner } from '../scan/useBarcodeScanner'
+import ArchivedCard from './ArchivedCard'
 import ConfirmCard from './ConfirmCard'
+import CountCard from './CountCard'
 import { loadMode, saveMode } from './mode'
 import Notice from './Notice'
 import { flowReducer, initialFlow, type ConfirmTarget, type Notice as FlowNotice } from './scanFlow'
@@ -98,22 +100,31 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
     })
   }, [unknownCode])
 
-  // « Valider » ou « Réessayer » : envoi avec l'identifiant gardé par l'automate.
+  // « Valider » ou « Réessayer » : envoi avec l'identifiant gardé par l'automate. Le mode ne
+  // change pas pendant l'envoi : en Inventaire, le nombre compté est celui retenu à l'envoi.
   const savingRequest = flow.step === 'confirm' && flow.status === 'saving' ? flow : null
   useEffect(() => {
     if (savingRequest === null) return
-    const { target, quantity, movementId } = savingRequest
-    api
-      .recordMovement({
-        id: movementId,
-        productId: target.product.id,
-        code: target.code,
-        mode: latest.current.mode,
-        units: target.units,
-        quantity,
-        employee: latest.current.employee,
-      })
-      .then(
+    const { target, quantity, movementId, counted } = savingRequest
+    const { mode: currentMode, employee: currentEmployee } = latest.current
+    if (currentMode === 'inventory' && counted === null) {
+      // Ne devrait pas arriver : « Valider » attend un comptage valide.
+      dispatch({ type: 'save_failed', kind: 'invalid' })
+      return
+    }
+    const request =
+      currentMode === 'inventory'
+        ? api.recordInventory({ id: movementId, productId: target.product.id, counted: counted ?? 0, employee: currentEmployee })
+        : api.recordMovement({
+            id: movementId,
+            productId: target.product.id,
+            code: target.code,
+            mode: currentMode,
+            units: target.units,
+            quantity,
+            employee: currentEmployee,
+          })
+    request.then(
         (result) => {
           dispatch({ type: 'save_done', delta: result.delta, stock: result.stock, at: Date.now() })
           latest.current.onCatalogChanged()
@@ -121,6 +132,19 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
         (error: unknown) => dispatch({ type: 'save_failed', kind: failWith(error) }),
       )
   }, [savingRequest, failWith])
+
+  // Produit archivé : réactivation, puis fiche de confirmation (RG-11).
+  const reactivating = flow.step === 'archived' && flow.status === 'saving' ? flow : null
+  useEffect(() => {
+    if (reactivating === null) return
+    api.setArchived(reactivating.target.product.id, false).then(
+      (product) => {
+        dispatch({ type: 'reactivate_done', product })
+        latest.current.onCatalogChanged()
+      },
+      (error: unknown) => dispatch({ type: 'reactivate_failed', kind: failWith(error) }),
+    )
+  }, [reactivating, failWith])
 
   // Chaque message disparaît au bout de 5 s, sauf pendant une annulation.
   const notice = flow.step === 'scanning' ? flow.notice : null
@@ -155,6 +179,11 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
   const modeLocked = flow.step === 'confirm' && flow.status !== 'idle'
   const close = () => dispatch({ type: 'close' })
   const ready = (target: ConfirmTarget) => dispatch({ type: 'product_ready', target, movementId: crypto.randomUUID() })
+  // Fiche créée ou code ajouté : le catalogue a changé.
+  const readyAfterChange = (target: ConfirmTarget) => {
+    ready(target)
+    onCatalogChanged()
+  }
   const offName = (code: string) => {
     const result = offResults[code]
     return result?.status === 'found' ? result.suggestedName : null
@@ -190,7 +219,9 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
           </>
         )
       case 'confirm':
-        return (
+        return mode === 'inventory' ? (
+          <CountCard key={flow.movementId} state={flow} onValidate={(counted) => dispatch({ type: 'validate', counted })} onClose={close} />
+        ) : (
           <ConfirmCard
             state={flow}
             mode={mode}
@@ -199,6 +230,8 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
             onClose={close}
           />
         )
+      case 'archived':
+        return <ArchivedCard state={flow} onReactivate={() => dispatch({ type: 'reactivate' })} onClose={close} />
       case 'unknown': {
         const name = offName(flow.code)
         return (
@@ -224,7 +257,7 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
             code={flow.code}
             off={offResults[flow.code]}
             setCapture={setCapture}
-            onReady={ready}
+            onReady={readyAfterChange}
             onAttachToExisting={(product) => dispatch({ type: 'choose_attach', product })}
             onCancel={close}
             onSessionExpired={onSessionExpired}
@@ -236,13 +269,13 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
             code={flow.code}
             preselected={flow.product}
             offName={offName(flow.code)}
-            onReady={ready}
+            onReady={readyAfterChange}
             onCancel={close}
             onSessionExpired={onSessionExpired}
           />
         )
       case 'manual':
-        return <ManualEntry onReady={ready} onCancel={close} onSessionExpired={onSessionExpired} />
+        return <ManualEntry mode={mode} onReady={ready} onCancel={close} onSessionExpired={onSessionExpired} />
     }
   }
 
@@ -268,6 +301,15 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
         </button>
         <button type="button" className="mode mode-out" aria-pressed={mode === 'out'} disabled={modeLocked} onClick={() => changeMode('out')}>
           Sortie −
+        </button>
+        <button
+          type="button"
+          className="mode mode-inv"
+          aria-pressed={mode === 'inventory'}
+          disabled={modeLocked}
+          onClick={() => changeMode('inventory')}
+        >
+          Inventaire =
         </button>
       </div>
       <div className="panel">{renderPanel()}</div>

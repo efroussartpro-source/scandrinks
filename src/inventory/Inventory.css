@@ -1,0 +1,13 @@
+/* Saisie d'un comptage d'inventaire : le total et l'écart, bien visibles. */
+.count-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.count-total {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d4ed8;
+}

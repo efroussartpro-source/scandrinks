@@ -74,14 +74,17 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
  * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
  * options.failLogout : coupe la déconnexion (/auth/v1/logout), comme sans réseau.
+ * options.loseFirstCreate : le premier create_product est enregistré, mais sa réponse se perd.
  * Renvoie { calls, addMovement } : addMovement simule un mouvement fait sur un autre téléphone.
  */
 export async function installFakeSupabase(page, options = {}) {
-  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false } = options
+  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
+    loseFirstCreate = false } = options
   const db = initialCatalogue(catalogue)
   const calls = []
   let recordFailuresLeft = failNextRecord ? 1 : 0
   let hangLeft = hangFirst ? 1 : 0
+  let lostCreatesLeft = loseFirstCreate ? 1 : 0
   let createdCount = 0
   let otherPhoneCount = 0
 
@@ -230,6 +233,12 @@ export async function installFakeSupabase(page, options = {}) {
       }
       const handler = rpc[fn]
       if (!handler) return reply(404, { code: 'PGRST202', message: `Could not find the function public.${fn}` })
+      if (fn === 'create_product' && lostCreatesLeft > 0) {
+        // La base enregistre la fiche, puis la réponse se perd (réseau coupé au retour).
+        lostCreatesLeft -= 1
+        handler(body)
+        return route.abort('internetdisconnected')
+      }
       const result = handler(body)
       if (result && typeof result === 'object' && 'status' in result && 'body' in result) return reply(result.status, result.body)
       return reply(200, result)

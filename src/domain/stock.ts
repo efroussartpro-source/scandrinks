@@ -8,7 +8,10 @@
  * U+2212, plus lisible que le tiret.
  */
 
-export type ScanMode = 'in' | 'out'
+export type ScanMode = 'in' | 'out' | 'inventory'
+
+// Mode d'une entrée ou d'une sortie ; l'inventaire a sa propre saisie (inventory.ts).
+export type MoveMode = Exclude<ScanMode, 'inventory'>
 
 export const QUANTITY_MIN = 1
 export const QUANTITY_MAX = 99
@@ -20,7 +23,7 @@ export function clampQuantity(q: number): number {
   return Math.min(QUANTITY_MAX, Math.max(QUANTITY_MIN, Math.trunc(q)))
 }
 
-export function movementDelta(mode: ScanMode, units: number, quantity: number): number {
+export function movementDelta(mode: MoveMode, units: number, quantity: number): number {
   return (mode === 'in' ? 1 : -1) * units * quantity
 }
 
@@ -39,7 +42,7 @@ export function formatDelta(delta: number): string {
 }
 
 // Ligne de la fiche de confirmation : « Pack de 24 × 3 → +72 », « À l'unité → −1 ».
-export function describeConfirm(units: number, quantity: number, mode: ScanMode): string {
+export function describeConfirm(units: number, quantity: number, mode: MoveMode): string {
   const what = units === 1 ? "À l'unité" : `Pack de ${units}`
   const times = quantity > 1 ? ` × ${quantity}` : ''
   return `${what}${times} → ${formatDelta(movementDelta(mode, units, quantity))}`

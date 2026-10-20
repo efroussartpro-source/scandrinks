@@ -2,6 +2,7 @@
 .scanner {
   --mode-in: #1f6f3f;
   --mode-out: #b45309;
+  --mode-inv: #1d4ed8;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -45,12 +46,15 @@
 
 .modes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .modes .mode {
+  padding: 0 4px;
+  font-size: 16px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .modes .mode-in {
@@ -70,6 +74,16 @@
 
 .modes .mode-out[aria-pressed='true'] {
   background: var(--mode-out);
+  color: #ffffff;
+}
+
+.modes .mode-inv {
+  color: var(--mode-inv);
+  border-color: var(--mode-inv);
+}
+
+.modes .mode-inv[aria-pressed='true'] {
+  background: var(--mode-inv);
   color: #ffffff;
 }
 
@@ -99,6 +113,10 @@
 
 .confirm[data-mode='out'] {
   border-left: 6px solid var(--mode-out);
+}
+
+.confirm[data-mode='inventory'] {
+  border-left: 6px solid var(--mode-inv);
 }
 
 .confirm-line {

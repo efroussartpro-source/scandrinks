@@ -19,7 +19,7 @@ test('code de lot → notice not_a_product ; clé de contrôle fausse → ignor�
   expect(flowReducer(initialFlow, { type: 'code_read', rawValue: '3502110123092', format: 'ean_13', at: 0 })).toBe(initialFlow)
 })
 test('code connu → fiche de confirmation, quantité 1', () => {
-  expect(confirmed()).toEqual({ step: 'confirm', target: { product: lipton, units: 12, code: PACK }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null })
+  expect(confirmed()).toEqual({ step: 'confirm', target: { product: lipton, units: 12, code: PACK }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
 })
 test('réponse arrivée pour un autre code : ignorée', () => {
   const s: FlowState = { step: 'looking_up', code: PACK }
@@ -52,7 +52,7 @@ test('coupure réseau : Réessayer garde le même identifiant, la quantité est 
 test('enregistré → lecture avec la notice saved, et le même code ignoré pendant 2 s', () => {
   const done = flowReducer(saving(), { type: 'save_done', delta: 12, stock: 12, at: 10_000 })
   expect(done).toEqual({ step: 'scanning', cooldown: { code: PACK, until: 12_000 },
-    notice: { kind: 'saved', movementId: 'm1', delta: 12, productName: 'Lipton Pêche 50 cl', stock: 12, packSize: 12 } })
+    notice: { kind: 'saved', movementId: 'm1', delta: 12, productName: 'Lipton Pêche 50 cl', stock: 12, packSize: 12, counted: null } })
   expect(flowReducer(done, { type: 'code_read', rawValue: PACK, format: 'ean_13', at: 11_999 })).toBe(done)
   expect(flowReducer(done, { type: 'code_read', rawValue: PACK, format: 'ean_13', at: 12_000 })).toEqual({ step: 'looking_up', code: PACK })
 })
@@ -69,7 +69,7 @@ test('étapes intermédiaires', () => {
   expect(flowReducer(initialFlow, { type: 'open_manual' })).toEqual({ step: 'manual' })
   const target = { product: lipton, units: 24, code: '9002490274658' }
   expect(flowReducer({ step: 'attach', code: '9002490274658', product: lipton }, { type: 'product_ready', target, movementId: 'm2' }))
-    .toEqual({ step: 'confirm', target, quantity: 1, movementId: 'm2', status: 'idle', errorKind: null })
+    .toEqual({ step: 'confirm', target, quantity: 1, movementId: 'm2', status: 'idle', errorKind: null, counted: null })
   expect(flowReducer(unknown, { type: 'close' })).toEqual(scanning())
 })
 test('annulation réussie ou échouée', () => {
@@ -104,4 +104,38 @@ test("pendant l'annulation, aucun code n'est relu et le résultat s'affiche touj
 test("un code de lot n'efface pas le message « enregistré » ni son bouton Annuler", () => {
   const saved = flowReducer(saving(), { type: 'save_done', delta: 12, stock: 12, at: 10_000 })
   expect(flowReducer(saved, { type: 'code_read', rawValue: '902602365', format: 'code_128', at: 10_500 })).toBe(saved)
+})
+
+test("Inventaire : le nombre compté est gardé à l'envoi et pour « Réessayer »", () => {
+  const sent = flowReducer(confirmed(), { type: 'validate', counted: 53 })
+  expect(sent).toMatchObject({ status: 'saving', counted: 53, movementId: 'm1' })
+  const failed = flowReducer(sent, { type: 'save_failed', kind: 'network' })
+  expect(flowReducer(failed, { type: 'validate', counted: 99 })).toMatchObject({ status: 'saving', counted: 53, movementId: 'm1' })
+})
+
+test('Inventaire enregistré : la notice porte le nombre compté', () => {
+  const sent = flowReducer(confirmed(), { type: 'validate', counted: 53 })
+  expect(flowReducer(sent, { type: 'save_done', delta: 29, stock: 53, at: 10_000 })).toMatchObject({
+    notice: { kind: 'saved', movementId: 'm1', delta: 29, productName: 'Lipton Pêche 50 cl', stock: 53, packSize: 12, counted: 53 } })
+})
+
+test('produit archivé : réactivation puis fiche de confirmation', () => {
+  const archived = flowReducer({ step: 'looking_up', code: PACK },
+    { type: 'lookup_done', code: PACK, result: { found: true, product: { ...lipton, archived: true }, units: 12 }, movementId: 'm1' })
+  expect(archived).toEqual({ step: 'archived', target: { product: { ...lipton, archived: true }, units: 12, code: PACK },
+    movementId: 'm1', status: 'idle', errorKind: null })
+  expect(flowReducer(archived, { type: 'code_read', rawValue: '5449000000996', format: 'ean_13', at: 0 })).toBe(archived)
+  const sending = flowReducer(archived, { type: 'reactivate' })
+  expect(flowReducer(sending, { type: 'close' })).toBe(sending)
+  expect(flowReducer(sending, { type: 'reactivate_done', product: lipton })).toEqual({ step: 'confirm',
+    target: { product: lipton, units: 12, code: PACK }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
+})
+
+test('réactivation impossible : message, nouvel essai, fermeture', () => {
+  const archived = flowReducer({ step: 'looking_up', code: PACK },
+    { type: 'lookup_done', code: PACK, result: { found: true, product: { ...lipton, archived: true }, units: 12 }, movementId: 'm1' })
+  const failed = flowReducer(flowReducer(archived, { type: 'reactivate' }), { type: 'reactivate_failed', kind: 'network' })
+  expect(failed).toMatchObject({ step: 'archived', status: 'failed', errorKind: 'network' })
+  expect(flowReducer(failed, { type: 'reactivate' })).toMatchObject({ status: 'saving', errorKind: null })
+  expect(flowReducer(failed, { type: 'close' })).toEqual({ step: 'scanning', notice: null, cooldown: null })
 })

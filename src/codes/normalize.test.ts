@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { isValidGtin, normalizeScannedCode } from './normalize'
+import { isUnitFormat, isValidGtin, normalizeScannedCode } from './normalize'
 
 const product = (code: string) => ({ kind: 'product', code })
 const ignored = (reason: string) => ({ kind: 'ignored', reason })
@@ -31,3 +31,7 @@ describe('normalizeScannedCode', () => {
 
 test.each([['3502110123091', true], ['3502110123092', false], ['96385074', true], ['03502110123091', true], ['12a4', false]])(
   'isValidGtin(%s) = %s', (digits, valid) => { expect(isValidGtin(digits)).toBe(valid) })
+
+test("isUnitFormat : seuls les formats d'une canette ou d'une bouteille", () => {
+  expect(['ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'code_128'].map(isUnitFormat)).toEqual([true, true, true, true, false, false])
+})

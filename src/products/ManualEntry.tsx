@@ -4,27 +4,35 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2)
  *
  * On choisit le produit, puis un pack Metro ou une unité ; la suite est la
- * même fiche de confirmation qu'après un scan.
+ * même fiche de confirmation qu'après un scan. En Inventaire, on compte tout
+ * le produit : le choix mène directement à la saisie du comptage.
  */
 import { useState } from 'react'
 import type { Product } from '../data/api'
+import type { ScanMode } from '../domain/stock'
 import type { ConfirmTarget } from '../scanner/scanFlow'
 import ProductPicker from './ProductPicker'
 
 interface ManualEntryProps {
+  mode: ScanMode
   onReady: (target: ConfirmTarget) => void
   onCancel: () => void
   onSessionExpired: () => void
 }
 
-export default function ManualEntry({ onReady, onCancel, onSessionExpired }: ManualEntryProps) {
+export default function ManualEntry({ mode, onReady, onCancel, onSessionExpired }: ManualEntryProps) {
   const [product, setProduct] = useState<Product | null>(null)
+
+  function pick(picked: Product) {
+    if (mode === 'inventory') onReady({ product: picked, units: picked.packSize, code: null })
+    else setProduct(picked)
+  }
 
   if (product === null) {
     return (
       <section className="card" aria-label="Saisie manuelle">
         <h2 className="card-title">Saisie manuelle</h2>
-        <ProductPicker initialQuery="" onPick={setProduct} onSessionExpired={onSessionExpired} />
+        <ProductPicker initialQuery="" onPick={pick} onSessionExpired={onSessionExpired} />
         <button type="button" onClick={onCancel}>
           Annuler
         </button>

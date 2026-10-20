@@ -27,7 +27,7 @@ export function classifyScannerError(error: unknown): ScannerErrorKind {
 
 const MESSAGES: Record<ScannerErrorKind, string> = {
   denied:
-    "L'accès à la caméra a été refusé. Sur iPhone : Réglages › Apps › Safari › Caméra › Autoriser, puis recharge la page (ou, depuis l'icône de l'écran d'accueil, ferme l'app et rouvre-la).",
+    "L'accès à la caméra a été refusé. Sur iPhone : Réglages › Safari › Caméra (iOS 18 et plus : Réglages › Apps › Safari › Caméra) › Autoriser, puis recharge la page (ou, depuis l'icône de l'écran d'accueil, ferme l'app et rouvre-la).",
   unavailable: 'Aucune caméra disponible. Elle est peut-être utilisée par une autre app : ferme-la puis réessaie.',
   insecure: 'La caméra ne fonctionne que sur une adresse sécurisée (https).',
   engine: "Le lecteur de codes-barres n'a pas pu se charger. Vérifie la connexion puis réessaie.",

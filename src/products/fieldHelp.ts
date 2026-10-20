@@ -11,5 +11,8 @@ export const FIELD_HELP = {
   codeUnits: 'Canettes ou bouteilles comptées à chaque scan de ce code : 24 pour un pack de 24, 1 pour une canette.',
   packSize: "Nombre d'unités du pack acheté chez Metro : le stock et les achats se comptent aussi en packs.",
   alertThreshold: 'Quand le stock descend à ce nombre ou en dessous, le produit passe dans « À racheter ».',
+  countPacks: 'Packs entiers trouvés en réserve.',
+  countUnits: 'Canettes ou bouteilles en plus des packs entiers.',
+  countUnitsOnly: 'Canettes ou bouteilles trouvées en réserve.',
   targetStock: "Le stock visé après les courses : l'app calcule les packs à acheter pour l'atteindre.",
 } as const

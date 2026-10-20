@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { clampQuantity, describeConfirm, formatStock, movementDelta, type ScanMode } from './stock'
+import { clampQuantity, describeConfirm, formatStock, movementDelta, type MoveMode } from './stock'
 
 // Le signe moins est U+2212 (−), pas le tiret du clavier.
 test.each([
@@ -15,5 +15,5 @@ test('clampQuantity borne entre 1 et 99, et tronque', () => {
 })
 test.each([
   [24, 1, 'in', 'Pack de 24 → +24'], [24, 3, 'in', 'Pack de 24 × 3 → +72'], [1, 1, 'out', "À l'unité → −1"], [1, 6, 'out', "À l'unité × 6 → −6"],
-])('describeConfirm(%i, %i, %s)', (units, q, mode, text) => { expect(describeConfirm(units, q, mode as ScanMode)).toBe(text) })
+])('describeConfirm(%i, %i, %s)', (units, q, mode, text) => { expect(describeConfirm(units, q, mode as MoveMode)).toBe(text) })
 

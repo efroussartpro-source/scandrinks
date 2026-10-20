@@ -1,5 +1,5 @@
 /**
- * mode.ts — Mode Entrée/Sortie, gardé par chaque téléphone.
+ * mode.ts — Mode Entrée, Sortie ou Inventaire, gardé par chaque téléphone.
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2)
  */
@@ -9,7 +9,8 @@ import type { ScanMode } from '../domain/stock'
 export const MODE_KEY = 'scandrinks.mode'
 
 export function loadMode(storage?: Storage | null): ScanMode {
-  return readStored(MODE_KEY, storage) === 'out' ? 'out' : 'in'
+  const stored = readStored(MODE_KEY, storage)
+  return stored === 'out' || stored === 'inventory' ? stored : 'in'
 }
 
 export function saveMode(mode: ScanMode, storage?: Storage | null): void {

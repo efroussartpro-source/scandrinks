@@ -15,7 +15,9 @@
  *   qui était affiché) ;
  * - pendant une annulation, aucun code n'est relu : son résultat s'affiche
  *   toujours, même en cas d'échec ;
- * - un code de lot n'efface pas le message « enregistré » ni son « Annuler ».
+ * - un code de lot n'efface pas le message « enregistré » ni son « Annuler » ;
+ * - en Inventaire, le nombre compté est gardé pour « Réessayer » (RG-4) ;
+ * - le code d'un produit archivé propose d'abord sa réactivation (RG-11).
  */
 import { normalizeScannedCode } from '../codes/normalize'
 import type { LookupResult, Product } from '../data/api'
@@ -33,8 +35,9 @@ export interface ConfirmTarget {
   code: string | null
 }
 
+// counted : le nombre compté, après un inventaire ; null après une entrée ou une sortie.
 export type Notice =
-  | { kind: 'saved'; movementId: string; delta: number; productName: string; stock: number; packSize: number }
+  | { kind: 'saved'; movementId: string; delta: number; productName: string; stock: number; packSize: number; counted: number | null }
   | { kind: 'cancelled'; productName: string; stock: number; packSize: number }
   | { kind: 'not_a_product' }
   | { kind: 'error'; message: string }
@@ -46,6 +49,16 @@ export type ConfirmState = {
   movementId: string
   status: 'idle' | 'saving' | 'failed'
   errorKind: ApiErrorKind | null
+  // Nombre compté, retenu à l'envoi d'un inventaire.
+  counted: number | null
+}
+
+export type ArchivedState = {
+  step: 'archived'
+  target: ConfirmTarget
+  movementId: string
+  status: 'idle' | 'saving' | 'failed'
+  errorKind: ApiErrorKind | null
 }
 
 export type FlowState =
@@ -53,6 +66,7 @@ export type FlowState =
   | { step: 'scanning'; notice: Notice | null; cooldown: { code: string; until: number } | null; undoing?: true }
   | { step: 'looking_up'; code: string }
   | ConfirmState
+  | ArchivedState
   | { step: 'unknown'; code: string }
   | { step: 'new_product'; code: string }
   // product : choisi d'avance (pack ajouté depuis sa canette).
@@ -64,7 +78,7 @@ export type FlowEvent =
   | { type: 'lookup_done'; code: string; result: LookupResult; movementId: string }
   | { type: 'lookup_failed'; code: string; kind: ApiErrorKind }
   | { type: 'set_quantity'; quantity: number }
-  | { type: 'validate' }
+  | { type: 'validate'; counted?: number }
   | { type: 'save_done'; delta: number; stock: number; at: number }
   | { type: 'save_failed'; kind: ApiErrorKind }
   | { type: 'close' }
@@ -76,6 +90,9 @@ export type FlowEvent =
   | { type: 'undo_done'; productName: string; stock: number; packSize: number }
   | { type: 'undo_failed'; kind: ApiErrorKind }
   | { type: 'notice_expired' }
+  | { type: 'reactivate' }
+  | { type: 'reactivate_done'; product: Product }
+  | { type: 'reactivate_failed'; kind: ApiErrorKind }
 
 export const initialFlow: FlowState = { step: 'scanning', notice: null, cooldown: null }
 
@@ -92,6 +109,7 @@ const confirmFor = (target: ConfirmTarget, movementId: string): ConfirmState => 
   movementId,
   status: 'idle',
   errorKind: null,
+  counted: null,
 })
 
 export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
@@ -109,11 +127,14 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
       if (state.cooldown && state.cooldown.code === normalized.code && event.at < state.cooldown.until) return state
       return { step: 'looking_up', code: normalized.code }
     }
-    case 'lookup_done':
+    case 'lookup_done': {
       if (state.step !== 'looking_up' || state.code !== event.code) return state
-      return event.result.found
-        ? confirmFor({ product: event.result.product, units: event.result.units, code: event.code }, event.movementId)
-        : { step: 'unknown', code: event.code }
+      if (!event.result.found) return { step: 'unknown', code: event.code }
+      const target = { product: event.result.product, units: event.result.units, code: event.code }
+      return target.product.archived
+        ? { step: 'archived', target, movementId: event.movementId, status: 'idle', errorKind: null }
+        : confirmFor(target, event.movementId)
+    }
     case 'lookup_failed':
       if (state.step !== 'looking_up' || state.code !== event.code) return state
       return scanningWith({ kind: 'error', message: apiErrorMessage(event.kind) })
@@ -122,7 +143,8 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
       return { ...state, quantity: clampQuantity(event.quantity) }
     case 'validate':
       if (state.step !== 'confirm' || state.status === 'saving') return state
-      return { ...state, status: 'saving', errorKind: null }
+      // Après un échec, ce qui est réessayé est ce qui était affiché : le nombre compté ne change plus.
+      return { ...state, status: 'saving', errorKind: null, counted: state.status === 'failed' ? state.counted : (event.counted ?? null) }
     case 'save_done':
       if (state.step !== 'confirm' || state.status !== 'saving') return state
       return scanningWith(
@@ -133,6 +155,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
           productName: state.target.product.name,
           stock: event.stock,
           packSize: state.target.product.packSize,
+          counted: state.counted,
         },
         state.target.code === null ? null : { code: state.target.code, until: event.at + SCAN_COOLDOWN_MS },
       )
@@ -142,7 +165,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
     case 'close':
       // Pendant une recherche, « Annuler » rend la main : la réponse tardive sera ignorée.
       if (state.step === 'scanning') return state
-      if (state.step === 'confirm' && state.status === 'saving') return state
+      if ((state.step === 'confirm' || state.step === 'archived') && state.status === 'saving') return state
       return scanningWith(null)
     case 'choose_new_product':
       return state.step === 'unknown' ? { step: 'new_product', code: state.code } : state
@@ -169,5 +192,13 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
       return state.step === 'scanning' ? scanningWith({ kind: 'error', message: UNDO_FAILED_MESSAGE }, state.cooldown) : state
     case 'notice_expired':
       return state.step === 'scanning' && state.notice !== null && !state.undoing ? { ...state, notice: null } : state
+    case 'reactivate':
+      return state.step === 'archived' && state.status !== 'saving' ? { ...state, status: 'saving', errorKind: null } : state
+    case 'reactivate_done':
+      return state.step === 'archived' && state.status === 'saving'
+        ? confirmFor({ ...state.target, product: event.product }, state.movementId)
+        : state
+    case 'reactivate_failed':
+      return state.step === 'archived' && state.status === 'saving' ? { ...state, status: 'failed', errorKind: event.kind } : state
   }
 }

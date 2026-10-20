@@ -37,3 +37,10 @@ Task 4: Step 3 → RED : authState introuvable ; scénario H en échec en attend
 Task 4: Ruling: règle globale `[hidden] { display: none !important }` dans styles.css — sinon `.app { display: flex }` annulait l'attribut `hidden` et les Réglages s'affichaient sous l'app — coût si faux : aucun.
 Task 4: Ruling: barre d'onglets en `position: fixed` (et non collée au bas du contenu), avec 76 px réservés sous l'app — elle reste en bas même sur une liste courte ; vérifié sur captures 390 × 844 (Scanner avec fiche, À racheter) — coût si faux : retouche d'affichage.
 Task 4: Ruling: boutons d'onglets cherchés par nom exact dans l'e2e (« Scanner » trouverait aussi « Scanner une canette du pack ») — coût si faux : aucun.
+Task 4: complete (commits c432f43..b37a589, tests: bash -c 'set -o pipefail; npm test 2>&1 | grep -E "^ +Tests " && npm run e2e 2>&1 | tail -1 && npm run build >/dev/null 2>&1 && echo "build OK"' → build OK)
+Task 5: Ruling: `scannerErrors.test.ts` fige le texte exact du message « caméra refusée » ; il est mis à jour avec le chemin de m15 — le plan prévoyait m15 « sans test », mais ce test existait — coût si faux : aucun.
+Task 5: Ruling: `stock.test.ts` convertit le mode de test en `MoveMode` au lieu de `ScanMode` (conséquence du nouveau type de `describeConfirm`) — coût si faux : aucun.
+Task 5: Ruling: `CountCard` reçoit `key={movementId}` : une nouvelle fiche repart de champs vides — coût si faux : aucun.
+Task 5: Ruling: en Inventaire sans nombre compté (impossible : « Valider » attend un comptage valide), l'envoi échoue en « invalid » au lieu de rester bloqué — coût si faux : aucun.
+Task 5: Step 3 → RED : 9 tests unitaires en échec (counted, étape archived, isUnitFormat, mode inventory) ; e2e (build sans tsc) : D attend la fiche après le nouvel essai (code déclaré pris), I attend « Inventaire = », J attend la carte « Produit archivé ».
+Task 5: contrôle visuel (capture 390 × 844) : trois boutons de mode sur une ligne, fiche d'inventaire lisible (stock connu, aides, total en bleu).

@@ -15,6 +15,8 @@ export type IgnoredReason = 'not_a_product' | 'invalid_check_digit'
 export type NormalizedCode = { kind: 'product'; code: string } | { kind: 'ignored'; reason: IgnoredReason }
 
 const GTIN_LENGTHS = [8, 12, 13, 14]
+// Formats imprimés sur une canette ou une bouteille ; un carton porte un ITF-14, un pack un code long.
+const UNIT_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e']
 const EXPECTED_LENGTH: Record<string, number> = { ean_13: 13, ean_8: 8, upc_a: 12, upc_e: 8 }
 
 // Préfixe d'identifiant de symbologie (« ]C1 » pour un GS1-128) et séparateurs GS.
@@ -33,6 +35,10 @@ export function isValidGtin(digits: string): boolean {
     sum += Number(body[i]) * (fromRight % 2 === 0 ? 3 : 1)
   }
   return (10 - (sum % 10)) % 10 === Number(digits[digits.length - 1])
+}
+
+export function isUnitFormat(format: string): boolean {
+  return UNIT_FORMATS.includes(format)
 }
 
 const product = (code: string): NormalizedCode => ({ kind: 'product', code })
