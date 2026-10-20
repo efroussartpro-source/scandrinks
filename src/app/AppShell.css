@@ -13,6 +13,11 @@
   font-size: 26px;
 }
 
+/* Place pour la barre d'onglets, fixée en bas. */
+.app {
+  padding-bottom: 76px;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -113,4 +118,49 @@ button:disabled {
 .muted {
   margin: 0;
   color: #666666;
+}
+
+/* Barre d'onglets fixée en bas, au-dessus de la zone du geste d'accueil. */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 8px max(16px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-right));
+  background: #ffffff;
+  border-top: 1px solid #dddddd;
+}
+
+.tab-bar button {
+  min-height: 48px;
+  padding: 0 6px;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.tab-bar button[aria-current='page'] {
+  border-color: #1a1a1a;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.tab-bar .badge {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
 }

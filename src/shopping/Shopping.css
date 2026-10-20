@@ -1,0 +1,42 @@
+/* Liste À racheter : une ligne par produit, les ruptures en rouge. */
+.shopping {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shopping h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.shopping-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shopping-error p {
+  margin: 0;
+}
+
+.shopping-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shopping-list li {
+  padding: 12px;
+  border: 1px solid #dddddd;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+.shopping-list li.out-of-stock {
+  border-color: #b91c1c;
+  color: #8a1c13;
+}

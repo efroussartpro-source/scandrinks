@@ -73,14 +73,17 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.failNextRecord : coupe le premier record_movement (réseau perdu).
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
  * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
+ * options.failLogout : coupe la déconnexion (/auth/v1/logout), comme sans réseau.
+ * Renvoie { calls, addMovement } : addMovement simule un mouvement fait sur un autre téléphone.
  */
 export async function installFakeSupabase(page, options = {}) {
-  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null } = options
+  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false } = options
   const db = initialCatalogue(catalogue)
   const calls = []
   let recordFailuresLeft = failNextRecord ? 1 : 0
   let hangLeft = hangFirst ? 1 : 0
   let createdCount = 0
+  let otherPhoneCount = 0
 
   const now = () => new Date().toISOString()
   const stockOf = (productId) =>
@@ -180,7 +183,9 @@ export async function installFakeSupabase(page, options = {}) {
         user,
       })
     }
-    if (url.pathname === '/auth/v1/logout') return route.fulfill({ status: 204, headers: CORS })
+    if (url.pathname === '/auth/v1/logout') {
+      return failLogout ? route.abort('internetdisconnected') : route.fulfill({ status: 204, headers: CORS })
+    }
 
     if (url.pathname === '/rest/v1/product_stock') {
       const activeOnly = url.searchParams.get('archived') === 'eq.false'
@@ -242,5 +247,9 @@ export async function installFakeSupabase(page, options = {}) {
     })
   })
 
-  return { calls }
+  const addMovement = ({ productId, kind, delta, employee }) => {
+    db.movements.set(`m-other-${++otherPhoneCount}`, movementRow(productId, kind, delta, employee, now()))
+  }
+
+  return { calls, addMovement }
 }

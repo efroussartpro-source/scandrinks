@@ -256,6 +256,86 @@ async function scenarioAttach(browser) {
   console.log('Scénario E (ajout à un produit existant) : OK')
 }
 
+// Onglets, catalogue partagé et liste À racheter (jalon 2).
+async function scenarioTabs(browser) {
+  const tab = (page, name) => page.getByRole('button', { name, exact: true })
+  {
+    // 1. Catalogue et badge.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage' })
+    await signIn(page)
+    const card = confirmCard(page)
+    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await tab(page, 'À racheter (3)').waitFor()
+
+    // 2. À racheter : ruptures en premier, heure de mise à jour, caméra arrêtée.
+    await tab(page, 'À racheter (3)').click()
+    const shopping = page.getByRole('list', { name: 'À racheter' })
+    await shopping.waitFor()
+    assert.deepEqual(await shopping.getByRole('listitem').allTextContents(), [
+      'Red Bull 25 cl — reste −3 — prendre 2 packs de 24 — stock à vérifier',
+      'Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24',
+      'Évian 1,5 L — reste 4 — prendre 8 unités',
+    ])
+    await page.getByText(/^Mis à jour à \d{2}:\d{2}$/).waitFor()
+    assert.ok(await page.evaluate(() => document.querySelector('video').srcObject === null), 'caméra arrêtée hors du Scanner')
+
+    // 3. Une entrée faite sur un autre téléphone : le changement d'onglet relit le catalogue.
+    fake.addMovement({ productId: 'p-evian', kind: 'in', delta: 8, employee: 'Léa' })
+    await tab(page, 'Scanner').click()
+    await tab(page, 'À racheter (2)').click()
+    assert.deepEqual(await shopping.getByRole('listitem').allTextContents(), [
+      'Red Bull 25 cl — reste −3 — prendre 2 packs de 24 — stock à vérifier',
+      'Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24',
+    ])
+
+    // 4. La fiche du Scanner est gardée pendant le changement d'onglet.
+    await tab(page, 'Scanner').click()
+    await card.getByText('Pack de 24 → +24').waitFor()
+    await card.getByRole('button', { name: 'Plus' }).click()
+    await card.getByText('Pack de 24 × 2 → +48').waitFor()
+    await card.getByRole('button', { name: 'Valider' }).click()
+    await page.getByText('✓ +48 Coca-Cola 33 cl — stock : 58 (2 packs + 10)').waitFor()
+    await tab(page, 'À racheter (1)').waitFor()
+    await context.close()
+  }
+  {
+    // 5. Réglages ouverts après un échec (m9) : la fiche et son identifiant sont gardés.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', failNextRecord: true })
+    await signIn(page)
+    const card = confirmCard(page)
+    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await card.getByRole('button', { name: 'Valider' }).click()
+    await card.getByRole('button', { name: 'Réessayer' }).waitFor()
+    await page.getByRole('button', { name: 'Réglages' }).click()
+    await page.getByRole('heading', { name: 'Réglages' }).waitFor()
+    await page.getByRole('button', { name: 'Retour' }).click()
+    await card.getByRole('button', { name: 'Réessayer' }).click()
+    await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 34 (1 pack + 10)').waitFor()
+    const records = recordCalls(fake)
+    assert.equal(records.length, 2, 'deux tentatives')
+    assert.equal(records[0].body.p_id, records[1].body.p_id, 'le nouvel essai garde le même identifiant')
+    await context.close()
+  }
+  {
+    // 6. Déconnexion sans réseau (m5) : le téléphone est déconnecté, sans alerte trompeuse.
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage', failLogout: true })
+    const dialogs = []
+    page.on('dialog', (dialog) => {
+      dialogs.push(`${dialog.type()}: ${dialog.message()}`)
+      void dialog.accept()
+    })
+    await signIn(page)
+    await page.getByRole('button', { name: 'Réglages' }).click()
+    await page.getByRole('button', { name: 'Se déconnecter' }).click()
+    await page.getByRole('button', { name: 'Se connecter' }).waitFor()
+    // Laisse à une éventuelle alerte le temps de s'afficher.
+    await page.waitForTimeout(500)
+    assert.deepEqual(dialogs, ['confirm: Se déconnecter ? Il faudra retaper le mot de passe du tabac.'])
+    await context.close()
+  }
+  console.log('Scénario H (onglets et À racheter) : OK')
+}
+
 async function scenarioStalledDatabase(browser) {
   // Recherche bloquée : « Annuler » rend la main tout de suite.
   {
@@ -338,6 +418,7 @@ try {
     ['E', scenarioAttach],
     ['F', scenarioReaderAndCamera],
     ['G', scenarioStalledDatabase],
+    ['H', scenarioTabs],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

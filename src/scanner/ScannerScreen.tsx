@@ -4,8 +4,10 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §7)
  *
  * La logique vit dans scanFlow.ts ; cet écran fait les appels réseau selon
- * l'étape obtenue et affiche le résultat. La caméra tourne en continu, même
- * pendant qu'une fiche est affichée : le scan suivant est prêt aussitôt.
+ * l'étape obtenue et affiche le résultat. La caméra tourne en continu tant
+ * que l'écran est actif, même pendant qu'une fiche est affichée : le scan
+ * suivant est prêt aussitôt. Sur un autre onglet ou dans les Réglages, elle
+ * s'arrête, mais l'écran reste monté : la fiche en cours est gardée.
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { classifyApiError, type ApiErrorKind } from '../data/apiErrors'
@@ -31,10 +33,12 @@ type CaptureHandler = (rawValue: string, format: string) => void
 
 interface ScannerScreenProps {
   employee: string
+  active: boolean
   onSessionExpired: () => void
+  onCatalogChanged: () => void
 }
 
-export default function ScannerScreen({ employee, onSessionExpired }: ScannerScreenProps) {
+export default function ScannerScreen({ employee, active, onSessionExpired, onCatalogChanged }: ScannerScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [flow, dispatch] = useReducer(flowReducer, initialFlow)
   const [mode, setMode] = useState<ScanMode>(() => loadMode())
@@ -42,9 +46,9 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
   const offRequested = useRef(new Set<string>())
 
   // Valeurs lues au moment d'un envoi, sans relancer les effets quand elles changent.
-  const latest = useRef({ mode, employee, onSessionExpired })
+  const latest = useRef({ mode, employee, onSessionExpired, onCatalogChanged })
   useEffect(() => {
-    latest.current = { mode, employee, onSessionExpired }
+    latest.current = { mode, employee, onSessionExpired, onCatalogChanged }
   })
 
   const failWith = useCallback((error: unknown): ApiErrorKind => {
@@ -66,10 +70,12 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
   }, [])
   const scanner = useBarcodeScanner({ videoRef, onDetect })
   const startCamera = scanner.start
+  const stopCamera = scanner.stop
 
   useEffect(() => {
-    void startCamera()
-  }, [startCamera])
+    if (active) void startCamera()
+    else stopCamera()
+  }, [active, startCamera, stopCamera])
 
   // Code lu : recherche dans la base.
   const lookupCode = flow.step === 'looking_up' ? flow.code : null
@@ -108,7 +114,10 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
         employee: latest.current.employee,
       })
       .then(
-        (result) => dispatch({ type: 'save_done', delta: result.delta, stock: result.stock, at: Date.now() }),
+        (result) => {
+          dispatch({ type: 'save_done', delta: result.delta, stock: result.stock, at: Date.now() })
+          latest.current.onCatalogChanged()
+        },
         (error: unknown) => dispatch({ type: 'save_failed', kind: failWith(error) }),
       )
   }, [savingRequest, failWith])
@@ -129,6 +138,7 @@ export default function ScannerScreen({ employee, onSessionExpired }: ScannerScr
       try {
         const result = await api.cancelMovement(saved.movementId, latest.current.employee)
         dispatch({ type: 'undo_done', productName: saved.productName, stock: result.stock, packSize: saved.packSize })
+        latest.current.onCatalogChanged()
       } catch (error) {
         dispatch({ type: 'undo_failed', kind: failWith(error) })
       }
