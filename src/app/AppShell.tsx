@@ -18,6 +18,7 @@ import { loadEmployeeName, saveEmployeeName } from '../auth/employee'
 import { apiErrorMessage } from '../data/apiErrors'
 import { supabase } from '../data/supabaseClient'
 import { shoppingList } from '../domain/restock'
+import HistoryScreen from '../history/HistoryScreen'
 import ScannerScreen from '../scanner/ScannerScreen'
 import SettingsScreen from '../settings/SettingsScreen'
 import ShoppingScreen from '../shopping/ShoppingScreen'
@@ -126,6 +127,9 @@ export default function AppShell() {
         )}
         {tab === 'stock' && (
           <StockScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
+        )}
+        {tab === 'history' && (
+          <HistoryScreen employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
         )}
         <TabBar tab={tab} shoppingCount={shoppingCount} onChange={changeTab} />
       </div>

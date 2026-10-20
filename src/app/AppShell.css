@@ -128,7 +128,9 @@ button:disabled {
   color: #666666;
 }
 
-/* Barre d'onglets fixée en bas, au-dessus de la zone du geste d'accueil. */
+/* Barre d'onglets fixée en bas, au-dessus de la zone du geste d'accueil. Quatre
+   onglets sur une ligne dès 320 px : marges serrées, et un contour tracé à
+   l'intérieur du bouton, qui ne prend pas de place. */
 .tab-bar {
   position: fixed;
   left: 0;
@@ -136,34 +138,46 @@ button:disabled {
   bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
   max-width: 560px;
   margin: 0 auto;
-  padding: 8px max(16px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-right));
+  padding: 8px max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-right));
   background: #ffffff;
   border-top: 1px solid #dddddd;
 }
 
 .tab-bar button {
+  position: relative;
   min-height: 48px;
-  padding: 0 6px;
-  font-size: 16px;
+  padding: 0 2px;
+  border: none;
+  box-shadow: inset 0 0 0 1px #c8c8c8;
+  font-size: 15px;
   white-space: nowrap;
 }
 
+/* Un nom trop long pour la police du téléphone finit par « … » au lieu de déborder. */
+.tab-bar .tab-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .tab-bar button[aria-current='page'] {
-  border-color: #1a1a1a;
+  box-shadow: none;
   background: #1a1a1a;
   color: #ffffff;
   font-weight: 600;
 }
 
+/* Le nombre se pose sur le coin du bouton : il ne réduit pas la place du nom. */
 .tab-bar .badge {
-  display: inline-block;
+  position: absolute;
+  top: -7px;
+  right: -3px;
   min-width: 22px;
-  margin-left: 6px;
   padding: 0 6px;
   border-radius: 11px;
   background: #b91c1c;
@@ -171,4 +185,11 @@ button:disabled {
   font-size: 14px;
   font-weight: 700;
   line-height: 22px;
+}
+
+/* Petits écrans (moins de 375 px) : « Historique » et « À racheter » tiennent encore. */
+@media (max-width: 374px) {
+  .tab-bar button {
+    font-size: 13px;
+  }
 }

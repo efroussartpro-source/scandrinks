@@ -3,11 +3,12 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4)
  *
- * Scanner, À racheter (avec le nombre de produits à racheter) et Stock.
- * L'onglet Historique arrive au jalon 3.
+ * Scanner, À racheter (avec le nombre de produits à racheter), Stock et
+ * Historique. Les quatre tiennent sur une ligne dès 320 px de large ; le
+ * nombre se pose sur le coin du bouton, sans prendre la place du nom.
  */
 
-export type Tab = 'scanner' | 'shopping' | 'stock'
+export type Tab = 'scanner' | 'shopping' | 'stock' | 'history'
 
 interface TabBarProps {
   tab: Tab
@@ -19,6 +20,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'scanner', label: 'Scanner' },
   { id: 'shopping', label: 'À racheter' },
   { id: 'stock', label: 'Stock' },
+  { id: 'history', label: 'Historique' },
 ]
 
 export default function TabBar({ tab, shoppingCount, onChange }: TabBarProps) {
@@ -34,7 +36,7 @@ export default function TabBar({ tab, shoppingCount, onChange }: TabBarProps) {
             aria-label={count === null ? undefined : `${label} (${count})`}
             onClick={() => onChange(id)}
           >
-            {label}
+            <span className="tab-label">{label}</span>
             {count !== null && (
               <span className="badge" aria-hidden="true">
                 {count}

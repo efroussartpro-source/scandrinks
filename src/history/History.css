@@ -1,0 +1,50 @@
+/* Onglet Historique : une ligne par mouvement, son bouton « Annuler » à droite, ou dessous quand la place manque. */
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.history-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-error p {
+  margin: 0;
+}
+
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.history-line {
+  flex: 1 1 14em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.history-list li.cancelled .history-line {
+  color: #777777;
+  text-decoration: line-through;
+}

@@ -1,5 +1,5 @@
 /**
- * app-smoke.mjs — Test de bout en bout de ScanDrinks (jalon 1).
+ * app-smoke.mjs — Test de bout en bout de ScanDrinks (jalons 1 à 3).
  *
  * Lance la version construite avec .env.e2e (vite preview) et ouvre Chromium
  * avec une fausse caméra qui montre un vrai EAN-13 (5449000000996). Le
@@ -701,6 +701,104 @@ async function scenarioReaderAndCamera(browser) {
   console.log('Scénario F (lecteur et caméra) : OK')
 }
 
+// Historique (jalon 3, §4.5) : pages, annulation, annulation faite ailleurs, retour dans l'app.
+async function scenarioHistory(browser) {
+  const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', extraMovements: 55 })
+  const dialogs = []
+  page.on('dialog', (dialog) => {
+    dialogs.push(dialog.message())
+    void dialog.accept()
+  })
+  let catalogReads = 0
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/rest/v1/product_stock') catalogReads += 1
+  })
+  const tab = (name) => page.getByRole('button', { name, exact: true })
+  const list = page.getByRole('list', { name: 'Historique' })
+  const lineTexts = () => list.locator('.history-line').allTextContents()
+  const row = (pattern) => list.getByRole('listitem').filter({ hasText: pattern })
+  await signIn(page)
+  await tab('À racheter (3)').waitFor()
+  await tab('Historique').click()
+  await page.getByRole('heading', { name: 'Historique' }).waitFor()
+
+  // 1. La plus récente d'abord, tous produits confondus, produit archivé compris.
+  await list.locator('.history-line').nth(49).waitFor()
+  let texts = await lineTexts()
+  assert.equal(texts.length, 50)
+  assert.match(texts[0], /— Sam — Sortie −3 — Red Bull 25 cl$/)
+  assert.match(texts[1], /— Léa — Sortie −38 — Coca-Cola 33 cl$/)
+  assert.ok(texts.some((text) => /— Sam — Entrée \+24 — Oasis Tropical 33 cl$/.test(text)), "mouvement d'un produit archivé")
+
+  // 2. À 320 px : les quatre onglets tiennent sur une ligne sans texte coupé, et « Voir plus »,
+  // en bas de page, reste au-dessus de la barre d'onglets.
+  await page.setViewportSize({ width: 320, height: 640 })
+  assert.ok(
+    await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll('.tab-bar button')]
+      return buttons.length === 4 && buttons.every((button) => {
+        const label = button.querySelector('.tab-label')
+        return label.scrollWidth <= label.clientWidth && button.offsetTop === buttons[0].offsetTop
+      })
+    }),
+    'onglets à 320 px',
+  )
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  assert.ok(
+    await page.evaluate(() => {
+      const more = [...document.querySelectorAll('button')].find((button) => button.textContent === 'Voir plus')
+      return more.getBoundingClientRect().bottom <= document.querySelector('.tab-bar').getBoundingClientRect().top
+    }),
+    '« Voir plus » visible au-dessus des onglets',
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  // 3. « Voir plus » : la page suivante part de la 50e ligne, sans doublon, puis le bouton disparaît.
+  await page.getByRole('button', { name: 'Voir plus' }).click()
+  await list.locator('.history-line').nth(60).waitFor()
+  texts = await lineTexts()
+  assert.equal(texts.length, 61)
+  assert.equal(new Set(texts).size, 61, 'aucune ligne en double')
+  await page.getByRole('button', { name: 'Voir plus' }).waitFor({ state: 'detached' })
+  assert.deepEqual(fake.calls.filter((call) => call.fn === 'list_history').map((call) => call.body), [
+    { p_before_created_at: null, p_before_id: null, p_limit: 50 },
+    { p_before_created_at: '2026-10-17T06:16:00Z', p_before_id: 'm-x44', p_limit: 50 },
+  ])
+
+  // 4. Annuler la sortie de Léa, après confirmation : le Coca remonte à 48 et quitte « À racheter ».
+  await page.getByRole('button', { name: /^Annuler : .*— Léa — Sortie −38 — Coca-Cola 33 cl$/ }).click()
+  const cancelled = row(/— Léa — Sortie −38 — Coca-Cola 33 cl — annulé par Sam$/)
+  await cancelled.waitFor()
+  assert.match(dialogs[0], /^Annuler ce mouvement \?\n.+— Léa — Sortie −38 — Coca-Cola 33 cl\nLe stock sera recalculé\.$/)
+  assert.deepEqual(fake.calls.find((call) => call.fn === 'cancel_movement')?.body, { p_movement_id: 'm-c2', p_employee: 'Sam' })
+  assert.equal(await cancelled.getAttribute('class'), 'cancelled')
+  assert.equal(await cancelled.getByRole('button').count(), 0, 'plus de bouton sur une ligne annulée')
+  await tab('À racheter (2)').waitFor()
+
+  // 5. Déjà annulée sur un autre téléphone : la ligne donne le prénom de celui qui l'a fait.
+  fake.cancelElsewhere('m-r1', 'Léa')
+  await page.getByRole('button', { name: /^Annuler : .*— Sam — Sortie −3 — Red Bull 25 cl$/ }).click()
+  await row(/— Sam — Sortie −3 — Red Bull 25 cl — annulé par Léa$/).waitFor()
+  assert.equal(dialogs.length, 2)
+
+  // 6. Retour dans l'app : la première page et le catalogue sont relus.
+  fake.addMovement({ productId: 'p-lipton', kind: 'in', delta: 12, employee: 'Zoé' })
+  const readsBefore = catalogReads
+  const setVisibility = (state) =>
+    page.evaluate((value) => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }, state)
+  await setVisibility('hidden')
+  await setVisibility('visible')
+  await page.waitForFunction(() =>
+    /— Zoé — Entrée \+12 — Lipton Pêche 50 cl$/.test(document.querySelector('.history-line')?.textContent ?? ''),
+  )
+  assert.ok(catalogReads > readsBefore, "catalogue relu au retour dans l'app")
+  await context.close()
+  console.log('Scénario M (historique) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -729,6 +827,7 @@ try {
     ['J', scenarioArchived],
     ['K', scenarioStock],
     ['L', scenarioSheetEdits],
+    ['M', scenarioHistory],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)
