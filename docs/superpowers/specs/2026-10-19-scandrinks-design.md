@@ -189,8 +189,7 @@ déploiement automatique depuis GitHub
 - React + TypeScript, construite avec Vite.
 - **App web installable (PWA)** :
   - un manifeste donne le nom, l'icône et l'affichage plein écran ;
-  - un service worker garde l'app en cache pour qu'elle s'ouvre vite ;
-  - une nouvelle version s'installe automatiquement à l'ouverture suivante.
+  - pas de service worker : sans mode hors ligne (hors version 1), il ne ferait qu'ajouter le risque de servir une ancienne version. Chaque ouverture charge la dernière version.
 - **Navigation en mémoire, sans changement d'adresse.** Une web app installée sur iOS peut redemander l'autorisation caméra à chaque changement d'URL. L'app reste donc sur une seule page, et le flux caméra n'est pas coupé entre deux scans.
 - **Scan** avec la bibliothèque `barcode-detector`, qui implémente l'API standard BarcodeDetector à partir de ZXing-C++ compilé en WebAssembly :
   - elle utilise la détection native quand le navigateur la propose, et ZXing sinon (c'est le cas de Safari) ;
@@ -242,8 +241,9 @@ déploiement automatique depuis GitHub
 
 - `record_movement(id, code ou product_id, kind, quantity, employee)` : calcule delta = ± unités du code × quantité.
 - `record_inventory(id, product_id, counted, employee)` : calcule l'écart par rapport au stock du moment.
-- `cancel_movement(movement_id, employee)`.
-- `create_product(name, pack_size, alert_threshold, target_stock, barcodes, id)` : crée la fiche et son ou ses codes en une seule fois. `barcodes` est une liste de paires (code, unités), vide pour un produit créé sans scan. `id` est tiré par le téléphone : rejouée, la création renvoie la fiche déjà créée.
+- `cancel_movement(movement_id, employee)` : renvoie le stock, puis qui a annulé et quand. Une seconde annulation ne change rien et garde le premier auteur.
+- `list_history(before_created_at, before_id, limit)` : l'historique, du plus récent au plus ancien, par pages (50 dans l'app), produits archivés compris. La page suivante part de la date et de l'identifiant du dernier mouvement affiché : un mouvement arrivé entre-temps ne décale rien.
+- `create_product(name, pack_size, alert_threshold, target_stock, barcodes, id)` : crée la fiche et son ou ses codes en une seule fois. `barcodes` est une liste de paires (code, unités), vide pour un produit créé sans scan. `id` est tiré par le téléphone : rejouée, ou envoyée deux fois en même temps, la création renvoie la fiche déjà créée.
 - `update_product(id, name, pack_size, alert_threshold, target_stock)` : modifie la fiche, avec les mêmes règles qu'à la création.
 - `set_product_archived(product_id, archived)` : archive ou réactive un produit.
 - `attach_barcode(code, product_id, units, move)` : associe un code à un produit, ou le déplace si `move` est vrai.
@@ -256,7 +256,8 @@ Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une ac
 - **Un compte unique pour le tabac** (Supabase Auth, e-mail + mot de passe). Le porteur du projet le crée dans le tableau de bord Supabase et choisit le mot de passe, qui n'est jamais communiqué à Claude.
 - **Inscriptions désactivées** : personne ne peut créer de compte depuis l'app.
 - **Row Level Security sur toutes les tables.** Seuls les comptes inscrits dans la table `allowed_users`, c'est-à-dire le compte du tabac, peuvent lire ou écrire. Sans connexion, tout est refusé, même avec le lien de l'app et la clé publique Supabase, qui est publique par conception.
-- **Changement de mot de passe** depuis les Réglages : le mot de passe est mis à jour et toutes les sessions sont révoquées.
+- **Changement de mot de passe** depuis les Réglages : le mot de passe actuel est vérifié, le nouveau enregistré, puis toutes les sessions sont révoquées, celle du téléphone compris.
+- **Session vérifiée à chaque appel** : la fonction d'accès (`is_allowed`) refuse un jeton dont la session est fermée. Un téléphone déconnecté par un changement de mot de passe est donc refusé tout de suite, sans attendre l'expiration de son jeton (jusqu'à une heure).
 - **Données personnelles** : uniquement des prénoms. Pas de suivi d'audience, pas de publicité, pas d'outil de mesure.
 
 ### 6.5 Hébergement, comptes et coûts
@@ -380,6 +381,13 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 | 20/10/2026 | Code ajouté depuis la fiche : tapé en chiffres, clé de contrôle vérifiée ; retirer un code supprime l'association, les mouvements gardent le code en texte | Éviter les fautes de frappe ; garder l'historique intact |
 | 20/10/2026 | Chaque ligne d'« À racheter » ouvre la fiche du produit | Corriger le stock d'un produit à vérifier sans le chercher |
 | 20/10/2026 | Une seule orthographe par prénom (la première enregistrée) dans le choix du prénom ; ordre alphabétique français partout (accents et casse ignorés) | Une liste propre, triée comme on l'attend |
+| 20/10/2026 | Historique : pages de 50 avec un curseur (date, identifiant) ; le produit termine la ligne ; produits archivés compris | Un mouvement arrivé entre deux pages ne décale rien ; exemple du §4.5 |
+| 20/10/2026 | Tout le monde peut annuler toute ligne active de l'Historique, après confirmation ; la ligne affiche le premier auteur de l'annulation ; la fiche produit reste en lecture | Petite équipe ; une seule façon d'annuler |
+| 20/10/2026 | Changer le mot de passe demande l'actuel ; 8 caractères au moins ; tous les téléphones sont déconnectés tout de suite (session vérifiée par la base) ; les autres voient « Ta session a expiré : reconnecte-toi. » | Un téléphone laissé ouvert ne suffit pas ; l'effet doit être immédiat, pas au bout d'une heure |
+| 20/10/2026 | Écran allumé seulement au Scanner, caméra en marche ; icône verte au code-barres blanc, sans texte, nom « ScanDrinks » | Le scan dure ; ailleurs, l'écran s'éteint comme d'habitude |
+| 20/10/2026 | Pas de service worker (§6.2) ; « Recharger » si l'app ne peut pas démarrer | Pas de mode hors ligne en version 1 ; l'app installée n'a pas d'autre moyen de recharger |
+| 20/10/2026 | Comptage vide : « Valider » reste grisé, sans message | Comportement du jalon 2 gardé |
+| 20/10/2026 | Anciennes adresses de test fermées par une page qui renvoie vers l'app, plutôt que supprimées | Une icône installée depuis l'une d'elles montre comment réinstaller l'app |
 
 ## 12. Glossaire
 
