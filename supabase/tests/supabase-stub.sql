@@ -2,8 +2,9 @@
 -- sur un PostgreSQL local, sans toucher au vrai projet.
 --
 -- Reproduit seulement ce dont la migration et les tests dépendent : les rôles
--- de l'API, le schéma auth (auth.users, auth.uid()) et les droits par défaut
--- que Supabase accorde sur le schéma public. Ne sert jamais en production.
+-- de l'API, le schéma auth (auth.users, auth.sessions, auth.uid(), auth.jwt())
+-- et les droits par défaut que Supabase accorde sur le schéma public. Ne sert
+-- jamais en production.
 
 -- Les rôles sont communs à toute l'instance : créés une seule fois.
 do $$
@@ -20,6 +21,16 @@ create table auth.users (
   email text
 );
 
+-- Une ligne par téléphone connecté ; la déconnexion la retire. Comme sur
+-- Supabase : RLS active sans aucune règle, donc fermée aux rôles de l'API ;
+-- postgres, propriétaire de private.is_allowed(), la contourne (BYPASSRLS).
+create table auth.sessions (
+  id uuid primary key,
+  user_id uuid not null,
+  not_after timestamptz
+);
+alter table auth.sessions enable row level security;
+
 -- Comme Supabase : l'identifiant du compte connecté vient des claims du jeton.
 create function auth.uid() returns uuid
 language sql stable
@@ -30,8 +41,18 @@ as $$
   )::uuid
 $$;
 
+-- Recopie de la fonction du vrai projet : les claims du jeton, ou null sans jeton.
+create function auth.jwt() returns jsonb
+language sql stable
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')
+  )::jsonb
+$$;
+
 grant usage on schema auth to anon, authenticated, service_role;
-grant execute on function auth.uid() to anon, authenticated, service_role;
+grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
 
 -- Droits par défaut de Supabase sur le schéma public : tout est ouvert aux
 -- rôles de l'API, et c'est la migration qui doit le refermer.

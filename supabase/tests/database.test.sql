@@ -1,4 +1,4 @@
--- database.test.sql — Tests de la base ScanDrinks (jalons 1 et 2).
+-- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3).
 --
 -- Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§5, §6.3, §6.4, §8)
 --
@@ -30,17 +30,34 @@ exception
 end
 $$;
 
+-- Exécute une instruction et renvoie le nombre de lignes touchées.
+create function pg_temp.run(p_sql text) returns bigint
+language plpgsql
+as $$
+declare
+  v_count bigint;
+begin
+  execute p_sql;
+  get diagnostics v_count = row_count;
+  return v_count;
+end
+$$;
+
 -- Mise en place, en tant que postgres : A est le compte du tabac, B un compte inconnu.
+-- Chaque jeton porte sa session (session_id), qui doit exister (cas 21).
 insert into auth.users (id, email) values
   ('00000000-0000-4000-8000-0000000000a1', 'compte-a@test.invalid'),
   ('00000000-0000-4000-8000-0000000000b2', 'compte-b@test.invalid');
+insert into auth.sessions (id, user_id) values
+  ('00000000-0000-4000-8000-00000000a1a1', '00000000-0000-4000-8000-0000000000a1'),
+  ('00000000-0000-4000-8000-00000000b2b2', '00000000-0000-4000-8000-0000000000b2');
 insert into public.allowed_users (user_id) values ('00000000-0000-4000-8000-0000000000a1');
 insert into public.products (id, name, pack_size, alert_threshold, target_stock)
   values ('00000000-0000-4000-8000-00000000c0ca', 'Coca-Cola 33 cl', 24, 24, 48);
 insert into public.barcodes (code, product_id, units)
   values ('2000000000015', '00000000-0000-4000-8000-00000000c0ca', 1);
 insert into public.movements (id, product_id, kind, delta, barcode, employee)
-  values ('00000000-0000-4000-8000-0000000000e0', '00000000-0000-4000-8000-00000000c0ca', 'in', 24, '2000000000015', 'Sam');
+  values ('00000000-0000-4000-8000-0000000000e0', '00000000-0000-4000-8000-00000000c0ca', 'in', 24, '2000000000015', 'Testeur');
 
 -- 1. Sans connexion (anon) : tout est refusé, lectures comme écritures.
 set local role anon;
@@ -60,7 +77,7 @@ reset role;
 -- 2. Compte connecté mais absent de allowed_users (B) : il ne voit et n'écrit rien,
 -- et la recherche d'un code le dit (m16) au lieu de laisser croire le catalogue vide.
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated"}', true);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
 select pg_temp.expect_error($q$select public.lookup_barcode('2000000000015')$q$, '42501');
 do $$
 begin
@@ -83,7 +100,7 @@ select pg_temp.expect_error('select 1 from public.allowed_users', '42501');
 
 -- 3. Compte du tabac (A) : création d'une fiche avec le code du pack et celui de la canette.
 -- La liste des comptes autorisés n'est ni lisible ni modifiable depuis l'app (m12).
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated"}', true);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
 select pg_temp.expect_error('select 1 from public.allowed_users', '42501');
 select pg_temp.expect_error($q$insert into public.allowed_users (user_id) values ('00000000-0000-4000-8000-0000000000b2')$q$, '42501');
 do $$
@@ -114,12 +131,12 @@ declare
   lipton uuid := current_setting('scandrinks_test.lipton')::uuid;
   result jsonb;
 begin
-  result := public.record_movement('00000000-0000-4000-8000-0000000000d1', lipton, '2000000000022', 'in', 12, 2, 'Sam');
+  result := public.record_movement('00000000-0000-4000-8000-0000000000d1', lipton, '2000000000022', 'in', 12, 2, 'Testeur');
   if (result ->> 'delta')::int <> 24 or (result ->> 'stock')::int <> 24 or (result ->> 'duplicate')::boolean then
     raise exception 'ÉCHEC : entrée de 2 packs (%)', result;
   end if;
 
-  result := public.record_movement('00000000-0000-4000-8000-0000000000d1', lipton, '2000000000022', 'in', 12, 2, 'Sam');
+  result := public.record_movement('00000000-0000-4000-8000-0000000000d1', lipton, '2000000000022', 'in', 12, 2, 'Testeur');
   if not (result ->> 'duplicate')::boolean or (result ->> 'stock')::int <> 24 or (result ->> 'delta')::int <> 24 then
     raise exception 'ÉCHEC : envoi répété (%)', result;
   end if;
@@ -127,44 +144,44 @@ begin
     raise exception 'ÉCHEC : doublon enregistré';
   end if;
   -- Renvoi tardif, alors que la saisie a changé entre-temps : on renvoie le premier enregistrement, sans contrôle.
-  result := public.record_movement('00000000-0000-4000-8000-0000000000d1', lipton, '2000000000022', 'in', 24, 5, 'Sam');
+  result := public.record_movement('00000000-0000-4000-8000-0000000000d1', lipton, '2000000000022', 'in', 24, 5, 'Testeur');
   if not (result ->> 'duplicate')::boolean or (result ->> 'delta')::int <> 24 then
     raise exception 'ÉCHEC : renvoi tardif (%)', result;
   end if;
 
-  result := public.record_movement('00000000-0000-4000-8000-0000000000d2', lipton, '2000000000039', 'out', 1, 6, 'Sam');
+  result := public.record_movement('00000000-0000-4000-8000-0000000000d2', lipton, '2000000000039', 'out', 1, 6, 'Testeur');
   if (result ->> 'delta')::int <> -6 or (result ->> 'stock')::int <> 18 then
     raise exception 'ÉCHEC : sortie de 6 canettes (%)', result;
   end if;
 
-  result := public.cancel_movement('00000000-0000-4000-8000-0000000000d1', 'Sam');
+  result := public.cancel_movement('00000000-0000-4000-8000-0000000000d1', 'Testeur');
   if (result ->> 'stock')::int <> -6 or (result ->> 'product_id')::uuid <> lipton then
     raise exception 'ÉCHEC : annulation (%)', result;
   end if;
-  result := public.cancel_movement('00000000-0000-4000-8000-0000000000d1', 'Léa');
+  result := public.cancel_movement('00000000-0000-4000-8000-0000000000d1', 'Testeuse');
   if (result ->> 'stock')::int <> -6 then
     raise exception 'ÉCHEC : seconde annulation (%)', result;
   end if;
-  if (select cancelled_by from public.movements where id = '00000000-0000-4000-8000-0000000000d1') is distinct from 'Sam' then
+  if (select cancelled_by from public.movements where id = '00000000-0000-4000-8000-0000000000d1') is distinct from 'Testeur' then
     raise exception 'ÉCHEC : auteur de l''annulation';
   end if;
 end
 $$;
-select pg_temp.expect_error($q$select public.cancel_movement('00000000-0000-4000-8000-0000000000ff', 'Sam')$q$, 'invalid_input:movement');
+select pg_temp.expect_error($q$select public.cancel_movement('00000000-0000-4000-8000-0000000000ff', 'Testeur')$q$, 'invalid_input:movement');
 
 -- 7. Les unités enregistrées sont celles du code, ou 1 ou le pack Metro en saisie manuelle.
-select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 24, 1, 'Sam')$q$,
+select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 24, 1, 'Testeur')$q$,
   current_setting('scandrinks_test.lipton')), 'invalid_input:units');
-select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000015', 'in', 1, 1, 'Sam')$q$,
+select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000015', 'in', 1, 1, 'Testeur')$q$,
   current_setting('scandrinks_test.lipton')), 'invalid_input:code');
-select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, null, 'in', 5, 1, 'Sam')$q$,
+select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, null, 'in', 5, 1, 'Testeur')$q$,
   current_setting('scandrinks_test.lipton')), 'invalid_input:units');
 do $$
 declare
   result jsonb;
 begin
   result := public.record_movement('00000000-0000-4000-8000-0000000000d3', current_setting('scandrinks_test.lipton')::uuid,
-    null, 'in', 12, 1, 'Sam');
+    null, 'in', 12, 1, 'Testeur');
   if (result ->> 'delta')::int <> 12 or (result ->> 'stock')::int <> 6 then
     raise exception 'ÉCHEC : saisie manuelle d''un pack (%)', result;
   end if;
@@ -216,13 +233,20 @@ $$;
 -- 9. Création avec un code déjà pris.
 select pg_temp.expect_error($q$select public.create_product('Doublon', 6, 6, 12, '[{"code":"2000000000022","units":6}]')$q$,
   'barcode_taken:2000000000022');
+do $$
+begin
+  if exists (select 1 from public.products where name = 'Doublon') then
+    raise exception 'ÉCHEC : la création refusée a laissé un produit';
+  end if;
+end
+$$;
 
 -- 10. Valeurs refusées.
-select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 12, 0, 'Sam')$q$,
+select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 12, 0, 'Testeur')$q$,
   current_setting('scandrinks_test.lipton')), 'invalid_input:quantity');
-select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 12, 100, 'Sam')$q$,
+select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 12, 100, 'Testeur')$q$,
   current_setting('scandrinks_test.lipton')), 'invalid_input:quantity');
-select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'inventory', 12, 1, 'Sam')$q$,
+select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'inventory', 12, 1, 'Testeur')$q$,
   current_setting('scandrinks_test.lipton')), 'invalid_input:kind');
 select pg_temp.expect_error(format($q$select public.record_movement(gen_random_uuid(), %L, '2000000000022', 'in', 12, 1, %L)$q$,
   current_setting('scandrinks_test.lipton'), repeat('x', 31)), 'invalid_input:employee');
@@ -236,7 +260,7 @@ select pg_temp.expect_error(format($q$select public.create_product(%L, 6, 6, 12,
 -- 11. Prénoms déjà utilisés (la vraie base peut en contenir d'autres).
 do $$
 begin
-  if not public.list_employees() @> '["Sam"]'::jsonb then
+  if not public.list_employees() @> '["Testeur"]'::jsonb then
     raise exception 'ÉCHEC : prénoms (%)', public.list_employees();
   end if;
 end
@@ -292,7 +316,7 @@ declare
   result jsonb;
   inv public.movements%rowtype;
 begin
-  result := public.record_inventory('00000000-0000-4000-8000-0000000000e1', coca, 20, 'Sam');
+  result := public.record_inventory('00000000-0000-4000-8000-0000000000e1', coca, 20, 'Testeur');
   if (result ->> 'delta')::int <> -4 or (result ->> 'stock')::int <> 20 or (result ->> 'counted')::int <> 20
      or (result ->> 'duplicate')::boolean then
     raise exception 'ÉCHEC : inventaire (%)', result;
@@ -301,24 +325,24 @@ begin
   if inv.kind is distinct from 'inventory' or inv.counted is distinct from 20 or inv.barcode is not null then
     raise exception 'ÉCHEC : ligne d''inventaire (%)', to_jsonb(inv);
   end if;
-  result := public.record_inventory('00000000-0000-4000-8000-0000000000e1', coca, 99, 'Sam');
+  result := public.record_inventory('00000000-0000-4000-8000-0000000000e1', coca, 99, 'Testeur');
   if not (result ->> 'duplicate')::boolean or (result ->> 'delta')::int <> -4 or (result ->> 'counted')::int <> 20
      or (result ->> 'stock')::int <> 20 then
     raise exception 'ÉCHEC : inventaire rejoué (%)', result;
   end if;
 end
 $$;
-select pg_temp.expect_error($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-00000000c0ca', -1, 'Sam')$q$,
+select pg_temp.expect_error($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-00000000c0ca', -1, 'Testeur')$q$,
   'invalid_input:counted');
-select pg_temp.expect_error($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-00000000c0ca', 10000, 'Sam')$q$,
+select pg_temp.expect_error($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-00000000c0ca', 10000, 'Testeur')$q$,
   'invalid_input:counted');
-select pg_temp.expect_error($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-0000000000ff', 5, 'Sam')$q$,
+select pg_temp.expect_error($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-0000000000ff', 5, 'Testeur')$q$,
   'invalid_input:product');
 select pg_temp.expect_error(format($q$select public.record_inventory(gen_random_uuid(), '00000000-0000-4000-8000-00000000c0ca', 5, %L)$q$,
   repeat('x', 31)), 'invalid_input:employee');
 do $$
 begin
-  if (public.cancel_movement('00000000-0000-4000-8000-0000000000e1', 'Sam') ->> 'stock')::int <> 24 then
+  if (public.cancel_movement('00000000-0000-4000-8000-0000000000e1', 'Testeur') ->> 'stock')::int <> 24 then
     raise exception 'ÉCHEC : annulation d''un inventaire';
   end if;
 end
@@ -399,23 +423,129 @@ select pg_temp.expect_error($q$select public.detach_barcode('abc')$q$, 'invalid_
 select pg_temp.expect_error($q$update public.movements set delta = 1000 where id = '00000000-0000-4000-8000-0000000000d2'$q$, '42501');
 select pg_temp.expect_error($q$update public.products set created_at = now()$q$, '42501');
 select pg_temp.expect_error(format($q$insert into public.movements (id, product_id, kind, delta, employee)
-  values (gen_random_uuid(), %L, 'in', -5, 'Sam')$q$, current_setting('scandrinks_test.lipton')), '23514');
+  values (gen_random_uuid(), %L, 'in', -5, 'Testeur')$q$, current_setting('scandrinks_test.lipton')), '23514');
 select pg_temp.expect_error(format($q$insert into public.movements (id, product_id, kind, delta, employee)
-  values (gen_random_uuid(), %L, 'inventory', 3, 'Sam')$q$, current_setting('scandrinks_test.lipton')), '23514');
+  values (gen_random_uuid(), %L, 'inventory', 3, 'Testeur')$q$, current_setting('scandrinks_test.lipton')), '23514');
 select pg_temp.expect_error(format($q$insert into public.movements (id, product_id, kind, delta, counted, employee)
-  values (gen_random_uuid(), %L, 'out', -3, 3, 'Sam')$q$, current_setting('scandrinks_test.lipton')), '23514');
+  values (gen_random_uuid(), %L, 'out', -3, 3, 'Testeur')$q$, current_setting('scandrinks_test.lipton')), '23514');
 
--- 20. Un prénom tapé avec une autre casse (« sam ») ne crée pas de doublon dans la liste.
--- Dans une transaction, now() est la même pour tous : « sam » est daté une minute plus tard.
+-- 20. Un prénom tapé avec une autre casse (« testeur ») ne crée pas de doublon dans la liste.
+-- Dans une transaction, now() est la même pour tous : « testeur » est daté une minute plus tard.
 insert into public.movements (id, product_id, kind, delta, employee, created_at)
-  values (gen_random_uuid(), current_setting('scandrinks_test.lipton')::uuid, 'in', 1, 'sam', now() + interval '1 minute');
+  values (gen_random_uuid(), current_setting('scandrinks_test.lipton')::uuid, 'in', 1, 'testeur', now() + interval '1 minute');
 do $$
 begin
-  if not public.list_employees() @> '["Sam"]'::jsonb or public.list_employees() @> '["sam"]'::jsonb then
+  if not public.list_employees() @> '["Testeur"]'::jsonb or public.list_employees() @> '["testeur"]'::jsonb then
     raise exception 'ÉCHEC : casse des prénoms (%)', public.list_employees();
   end if;
 end
 $$;
+
+-- 21. Session fermée (« tous les téléphones déconnectés » après un changement de mot de passe)
+-- ou expirée : tout est refusé avec PT401, que l'API rend en 401 (session expirée dans l'app),
+-- même si le jeton n'a pas encore expiré. Les lectures aussi.
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000dead"}', true);
+select pg_temp.expect_error('select 1 from public.product_stock', 'PT401');
+select pg_temp.expect_error($q$select public.lookup_barcode('2000000000022')$q$, 'PT401');
+reset role;
+insert into auth.sessions (id, user_id, not_after)
+  values ('00000000-0000-4000-8000-0000a1a1dead', '00000000-0000-4000-8000-0000000000a1', now() - interval '1 minute');
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-0000a1a1dead"}', true);
+select pg_temp.expect_error('select 1 from public.product_stock', 'PT401');
+select pg_temp.expect_error($q$select public.lookup_barcode('2000000000022')$q$, 'PT401');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+
+-- 22. Historique (§4.5) : du plus récent au plus ancien, page après page, tous produits
+-- confondus, archivés compris. À heure égale, l'identifiant départage : aucune ligne sautée
+-- ni répétée d'une page à l'autre. Ces quatre mouvements sont datés après tous les autres
+-- (celui du cas 20 compris, à une minute), ceux de la vraie base aussi.
+reset role;
+insert into public.products (id, name, pack_size, alert_threshold, target_stock, archived)
+  values ('00000000-0000-4000-8000-00000000a5a5', 'Oasis Tropical 33 cl', 24, 24, 48, true);
+insert into public.movements (id, product_id, kind, delta, employee, created_at) values
+  ('00000000-0000-4000-8000-000000001001', '00000000-0000-4000-8000-00000000c0ca', 'in', 1, 'Testeur', now() + interval '4 minutes'),
+  ('00000000-0000-4000-8000-000000001002', '00000000-0000-4000-8000-00000000a5a5', 'in', 24, 'Testeuse', now() + interval '3 minutes'),
+  ('00000000-0000-4000-8000-000000001003', '00000000-0000-4000-8000-00000000c0ca', 'out', -2, 'Testeur', now() + interval '2 minutes'),
+  ('00000000-0000-4000-8000-000000001004', '00000000-0000-4000-8000-00000000c0ca', 'out', -1, 'Testeur', now() + interval '2 minutes');
+set local role authenticated;
+do $$
+declare
+  page1 jsonb := public.list_history(null, null, 2);
+  page2 jsonb;
+  tie jsonb;
+begin
+  if jsonb_path_query_array(page1, '$[*].id')
+       <> '["00000000-0000-4000-8000-000000001001", "00000000-0000-4000-8000-000000001002"]'::jsonb
+     or (select array_agg(k order by k) from jsonb_object_keys(page1 -> 0) k) <> array['cancelled_at', 'cancelled_by', 'counted',
+       'created_at', 'delta', 'employee', 'id', 'kind', 'product_id', 'product_name']
+     or page1 -> 0 ->> 'product_name' <> 'Coca-Cola 33 cl' or page1 -> 0 ->> 'employee' <> 'Testeur'
+     or page1 -> 0 ->> 'kind' <> 'in' or (page1 -> 0 ->> 'delta')::int <> 1 or page1 -> 0 ->> 'cancelled_at' is not null
+     or page1 -> 1 ->> 'product_name' <> 'Oasis Tropical 33 cl' then
+    raise exception 'ÉCHEC : première page de l''historique (%)', page1;
+  end if;
+  page2 := public.list_history((page1 -> 1 ->> 'created_at')::timestamptz, (page1 -> 1 ->> 'id')::uuid, 2);
+  if jsonb_path_query_array(page2, '$[*].id')
+       <> '["00000000-0000-4000-8000-000000001004", "00000000-0000-4000-8000-000000001003"]'::jsonb then
+    raise exception 'ÉCHEC : page suivante de l''historique (%)', page2;
+  end if;
+  if exists (select 1 from jsonb_array_elements(page1) a join jsonb_array_elements(page2) b on a ->> 'id' = b ->> 'id') then
+    raise exception 'ÉCHEC : une ligne figure sur deux pages (%, %)', page1, page2;
+  end if;
+  tie := public.list_history((page2 -> 0 ->> 'created_at')::timestamptz, (page2 -> 0 ->> 'id')::uuid, 1);
+  if jsonb_path_query_array(tie, '$[*].id') <> '["00000000-0000-4000-8000-000000001003"]'::jsonb then
+    raise exception 'ÉCHEC : à heure égale, une ligne sautée (%)', tie;
+  end if;
+end
+$$;
+select pg_temp.expect_error('select public.list_history(null, null, 0)', 'invalid_input:limit');
+select pg_temp.expect_error('select public.list_history(null, null, 101)', 'invalid_input:limit');
+select pg_temp.expect_error('select public.list_history(null, null, null)', 'invalid_input:limit');
+select pg_temp.expect_error('select public.list_history(now(), null, 10)', 'invalid_input:cursor');
+select pg_temp.expect_error($q$select public.list_history(null, '00000000-0000-4000-8000-000000001001', 10)$q$, 'invalid_input:cursor');
+set local role anon;
+select pg_temp.expect_error('select public.list_history()', '42501');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
+select pg_temp.expect_error('select public.list_history()', '42501');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+
+-- 23. Annulation déjà faite (par un autre téléphone) : la réponse donne le premier auteur et
+-- l'heure de l'annulation, le stock ne bouge plus, et l'historique la montre.
+do $$
+declare
+  cancelled jsonb;
+  again jsonb;
+begin
+  cancelled := public.cancel_movement('00000000-0000-4000-8000-000000001001', 'Testeur');
+  again := public.cancel_movement('00000000-0000-4000-8000-000000001001', 'Testeuse');
+  if cancelled ->> 'cancelled_by' is distinct from 'Testeur' or cancelled ->> 'cancelled_at' is null
+     or again ->> 'cancelled_by' is distinct from 'Testeur' or again ->> 'cancelled_at' is distinct from cancelled ->> 'cancelled_at'
+     or (again ->> 'stock')::int is distinct from (cancelled ->> 'stock')::int then
+    raise exception 'ÉCHEC : annulation déjà faite (%, %)', cancelled, again;
+  end if;
+  if public.list_history(null, null, 1) -> 0 ->> 'cancelled_by' is distinct from 'Testeur' then
+    raise exception 'ÉCHEC : annulation absente de l''historique (%)', public.list_history(null, null, 1);
+  end if;
+end
+$$;
+
+-- 24. Suppressions (p4) : refusées sans connexion ; un compte sans accès (B) ne retire rien.
+-- Toute instruction de suppression reste dans une chaîne, exécutée par pg_temp.run.
+set local role anon;
+select pg_temp.expect_error('delete from public.barcodes', '42501');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
+do $$
+begin
+  if pg_temp.run('delete from public.barcodes') <> 0 then
+    raise exception 'ÉCHEC : B a retiré des codes';
+  end if;
+end
+$$;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
 
 reset role;
 rollback;
