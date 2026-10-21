@@ -1,13 +1,14 @@
-/* Liste À racheter : une ligne par produit, les ruptures en rouge. */
+/* Liste À racheter (maquettes A-racheter, N-racheter) : le titre et le résumé, puis une liste groupée ; les ruptures en rouge. */
 .shopping {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.shopping h1 {
-  margin: 0;
-  font-size: 26px;
+.shopping-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .shopping-error {
@@ -20,21 +21,49 @@
   margin: 0;
 }
 
-.shopping-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.shopping-list .row {
+  padding: 12px 10px 12px 16px;
+}
+
+.shopping-list .row-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.shopping-list .row-sub svg {
+  flex: none;
+}
+
+.shopping-list .out-of-stock .row-sub {
+  color: var(--red-text);
+}
+
+/* Ce qu'il faut prendre chez Metro : la quantité dans une pastille verte, le pack dessous. */
+.buy {
+  flex: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 2px;
 }
 
-.shopping-list button {
-  width: 100%;
-  padding: 12px;
-  text-align: left;
+.buy-amount {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--green-pale);
+  color: var(--green-text);
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-.shopping-list button.out-of-stock {
-  color: var(--red-text);
+.buy-note {
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.shopping > .note {
+  margin-left: 16px;
 }

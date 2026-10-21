@@ -281,6 +281,19 @@ button.back {
   color: var(--text-2);
 }
 
+/* Couleur de chaque type de mouvement (fiche produit, Historique). */
+.kind-in {
+  color: var(--green-text);
+}
+
+.kind-out {
+  color: var(--orange-text);
+}
+
+.kind-inventory {
+  color: var(--blue-text);
+}
+
 /* Tuile d'icône des listes (Réglages). */
 .tile {
   flex: none;
@@ -328,7 +341,7 @@ button.back {
 }
 
 .segmented button[aria-pressed='true'] {
-  background: var(--card);
+  background: var(--segment);
   color: var(--text);
   font-weight: 600;
   box-shadow: var(--shadow);

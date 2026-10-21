@@ -4,8 +4,9 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §5)
  *
  * Le stock se compte en unités et s'affiche aussi en packs Metro :
- * « 53 (2 packs + 5) ». Le signe moins affiché est le signe typographique
- * U+2212, plus lisible que le tiret.
+ * « 53 (2 packs + 5) ». Les listes et la fiche montrent les deux à part :
+ * « 53 » en grand, « 2 packs + 5 » dessous. Le signe moins affiché est le
+ * signe typographique U+2212, plus lisible que le tiret.
  */
 
 export type ScanMode = 'in' | 'out' | 'inventory'
@@ -27,14 +28,22 @@ export function movementDelta(mode: MoveMode, units: number, quantity: number): 
   return (mode === 'in' ? 1 : -1) * units * quantity
 }
 
-// RG-1 : unités seules si le pack Metro vaut 1, si le stock est négatif ou s'il fait moins d'un pack.
-export function formatStock(stock: number, packSize: number): string {
-  if (stock < 0) return MINUS + String(-stock)
-  const packs = packSize > 1 ? Math.floor(stock / packSize) : 0
-  if (packs === 0) return String(stock)
+export function formatUnits(stock: number): string {
+  return stock < 0 ? MINUS + String(-stock) : String(stock)
+}
+
+// RG-1 : pas de packs si le pack Metro vaut 1, si le stock est négatif ou s'il fait moins d'un pack.
+export function formatPacks(stock: number, packSize: number): string | null {
+  const packs = packSize > 1 && stock > 0 ? Math.floor(stock / packSize) : 0
+  if (packs === 0) return null
   const rest = stock - packs * packSize
   const packLabel = packs === 1 ? '1 pack' : `${packs} packs`
-  return rest === 0 ? `${stock} (${packLabel})` : `${stock} (${packLabel} + ${rest})`
+  return rest === 0 ? packLabel : `${packLabel} + ${rest}`
+}
+
+export function formatStock(stock: number, packSize: number): string {
+  const packs = formatPacks(stock, packSize)
+  return packs === null ? formatUnits(stock) : `${stock} (${packs})`
 }
 
 export function formatDelta(delta: number): string {

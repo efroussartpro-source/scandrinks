@@ -7,11 +7,13 @@
  * Il faut alors stock idéal − max(stock, 0), arrondi au pack Metro supérieur :
  * « Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24 ». Un stock négatif
  * compte pour 0 et la ligne porte « stock à vérifier ». Les ruptures (stock
- * ≤ 0) passent en premier.
+ * ≤ 0) passent en premier. À l'écran, la ligne se lit en morceaux : le reste
+ * sous le nom, « 2 packs » dans une pastille, « de 24 » dessous ; la phrase
+ * entière reste le nom de la ligne pour VoiceOver.
  */
 import type { Product } from '../data/api'
 import { compareNames } from './names'
-import { formatStock } from './stock'
+import { formatPacks, formatUnits } from './stock'
 
 export interface RestockLine {
   product: Product
@@ -43,14 +45,36 @@ export function shoppingList(products: readonly Product[]): RestockLine[] {
     .map(restockLine)
 }
 
+const buyAmount = ({ toBuy, unit }: RestockLine) =>
+  unit === 'pack' ? `${toBuy} ${toBuy > 1 ? 'packs' : 'pack'}` : `${toBuy} ${toBuy > 1 ? 'unités' : 'unité'}`
+
 export function describeShoppingLine(line: RestockLine): string {
-  const { product, toBuy, unit, checkStock } = line
-  const what =
-    unit === 'pack'
-      ? `${toBuy} ${toBuy > 1 ? 'packs' : 'pack'} de ${product.packSize}`
-      : `${toBuy} ${toBuy > 1 ? 'unités' : 'unité'}`
+  const { product, unit, checkStock } = line
+  const what = unit === 'pack' ? `${buyAmount(line)} de ${product.packSize}` : buyAmount(line)
   // Le reste se dit en unités seules, comme dans l'exemple de la spec.
-  const parts = [product.name, `reste ${formatStock(product.stock, 1)}`, `prendre ${what}`]
+  const parts = [product.name, `reste ${formatUnits(product.stock)}`, `prendre ${what}`]
   if (checkStock) parts.push('stock à vérifier')
   return parts.join(' — ')
+}
+
+// Ligne d'À racheter : « Reste 10 », « 2 packs » et « de 24 ».
+export function shoppingParts(line: RestockLine): { rest: string; amount: string; note: string } {
+  const { product, unit, checkStock } = line
+  return {
+    rest: `Reste ${formatUnits(product.stock)}${checkStock ? ' · stock à vérifier' : ''}`,
+    amount: buyAmount(line),
+    note: unit === 'pack' ? `de ${product.packSize}` : "à l'unité",
+  }
+}
+
+// Sous le titre d'À racheter : « 3 produits · mis à jour à 12:03 ».
+export function shoppingSummary(count: number, clock: string): string {
+  if (count === 0) return `Mis à jour à ${clock}`
+  return `${count} ${count > 1 ? 'produits' : 'produit'} · mis à jour à ${clock}`
+}
+
+// Sous le nom, dans la liste du Stock : « À racheter » pour un produit actif au seuil, sinon ses packs.
+export function listState(product: Product): string | null {
+  if (!product.archived && isLow(product)) return product.stock < 0 ? 'À racheter · stock à vérifier' : 'À racheter'
+  return formatPacks(product.stock, product.packSize)
 }

@@ -93,7 +93,7 @@ test.each([
 })
 
 const TEXT_PAIRS: Array<[string, string]> = [
-  ['text', 'bg'], ['text', 'card'], ['text', 'field'], ['text', 'green-pale'],
+  ['text', 'bg'], ['text', 'card'], ['text', 'field'], ['text', 'green-pale'], ['text', 'segment'],
   ['text-2', 'card'], ['text-2', 'bg'], ['text-2', 'green-pale'], ['text-2', 'tab-bar'],
   ['text-3', 'track'], ['text-3', 'pill'],
   ['green-text', 'card'], ['green-text', 'bg'], ['green-text', 'green-pale'], ['green-text', 'track'], ['green-text', 'tab-bar'],
@@ -119,6 +119,11 @@ test.each(THEMES)("éléments d'interface : 3:1 au moins (%s)", (_theme, values)
     ([, ratio]) => !(ratio >= 3),
   )
   expect(tooLow).toEqual([])
+})
+
+// Sélecteur à segments : le segment choisi ressort, plus clair que sa piste, de jour comme de nuit (maquette N-reglages).
+test.each(THEMES)('le segment choisi est plus clair que sa piste (%s)', (_theme, values) => {
+  expect(luminance(values.segment)).toBeGreaterThan(luminance(values.track))
 })
 
 // Une couleur écrite en dur resterait la même de nuit : l'écran deviendrait illisible.

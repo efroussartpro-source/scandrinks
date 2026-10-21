@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { formatClock, formatWhen, historyLine, movementLine, type HistoryMovement, type Movement } from './movements'
+import { formatClock, formatWhen, historyLine, historyParts, movementLine, movementParts, type HistoryMovement, type Movement } from './movements'
 
 // now = mardi 20/10/2026, 14:00 à Paris.
 const now = new Date('2026-10-20T12:00:00Z')
@@ -32,4 +32,22 @@ test("ligne d'historique : le produit à la fin, puis l'annulation", () => {
     .toBe('lun. 14:32 — Sam — Inventaire : 53 comptés (−3) — Coca-Cola 33 cl')
   expect(historyLine({ ...base, cancelledAt: '2026-10-19T13:00:00Z', cancelledBy: 'Léa' }, now))
     .toBe('lun. 14:32 — Sam — Entrée +24 — Coca-Cola 33 cl — annulé par Léa')
+})
+
+// Fiche produit : le mouvement en titre, puis le moment et le prénom.
+test('movementParts', () => {
+  expect(movementParts(m(), now)).toEqual({ title: 'Entrée +24', meta: 'lun. 14:32 · Sam' })
+  expect(movementParts(m({ cancelledAt: '2026-10-19T12:40:00Z', cancelledBy: 'Léa' }), now).meta).toBe('lun. 14:32 · Sam — annulé par Léa')
+  expect(movementParts(m({ kind: 'inventory', delta: -3, counted: 53 }), now).title).toBe('Inventaire : 53 comptés (−3)')
+})
+
+// Historique : le produit en titre, la quantité à droite, puis le type, le moment et le prénom.
+test('historyParts', () => {
+  const base: HistoryMovement = { ...m(), productId: 'p1', productName: 'Coca-Cola 33 cl' }
+  expect(historyParts({ ...base, kind: 'out', delta: -24 }, now))
+    .toEqual({ title: 'Coca-Cola 33 cl', amount: '−24', meta: 'Sortie · lun. 14:32 · Sam' })
+  expect(historyParts({ ...base, kind: 'inventory', delta: 29, counted: 53 }, now))
+    .toMatchObject({ amount: '53 comptés', meta: 'Inventaire (+29) · lun. 14:32 · Sam' })
+  expect(historyParts({ ...base, kind: 'inventory', delta: -2, counted: 1 }, now).amount).toBe('1 compté')
+  expect(historyParts({ ...base, cancelledAt: '2026-10-19T13:00:00Z', cancelledBy: null }, now).meta).toBe('Entrée · lun. 14:32 · Sam — annulé')
 })

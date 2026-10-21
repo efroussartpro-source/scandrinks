@@ -3,7 +3,9 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.5, RG-9)
  *
- * Par pages de 50, avec « Voir plus ». La première page est relue à
+ * Chaque ligne montre le produit et la quantité dans la couleur du type, puis
+ * le type, le moment et le prénom (maquette J-historique) ; VoiceOver lit la
+ * phrase entière. Par pages de 50, avec « Voir plus ». La première page est relue à
  * l'ouverture de l'onglet et au retour dans l'app : la liste repart alors du
  * haut. Une réponse arrivée après une relecture plus récente est ignorée, et
  * une page suivante ne s'ajoute que si elle suit la liste affichée.
@@ -14,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
-import { historyLine, type HistoryMovement } from '../domain/movements'
+import { historyLine, historyParts, type HistoryMovement } from '../domain/movements'
 import { appendHistoryPage, markCancelled, type HistoryState } from './historyList'
 import './History.css'
 
@@ -125,15 +127,29 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
       {movements === null && loadError === null && <p className="muted">Chargement…</p>}
       {movements !== null && movements.length === 0 && <p className="muted">Aucun mouvement pour l'instant.</p>}
       {movements !== null && movements.length > 0 && (
-        <ul className="history-list" aria-label="Historique">
+        <ul className="group history-list" aria-label="Historique">
           {movements.map((movement) => {
             const line = historyLine(movement, now)
+            const { title, amount, meta } = historyParts(movement, now)
             const cancelled = movement.cancelledAt !== null
             return (
               <li key={movement.id} className={cancelled ? 'cancelled' : undefined}>
-                <span className="history-line">{line}</span>
+                <span className="history-visual" aria-hidden="true">
+                  <span className="history-top">
+                    <span className="history-title">{title}</span>
+                    <span className={`history-amount kind-${movement.kind}`}>{amount}</span>
+                  </span>
+                  <span className="history-meta">{meta}</span>
+                </span>
+                <span className="visually-hidden history-line">{line}</span>
                 {!cancelled && (
-                  <button type="button" aria-label={`Annuler : ${line}`} disabled={cancelling} onClick={() => void cancel(movement, line)}>
+                  <button
+                    type="button"
+                    className="link"
+                    aria-label={`Annuler : ${line}`}
+                    disabled={cancelling}
+                    onClick={() => void cancel(movement, line)}
+                  >
                     Annuler
                   </button>
                 )}
@@ -148,7 +164,7 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
         </p>
       )}
       {next !== null && (
-        <button type="button" disabled={loadingMore} onClick={loadMore}>
+        <button type="button" className="block" disabled={loadingMore} onClick={loadMore}>
           {loadingMore ? 'Chargement…' : 'Voir plus'}
         </button>
       )}

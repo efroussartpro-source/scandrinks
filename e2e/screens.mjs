@@ -26,7 +26,8 @@ const SCAN_TIMEOUT = 20_000
 
 const confirmCard = (page) => page.getByRole('region', { name: 'Fiche de confirmation' })
 
-// Chaque capture : les options de la base simulée, puis les gestes qui mènent à l'écran.
+// Chaque capture : les options de la base simulée, puis les gestes qui mènent à l'écran (avec la base simulée, pour
+// les changements faits « sur un autre téléphone »).
 const SHOTS = [
   { name: 'connexion', fake: {}, go: async (page) => page.getByRole('button', { name: 'Se connecter' }).waitFor() },
   {
@@ -89,6 +90,45 @@ const SHOTS = [
     },
   },
   {
+    name: 'racheter',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'À racheter (3)', exact: true }).click()
+      await page.getByRole('list', { name: 'À racheter' }).waitFor()
+    },
+  },
+  {
+    name: 'stock',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Stock', exact: true }).click()
+      await page.getByRole('list', { name: 'Produits' }).waitFor()
+    },
+  },
+  {
+    name: 'fiche',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Stock', exact: true }).click()
+      await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+      await page.getByRole('region', { name: 'Fiche produit' }).locator('.movement-line').first().waitFor()
+    },
+  },
+  {
+    name: 'historique',
+    fake: { catalogue: 'pilotage' },
+    go: async (page, fake) => {
+      // Une ligne annulée, pour voir le texte barré.
+      fake.cancelElsewhere('m-o1', 'Léa')
+      await signIn(page)
+      await page.getByRole('button', { name: 'Historique', exact: true }).click()
+      await page.locator('.history-line').first().waitFor()
+    },
+  },
+  {
     name: 'reglages',
     fake: {},
     go: async (page) => {
@@ -130,9 +170,9 @@ try {
     for (const shot of SHOTS) {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme })
       const page = await context.newPage()
-      await installFakeSupabase(page, shot.fake)
+      const fake = await installFakeSupabase(page, shot.fake)
       await page.goto(`${BASE}/`)
-      await shot.go(page)
+      await shot.go(page, fake)
       // Laisse finir les images et les polices.
       await page.waitForTimeout(400)
       await page.screenshot({ path: join(OUT, theme, `${shot.name}.png`) })

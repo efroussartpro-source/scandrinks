@@ -3,6 +3,9 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, RG-4, RG-7, RG-8, RG-11)
  *
+ * De haut en bas (maquette J-fiche) : « Retour », le nom, le stock en grand
+ * avec les packs et les chiffres, les actions, les codes, les derniers
+ * mouvements, puis « Archiver le produit » ou « Réactiver ».
  * Les codes et les 20 derniers mouvements sont relus à l'ouverture, quand le
  * stock change et après un changement de code. Depuis la fiche d'un produit
  * actif, on le modifie, on gère ses codes et on corrige son stock : chaque
@@ -18,8 +21,9 @@ import type { Product, ProductDetail } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { isLow } from '../domain/restock'
-import { formatStock } from '../domain/stock'
+import { formatPacks, formatStock, formatUnits } from '../domain/stock'
 import CorrectStockForm from '../inventory/CorrectStockForm'
+import { IconChevronLeft } from '../ui/icons'
 import AddCodeForm from './AddCodeForm'
 import CodeList from './CodeList'
 import MovementList from './MovementList'
@@ -157,15 +161,39 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
   }
 
   const low = !product.archived && isLow(product)
+  const packs = formatPacks(product.stock, product.packSize)
 
   return (
-    <section className="card product-sheet" aria-label="Fiche produit">
-      <h2 className="card-title">{product.name}</h2>
-      <p className={low ? 'sheet-stock stock-low' : 'sheet-stock'}>Stock : {formatStock(product.stock, product.packSize)}</p>
-      <p className="muted sheet-figures">
-        <span>Pack Metro : {product.packSize}</span> · <span>Seuil : {product.alertThreshold}</span> ·{' '}
-        <span>Stock idéal : {product.targetStock}</span>
-      </p>
+    <section className="product-sheet" aria-label="Fiche produit">
+      <button type="button" className="link back" onClick={onClose}>
+        <IconChevronLeft size={22} strokeWidth={2.4} />
+        Retour
+      </button>
+      <div className="sheet-head">
+        <h1 className="sheet-title">{product.name}</h1>
+      </div>
+      <section className="card sheet-stock" aria-label="Stock du produit">
+        <div className="sheet-stock-top">
+          <span className="sheet-stock-label">Stock</span>
+          {product.stock < 0 && <span className="check-badge">Stock à vérifier</span>}
+        </div>
+        <span className={low ? 'sheet-stock-value stock-low' : 'sheet-stock-value'}>{formatUnits(product.stock)}</span>
+        {packs !== null && <span className="sheet-stock-packs">{packs}</span>}
+        <dl className="sheet-figures">
+          <div>
+            <dt>Pack Metro</dt>
+            <dd>{product.packSize}</dd>
+          </div>
+          <div>
+            <dt>Seuil</dt>
+            <dd>{product.alertThreshold}</dd>
+          </div>
+          <div>
+            <dt>Stock idéal</dt>
+            <dd>{product.targetStock}</dd>
+          </div>
+        </dl>
+      </section>
       {notice && (
         <p role="status" className="message message-ok">
           {notice}
@@ -192,25 +220,21 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
         </div>
       )}
 
-      <h3>Codes</h3>
-      {detail === null && <p className="muted">Chargement…</p>}
-      {detail !== null && detail.barcodes.length === 0 && <p className="muted">Aucun code : utilise « Saisie manuelle » au Scanner.</p>}
-      {detail !== null && detail.barcodes.length > 0 && (
+      <h2 className="section-label">Codes</h2>
+      {detail === null ? (
+        <p className="muted">Chargement…</p>
+      ) : (
         <CodeList
           product={product}
           barcodes={detail.barcodes}
           readOnly={product.archived}
+          onAdd={product.archived ? undefined : () => open('add_code')}
           onChanged={() => setCodesVersion((version) => version + 1)}
           onSessionExpired={onSessionExpired}
         />
       )}
-      {!product.archived && (
-        <button type="button" onClick={() => open('add_code')}>
-          Ajouter un code
-        </button>
-      )}
 
-      <h3>Derniers mouvements</h3>
+      <h2 className="section-label">Derniers mouvements</h2>
       {detail !== null && <MovementList movements={detail.movements} />}
 
       {product.archived ? (
@@ -221,13 +245,10 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
           </button>
         </>
       ) : (
-        <button type="button" disabled={busy} onClick={() => void changeArchived(true)}>
-          Archiver
+        <button type="button" className="danger block" disabled={busy} onClick={() => void changeArchived(true)}>
+          Archiver le produit
         </button>
       )}
-      <button type="button" onClick={onClose}>
-        Retour
-      </button>
     </section>
   )
 }

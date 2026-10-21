@@ -14,6 +14,7 @@
   --card: #FFFFFF;
   --field: #F2F2F7;
   --track: #E3E3E8;
+  --segment: #FFFFFF;
   --separator: #E5E5EA;
   --text: #1C1C1E;
   --text-2: #6C6C70;
@@ -49,6 +50,7 @@
     --card: #1C1C1E;
     --field: #2C2C2E;
     --track: #2C2C2E;
+    --segment: #636366;
     --separator: #38383A;
     --text: #FFFFFF;
     --text-2: #98989F;
@@ -84,6 +86,7 @@
   --card: #1C1C1E;
   --field: #2C2C2E;
   --track: #2C2C2E;
+  --segment: #636366;
   --separator: #38383A;
   --text: #FFFFFF;
   --text-2: #98989F;

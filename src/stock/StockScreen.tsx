@@ -3,7 +3,8 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, RG-1, RG-8, RG-11)
  *
- * Les produits actifs par ordre alphabétique, avec le stock en packs Metro ;
+ * Les produits actifs par ordre alphabétique (maquette J-stock) : le stock
+ * en unités à droite, et sous le nom « À racheter » ou les packs Metro ;
  * en rouge quand ils sont à racheter (stock au seuil ou en dessous, négatif
  * compris). Le filtre « Archivés » montre les produits archivés, que l'on
  * réactive depuis leur fiche. Une ligne ouvre la fiche du produit.
@@ -15,9 +16,11 @@ import { useState } from 'react'
 import type { Catalog } from '../app/useCatalog'
 import type { Product } from '../data/api'
 import { apiErrorMessage } from '../data/apiErrors'
-import { isLow } from '../domain/restock'
-import { formatStock } from '../domain/stock'
+import { formatClock } from '../domain/movements'
+import { isLow, listState } from '../domain/restock'
+import { formatUnits } from '../domain/stock'
 import { filterProducts } from '../products/search'
+import { IconChevronRight, IconPlus, IconSearch } from '../ui/icons'
 import ProductCreateForm from './ProductCreateForm'
 import ProductSheet from './ProductSheet'
 import './Stock.css'
@@ -36,7 +39,7 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
   const [creating, setCreating] = useState(false)
   // Fiche tout juste créée : le catalogue ne la contient qu'après sa prochaine lecture.
   const [created, setCreated] = useState<Product | null>(null)
-  const { products, errorKind, refresh } = catalog
+  const { products, errorKind, updatedAt, refresh } = catalog
 
   if (creating) {
     return (
@@ -75,15 +78,19 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
 
   return (
     <section className="stock" aria-labelledby="stock-title">
-      <h1 id="stock-title">Stock</h1>
-      <label className="field">
-        <span>Rechercher un produit</span>
-        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
+      <div className="title-row">
+        <h1 id="stock-title">Stock</h1>
+        <button type="button" className="pill-button" onClick={() => setCreating(true)}>
+          <IconPlus size={18} strokeWidth={2.4} />
+          Nouveau produit
+        </button>
+      </div>
+      <label className="search">
+        <span className="visually-hidden">Rechercher un produit</span>
+        <IconSearch size={18} />
+        <input type="search" placeholder="Rechercher un produit" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
-      <button type="button" onClick={() => setCreating(true)}>
-        Nouveau produit
-      </button>
-      <div className="choices" role="group" aria-label="Filtre">
+      <div className="segmented" role="group" aria-label="Filtre">
         <button type="button" aria-pressed={!archived} onClick={() => setArchived(false)}>
           Actifs
         </button>
@@ -105,21 +112,31 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
       )}
       {inFilter.length > 0 && shown.length === 0 && <p className="muted">Aucun produit ne correspond.</p>}
       {shown.length > 0 && (
-        <ul className="stock-list" aria-label="Produits">
-          {shown.map((product) => (
-            <li key={product.id}>
-              <button
-                type="button"
-                className={!product.archived && isLow(product) ? 'product-row stock-low' : 'product-row'}
-                onClick={() => setOpenId(product.id)}
-              >
-                <span className="product-name">{product.name}</span>
-                <span className="product-stock">{formatStock(product.stock, product.packSize)}</span>
-              </button>
-            </li>
-          ))}
+        <ul className="group stock-list" aria-label="Produits">
+          {shown.map((product) => {
+            const state = listState(product)
+            return (
+              <li key={product.id}>
+                <button
+                  type="button"
+                  className={!product.archived && isLow(product) ? 'row product-row stock-low' : 'row product-row'}
+                  onClick={() => setOpenId(product.id)}
+                >
+                  <span className="row-text">
+                    <span className="product-name">{product.name}</span>
+                    {state !== null && <span className="product-state">{state}</span>}
+                  </span>
+                  <span className="product-stock">{formatUnits(product.stock)}</span>
+                  <span className="chevron">
+                    <IconChevronRight size={18} />
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
+      {updatedAt && <p className="note stock-updated">Mis à jour à {formatClock(updatedAt)}</p>}
     </section>
   )
 }

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { clampQuantity, confirmParts, formatStock, movementDelta, type MoveMode } from './stock'
+import { clampQuantity, confirmParts, formatPacks, formatStock, formatUnits, movementDelta, type MoveMode } from './stock'
 
 // Le signe moins est U+2212 (−), pas le tiret du clavier.
 test.each([
@@ -17,4 +17,11 @@ test('clampQuantity borne entre 1 et 99, et tronque', () => {
 test.each([
   [24, 1, 'in', 'Pack de 24', '+24'], [24, 3, 'in', 'Pack de 24 × 3', '+72'], [1, 1, 'out', "À l'unité", '−1'], [1, 6, 'out', "À l'unité × 6", '−6'],
 ])('confirmParts(%i, %i, %s)', (units, q, mode, what, delta) => { expect(confirmParts(units, q, mode as MoveMode)).toEqual({ what, delta }) })
-
+// Listes et fiche : le nombre d'unités en grand, les packs Metro à part.
+test('formatUnits : le nombre seul, avec le signe moins typographique', () => {
+  expect([formatUnits(48), formatUnits(-3)]).toEqual(['48', '−3'])
+})
+// RG-1 : rien si le pack vaut 1, si le stock est négatif ou s'il fait moins d'un pack.
+test.each([
+  [48, 24, '2 packs'], [53, 24, '2 packs + 5'], [25, 24, '1 pack + 1'], [24, 24, '1 pack'], [10, 24, null], [36, 1, null], [-3, 24, null],
+])('formatPacks(%i, %i) = %s', (stock, pack, text) => { expect(formatPacks(stock, pack)).toBe(text) })

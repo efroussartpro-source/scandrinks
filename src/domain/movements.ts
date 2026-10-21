@@ -8,8 +8,10 @@
  * avec l'année si elle diffère. Une ligne annulée porte « annulé par … ».
  * Sert à la fiche produit (jalon 2) et à l'Historique (jalon 3), où le nom
  * du produit vient en dernier : « … — Entrée +24 — Coca-Cola 33 cl ».
+ * À l'écran, une ligne a deux étages (movementParts, historyParts) ; la
+ * phrase entière reste pour VoiceOver.
  */
-import { describeInventory } from './inventory'
+import { describeInventory, formatCounted, formatGap } from './inventory'
 import { formatDelta } from './stock'
 
 export type MovementKind = 'in' | 'out' | 'inventory'
@@ -90,4 +92,19 @@ export function movementLine(m: Movement, now: Date): string {
 
 export function historyLine(m: HistoryMovement, now: Date): string {
   return withCancellation(`${formatWhen(m.createdAt, now)} — ${m.employee} — ${describeMovement(m)} — ${m.productName}`, m)
+}
+
+const KIND_NAMES: Record<MovementKind, string> = { in: 'Entrée', out: 'Sortie', inventory: 'Inventaire' }
+
+// Fiche produit : « Entrée +24 », puis « lun. 14:32 · Sam ».
+export function movementParts(m: Movement, now: Date): { title: string; meta: string } {
+  return { title: describeMovement(m), meta: withCancellation(`${formatWhen(m.createdAt, now)} · ${m.employee}`, m) }
+}
+
+// Historique : le produit et la quantité (« −24 », « 53 comptés »), puis « Sortie · mer. 12:03 · Sam ».
+export function historyParts(m: HistoryMovement, now: Date): { title: string; amount: string; meta: string } {
+  const inventory = m.kind === 'inventory'
+  const amount = inventory ? formatCounted(m.counted ?? 0) : formatDelta(m.delta)
+  const kind = inventory ? `${KIND_NAMES.inventory} (${formatGap(m.delta)})` : KIND_NAMES[m.kind]
+  return { title: m.productName, amount, meta: withCancellation(`${kind} · ${formatWhen(m.createdAt, now)} · ${m.employee}`, m) }
 }

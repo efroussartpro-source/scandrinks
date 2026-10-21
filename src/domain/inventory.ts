@@ -33,7 +33,12 @@ export function formatGap(gap: number): string {
   return gap === 0 ? '0' : formatDelta(gap)
 }
 
-// « Inventaire : 53 comptés (−3) » ; « compté » au singulier pour 0 et 1.
+// « 53 comptés » ; « compté » au singulier pour 0 et 1.
+export function formatCounted(counted: number): string {
+  return `${counted} ${counted > 1 ? 'comptés' : 'compté'}`
+}
+
+// « Inventaire : 53 comptés (−3) ».
 export function describeInventory(counted: number, delta: number): string {
-  return `Inventaire : ${counted} ${counted > 1 ? 'comptés' : 'compté'} (${formatGap(delta)})`
+  return `Inventaire : ${formatCounted(counted)} (${formatGap(delta)})`
 }

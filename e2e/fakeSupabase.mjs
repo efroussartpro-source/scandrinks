@@ -102,6 +102,7 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.loseFirst : fonctions SQL (create_product, record_inventory…) dont le premier appel est enregistré, mais sa réponse
  *   se perd ; 'auth:user' fait de même pour le changement de mot de passe.
  * options.extraMovements : nombre d'entrées de +1 sur le Lipton ajoutées avant le catalogue, une par minute (Historique).
+ * options.longNames : chaque nom de produit reçoit la suite « — édition limitée, format familial » (rien ne doit déborder).
  * options.cutReads : 'movements' ou 'barcodes' : les lectures de cette table sont coupées (réseau perdu) jusqu'à
  *   restoreReads(). Une seule coupure ne suffit pas : supabase-js relance seul une lecture jusqu'à trois fois.
  * Renvoie { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
@@ -112,9 +113,10 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  */
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
-    loseFirst = [], extraMovements = 0, cutReads = null } = options
+    loseFirst = [], extraMovements = 0, cutReads = null, longNames = false } = options
   const db = initialCatalogue(catalogue)
   addExtraMovements(db, extraMovements)
+  if (longNames) for (const product of db.products.values()) product.name += ' — édition limitée, format familial'
   const calls = []
   const authCalls = []
   // Sessions ouvertes (une par connexion) et mot de passe du moment.

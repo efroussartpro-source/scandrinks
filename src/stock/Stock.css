@@ -1,13 +1,19 @@
-/* Liste du stock et fiche produit. */
+/* Liste du stock (maquette J-stock) et fiche produit (maquette J-fiche). */
 .stock {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.stock h1 {
-  margin: 0;
-  font-size: 26px;
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title-row .pill-button {
+  flex: none;
 }
 
 .stock-error {
@@ -20,103 +26,210 @@
   margin: 0;
 }
 
-.stock-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Une ligne par produit : le nom et son état, le stock en grand à droite ; en rouge à racheter. */
+.stock-list .row {
+  padding: 11px 10px 11px 16px;
 }
 
-.product-row {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  text-align: left;
-}
-
-.product-row .product-stock {
-  flex: none;
+.product-name {
+  font-size: 17px;
   font-weight: 600;
 }
 
-.product-row.stock-low {
+.product-state {
+  font-size: 15px;
+  color: var(--text-2);
+}
+
+.product-stock {
+  flex: none;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.product-row.stock-low .product-state,
+.product-row.stock-low .product-stock {
   color: var(--red-text);
 }
 
-.product-sheet h3 {
-  margin: 6px 0 0;
-  font-size: 17px;
+.stock-updated {
+  margin-left: 16px;
 }
 
+/* Fiche produit. */
+.product-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -6px;
+}
+
+.sheet-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 28px;
+}
+
+/* Le stock en grand, les packs dessous, puis les trois chiffres du produit. */
 .sheet-stock {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
 }
 
-.sheet-stock.stock-low {
-  color: var(--red-text);
-}
-
-/* Chaque « libellé : valeur » reste sur une ligne. */
-.sheet-figures span {
-  white-space: nowrap;
-}
-
-/* Filtre choisi (Actifs ou Archivés). */
-.stock .choices button[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--on-color);
-}
-
-/* Corriger le stock et Modifier, côte à côte sous les chiffres. */
-.sheet-actions {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
+.sheet-stock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-/* Un code par ligne ; ses boutons passent dessous quand la place manque. */
-.code-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
+.sheet-stock-label {
+  font-size: 15px;
+  color: var(--text-2);
 }
 
+.check-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--red-pale);
+  color: var(--red-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sheet-stock-value {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sheet-stock-value.stock-low {
+  color: var(--red-text);
+}
+
+.sheet-stock-packs {
+  margin-top: -4px;
+  font-size: 15px;
+  color: var(--text-2);
+}
+
+.sheet-figures {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--separator);
+}
+
+.sheet-figures div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sheet-figures dt {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.sheet-figures dd {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Corriger le stock et Modifier, côte à côte sous le stock. */
+.sheet-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sheet-actions button {
+  padding: 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.product-sheet > .danger {
+  margin-top: 8px;
+}
+
+/* Codes : le code, ce qu'il vaut dessous, les liens à droite ; la modification s'ouvre dans la ligne. */
 .code-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--separator);
+  gap: 4px;
+  padding: 6px 4px 6px 16px;
+}
+
+.code-value {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-meta {
+  font-size: 15px;
+  color: var(--text-2);
 }
 
 .code-actions {
   display: flex;
-  gap: 8px;
+}
+
+.code-actions button {
+  font-size: 15px;
 }
 
 .code-edit {
   width: 100%;
+  padding: 4px 12px 10px 0;
 }
 
-.movement-list {
-  margin: 0;
-  padding-left: 18px;
+.code-empty {
+  padding: 12px 16px;
+}
+
+.add-row {
+  min-height: 48px;
+  padding: 0 16px;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--green-text);
+}
+
+/* Derniers mouvements : « Sortie −24 » dans la couleur du type, puis le moment et le prénom. */
+.movement-list li {
+  padding: 10px 16px;
+}
+
+.movement-visual {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
 }
 
-.movement-list li.cancelled {
+.movement-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.movement-meta {
+  font-size: 15px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.movement-list li.cancelled .movement-title {
   color: var(--text-2);
   text-decoration: line-through;
 }

@@ -6,7 +6,9 @@
  * « Modifier » change le nombre d'unités comptées à chaque scan du code ;
  * « Retirer » le détache du produit, sans toucher aux mouvements passés. Les
  * boutons nomment leur code pour un lecteur d'écran. Un produit archivé
- * montre ses codes sans les boutons.
+ * montre ses codes sans les boutons. Une liste groupée (maquette J-fiche) :
+ * le code, ce qu'il vaut dessous, les liens à droite ; « Ajouter un code »
+ * en dernière ligne.
  */
 import { useRef, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
@@ -16,18 +18,20 @@ import { api } from '../data/supabaseClient'
 import { parseIntInRange } from '../domain/productDraft'
 import { FIELD_HELP } from '../products/fieldHelp'
 import HelpField from '../products/HelpField'
+import { IconPlus } from '../ui/icons'
 
 interface CodeListProps {
   product: Product
   barcodes: BarcodeEntry[]
   readOnly?: boolean
+  onAdd?: () => void
   onChanged: () => void
   onSessionExpired: () => void
 }
 
 const unitsLabel = (units: number) => `${units} ${units > 1 ? 'unités' : 'unité'}`
 
-export default function CodeList({ product, barcodes, readOnly = false, onChanged, onSessionExpired }: CodeListProps) {
+export default function CodeList({ product, barcodes, readOnly = false, onAdd, onChanged, onSessionExpired }: CodeListProps) {
   const [editing, setEditing] = useState<string | null>(null)
   const [units, setUnits] = useState('')
   const [unitsError, setUnitsError] = useState<string | null>(null)
@@ -84,23 +88,36 @@ export default function CodeList({ product, barcodes, readOnly = false, onChange
 
   return (
     <>
-      <ul className="code-list" aria-label="Codes">
+      <ul className="group code-list" aria-label="Codes">
+        {barcodes.length === 0 && (
+          <li className="code-empty">
+            <p className="muted">Aucun code : utilise « Saisie manuelle » au Scanner.</p>
+          </li>
+        )}
         {barcodes.map((barcode) => (
           <li key={barcode.code} className="code-row">
-            <span className="code-label">
-              {barcode.code} — {unitsLabel(barcode.units)}
+            <span className="row-text">
+              <span className="code-value">{barcode.code}</span>
+              <span className="code-meta">{unitsLabel(barcode.units)}</span>
             </span>
             {!readOnly && editing !== barcode.code && (
               <span className="code-actions">
                 <button
                   type="button"
+                  className="link"
                   aria-label={`Modifier le code ${barcode.code}`}
                   disabled={busy}
                   onClick={() => startEditing(barcode)}
                 >
                   Modifier
                 </button>
-                <button type="button" aria-label={`Retirer le code ${barcode.code}`} disabled={busy} onClick={() => remove(barcode.code)}>
+                <button
+                  type="button"
+                  className="link danger"
+                  aria-label={`Retirer le code ${barcode.code}`}
+                  disabled={busy}
+                  onClick={() => remove(barcode.code)}
+                >
                   Retirer
                 </button>
               </span>
@@ -133,6 +150,14 @@ export default function CodeList({ product, barcodes, readOnly = false, onChange
             )}
           </li>
         ))}
+        {onAdd && (
+          <li>
+            <button type="button" className="row add-row" onClick={onAdd}>
+              <IconPlus size={20} strokeWidth={2.4} />
+              Ajouter un code
+            </button>
+          </li>
+        )}
       </ul>
       {error && (
         <p role="alert" className="message message-error">

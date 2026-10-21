@@ -75,6 +75,19 @@ async function waitForCount(scope, total, gap) {
   await scope.locator('.count-total').filter({ hasText: exactly(total) }).waitFor()
   await scope.locator('.count-gap').filter({ hasText: exactly(gap) }).waitFor()
 }
+
+// Noms donnés aux lecteurs d'écran (aria-label) des éléments trouvés, dans l'ordre.
+const accessibleNames = (locator) => locator.evaluateAll((elements) => elements.map((element) => element.getAttribute('aria-label')))
+
+// Ligne d'un code dans la fiche produit : celle dont le code vaut exactement code.
+const codeRow = (codes, code) =>
+  codes.getByRole('listitem').filter({ has: codes.page().locator('.code-value').filter({ hasText: exactly(code) }) })
+
+// Chiffres de la fiche produit, en paires [libellé, valeur] : [['Pack Metro', '24'], …].
+const sheetFigures = (sheet) =>
+  sheet.locator('.sheet-figures').evaluate((list) =>
+    [...list.querySelectorAll('dt')].map((term) => [term.textContent.trim(), term.nextElementSibling.textContent.trim()]),
+  )
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const recordCalls = (fake) => fake.calls.filter((call) => call.fn === 'record_movement')
 
@@ -323,22 +336,25 @@ async function scenarioTabs(browser) {
     await tab(page, 'À racheter (3)').click()
     const shopping = page.getByRole('list', { name: 'À racheter' })
     await shopping.waitFor()
-    assert.deepEqual(await shopping.getByRole('listitem').allTextContents(), [
+    assert.deepEqual(await accessibleNames(shopping.getByRole('button')), [
       'Red Bull 25 cl — reste −3 — prendre 2 packs de 24 — stock à vérifier',
       'Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24',
       'Évian 1,5 L — reste 4 — prendre 8 unités',
     ])
-    await page.getByText(/^Mis à jour à \d{2}:\d{2}$/).waitFor()
+    assert.deepEqual(await shopping.locator('.buy-amount').allTextContents(), ['2 packs', '2 packs', '8 unités'])
+    assert.deepEqual(await shopping.locator('.buy-note').allTextContents(), ['de 24', 'de 24', "à l'unité"])
+    await page.getByText(/^3 produits · mis à jour à \d{2}:\d{2}$/).waitFor()
     assert.ok(await page.evaluate(() => document.querySelector('video').srcObject === null), 'caméra arrêtée hors du Scanner')
 
     // 3. Une entrée faite sur un autre téléphone : le changement d'onglet relit le catalogue.
     fake.addMovement({ productId: 'p-evian', kind: 'in', delta: 8, employee: 'Léa' })
     await tab(page, 'Scanner').click()
     await tab(page, 'À racheter (2)').click()
-    assert.deepEqual(await shopping.getByRole('listitem').allTextContents(), [
+    assert.deepEqual(await accessibleNames(shopping.getByRole('button')), [
       'Red Bull 25 cl — reste −3 — prendre 2 packs de 24 — stock à vérifier',
       'Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24',
     ])
+    await page.getByText(/^2 produits · mis à jour à \d{2}:\d{2}$/).waitFor()
 
     // 4. La fiche du Scanner est gardée pendant le changement d'onglet.
     await tab(page, 'Scanner').click()
@@ -475,11 +491,14 @@ async function scenarioStock(browser) {
   await signIn(page)
   await tab('Stock').click()
 
-  // 1. Liste triée à la française, stock en packs, produits à racheter en rouge.
+  // 1. Liste triée à la française : le stock en unités, l'état dessous (à racheter, ou les packs), en rouge à racheter.
   const list = page.getByRole('list', { name: 'Produits' })
   await list.waitFor()
   assert.deepEqual(await list.locator('.product-name').allTextContents(), ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
-  assert.deepEqual(await list.locator('.product-stock').allTextContents(), ['10', '4', '36 (3 packs)', '−3'])
+  assert.deepEqual(await list.locator('.product-stock').allTextContents(), ['10', '4', '36', '−3'])
+  assert.deepEqual(await list.locator('.product-state').allTextContents(),
+    ['À racheter', 'À racheter', '3 packs', 'À racheter · stock à vérifier'])
+  await page.getByText(/^Mis à jour à \d{2}:\d{2}$/).waitFor()
   assert.deepEqual(await list.locator('.product-row').evaluateAll((rows) => rows.map((row) => row.classList.contains('stock-low'))),
     [true, true, false, true])
 
@@ -493,26 +512,28 @@ async function scenarioStock(browser) {
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
   const sheet = page.getByRole('region', { name: 'Fiche produit' })
   await sheet.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
-  await sheet.getByText('Stock : 10', { exact: true }).waitFor()
-  await sheet.getByText('Pack Metro : 24 · Seuil : 24 · Stock idéal : 48').waitFor()
-  await sheet.getByText('5449000000996 — 24 unités').waitFor()
+  await sheet.locator('.sheet-stock-value').filter({ hasText: exactly('10') }).waitFor()
+  assert.equal(await sheet.locator('.sheet-stock-packs').count(), 0, "moins d'un pack : pas de packs")
+  assert.deepEqual(await sheetFigures(sheet), [['Pack Metro', '24'], ['Seuil', '24'], ['Stock idéal', '48']])
+  const codes = sheet.getByRole('list', { name: 'Codes' })
+  await codeRow(codes, '5449000000996').locator('.code-meta').filter({ hasText: exactly('24 unités') }).waitFor()
   const movements = sheet.getByRole('list', { name: 'Derniers mouvements' })
-  await movements.getByRole('listitem').first().waitFor()
-  const lines = await movements.getByRole('listitem').allTextContents()
+  await movements.locator('.movement-line').first().waitFor()
+  const lines = await movements.locator('.movement-line').allTextContents()
   assert.equal(lines.length, 2)
   assert.match(lines[0], /— Léa — Sortie −38$/)
   assert.match(lines[1], /— Sam — Entrée \+48$/)
 
   // 4. Archivage refusé une première fois (p4) : aucun appel, la fiche reste ouverte.
   declineNext = true
-  await sheet.getByRole('button', { name: 'Archiver' }).click()
+  await sheet.getByRole('button', { name: 'Archiver le produit' }).click()
   await page.waitForTimeout(300)
   assert.deepEqual(dialogs, ['Archiver « Coca-Cola 33 cl » ? Il disparaîtra des listes ; son historique est gardé.'])
   assert.equal(fake.calls.filter((call) => call.fn === 'set_product_archived').length, 0, 'aucun archivage sans accord')
   await sheet.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
 
   // Puis accepté : confirmation, retour à la liste, badge à jour.
-  await sheet.getByRole('button', { name: 'Archiver' }).click()
+  await sheet.getByRole('button', { name: 'Archiver le produit' }).click()
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).waitFor({ state: 'detached' })
   await tab('À racheter (2)').waitFor()
 
@@ -537,6 +558,37 @@ async function scenarioStock(browser) {
   await page.getByRole('list', { name: 'À racheter' }).getByRole('button', { name: /^Red Bull 25 cl/ }).click()
   await sheet.getByRole('heading', { name: 'Red Bull 25 cl' }).waitFor()
   await context.close()
+
+  {
+    // 7. Noms longs à 320 px : rien ne déborde sur le Scanner, À racheter, le Stock, la fiche et l'Historique.
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage', longNames: true })
+    await page.setViewportSize({ width: 320, height: 640 })
+    const tab = (name) => page.getByRole('button', { name, exact: true })
+    // Ce qui déborde : la page, plus large que l'écran, ou une ligne de liste, plus large qu'elle-même.
+    const overflows = () =>
+      page.evaluate(() => [
+        ...(document.documentElement.scrollWidth > 320 ? [`page : ${document.documentElement.scrollWidth} px`] : []),
+        ...[...document.querySelectorAll('.row')].filter((row) => row.scrollWidth > row.clientWidth).map((row) => `ligne : ${row.textContent}`),
+      ])
+    await signIn(page)
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
+    await confirmCard(page).getByRole('heading', { name: 'Coca-Cola 33 cl — édition limitée, format familial' }).waitFor()
+    assert.deepEqual(await overflows(), [], 'Scanner')
+    await tab('À racheter (3)').click()
+    await page.getByRole('list', { name: 'À racheter' }).waitFor()
+    assert.deepEqual(await overflows(), [], 'À racheter')
+    await tab('Stock').click()
+    const list = page.getByRole('list', { name: 'Produits' })
+    await list.waitFor()
+    assert.deepEqual(await overflows(), [], 'Stock')
+    await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+    await page.getByRole('region', { name: 'Fiche produit' }).locator('.movement-line').first().waitFor()
+    assert.deepEqual(await overflows(), [], 'fiche produit')
+    await tab('Historique').click()
+    await page.getByRole('list', { name: 'Historique' }).waitFor()
+    assert.deepEqual(await overflows(), [], 'Historique')
+    await context.close()
+  }
   console.log('Scénario K (stock et fiche produit) : OK')
 }
 
@@ -558,7 +610,7 @@ async function scenarioSheetEdits(browser) {
   await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
   const sheet = page.getByRole('region', { name: 'Fiche produit' })
   const codes = sheet.getByRole('list', { name: 'Codes' })
-  await codes.getByText('5449000000996 — 24 unités').waitFor()
+  await codeRow(codes, '5449000000996').waitFor()
 
   // 1. Modifier : champs pré-remplis, le seuil ne suit pas le pack, RG-7 vérifiée avant l'envoi.
   await sheet.getByRole('button', { name: 'Modifier', exact: true }).click()
@@ -582,7 +634,8 @@ async function scenarioSheetEdits(browser) {
   await page.route(isCatalogRead, cutCatalog)
   await edit.getByLabel('Stock idéal (unités)').fill('48')
   await edit.getByRole('button', { name: 'Enregistrer' }).click()
-  await sheet.getByText('Pack Metro : 24 · Seuil : 30 · Stock idéal : 48').waitFor()
+  await sheet.locator('.sheet-figures').waitFor()
+  assert.deepEqual(await sheetFigures(sheet), [['Pack Metro', '24'], ['Seuil', '30'], ['Stock idéal', '48']])
   await page.unroute(isCatalogRead, cutCatalog)
   assert.deepEqual(bodies('update_product'), [
     { p_id: 'p-coca', p_name: 'Coca-Cola 33 cl', p_pack_size: 24, p_alert_threshold: 30, p_target_stock: 48 },
@@ -593,7 +646,7 @@ async function scenarioSheetEdits(browser) {
   assert.equal(await codes.getByLabel('Ce code vaut (unités)').inputValue(), '24')
   await codes.getByLabel('Ce code vaut (unités)').fill('12')
   await codes.getByRole('button', { name: 'Enregistrer' }).click()
-  await codes.getByText('5449000000996 — 12 unités').waitFor()
+  await codeRow(codes, '5449000000996').locator('.code-meta').filter({ hasText: exactly('12 unités') }).waitFor()
   assert.deepEqual(bodies('attach_barcode'), [{ p_code: '5449000000996', p_product_id: 'p-coca', p_units: 12, p_move: false }])
 
   // 3. Ajouter un code tapé à la main : la clé de contrôle est vérifiée.
@@ -608,12 +661,12 @@ async function scenarioSheetEdits(browser) {
   const attach = page.getByRole('region', { name: 'Ajouter à un produit existant' })
   await attach.getByLabel('Ce code vaut (unités)').fill('1')
   await attach.getByRole('button', { name: 'Ajouter le code' }).click()
-  await codes.getByText('4006381333931 — 1 unité').waitFor()
+  await codeRow(codes, '4006381333931').locator('.code-meta').filter({ hasText: exactly('1 unité') }).waitFor()
   assert.deepEqual(bodies('attach_barcode').at(-1), { p_code: '4006381333931', p_product_id: 'p-coca', p_units: 1, p_move: false })
 
   // 4. Retirer un code : confirmation, puis la ligne disparaît.
   await codes.getByRole('button', { name: 'Retirer le code 4006381333931' }).click()
-  await codes.getByText('4006381333931 — 1 unité').waitFor({ state: 'detached' })
+  await codeRow(codes, '4006381333931').waitFor({ state: 'detached' })
   assert.deepEqual(bodies('detach_barcode'), [{ p_code: '4006381333931' }])
   assert.equal(dialogs.at(-1), 'Retirer le code 4006381333931 ? Les mouvements passés ne changent pas.')
 
@@ -628,7 +681,8 @@ async function scenarioSheetEdits(browser) {
   assert.ok(await correct.getByLabel('Packs de 24').isDisabled(), 'comptage figé après un échec')
   await correct.getByRole('button', { name: 'Réessayer' }).click()
   await sheet.getByText('Stock corrigé : 26 (1 pack + 2)').waitFor()
-  await sheet.getByText('Stock : 26 (1 pack + 2)', { exact: true }).waitFor()
+  await sheet.locator('.sheet-stock-value').filter({ hasText: exactly('26') }).waitFor()
+  await sheet.locator('.sheet-stock-packs').filter({ hasText: exactly('1 pack + 2') }).waitFor()
   const inventories = bodies('record_inventory')
   assert.equal(inventories.length, 2, 'deux tentatives')
   assert.match(inventories[0].p_id, UUID)
@@ -636,7 +690,7 @@ async function scenarioSheetEdits(browser) {
   assert.deepEqual({ ...inventories[0], p_id: undefined }, { p_id: undefined, p_product_id: 'p-coca', p_counted: 26, p_employee: 'Sam' })
   const movements = sheet.getByRole('list', { name: 'Derniers mouvements' }).getByRole('listitem')
   await movements.first().filter({ hasText: 'Inventaire' }).waitFor()
-  assert.match(await movements.first().textContent(), /— Sam — Inventaire : 26 comptés \(\+16\)$/)
+  assert.match(await movements.first().locator('.movement-line').textContent(), /— Sam — Inventaire : 26 comptés \(\+16\)$/)
   assert.equal(await movements.count(), 3, 'un seul inventaire enregistré')
 
   // 6. Nouveau produit sans scan : seuil et stock idéal suivent le pack ; création rejouée sans doublon ;
@@ -792,6 +846,12 @@ async function scenarioHistory(browser) {
   assert.match(texts[0], /— Sam — Sortie −3 — Red Bull 25 cl$/)
   assert.match(texts[1], /— Léa — Sortie −38 — Coca-Cola 33 cl$/)
   assert.ok(texts.some((text) => /— Sam — Entrée \+24 — Oasis Tropical 33 cl$/.test(text)), "mouvement d'un produit archivé")
+  // Telle qu'elle s'affiche : le produit, la quantité dans la couleur du type, puis le type, le moment et le prénom.
+  const first = list.getByRole('listitem').first()
+  assert.equal(await first.locator('.history-title').textContent(), 'Red Bull 25 cl')
+  assert.equal(await first.locator('.history-amount').textContent(), '−3')
+  assert.equal(await first.locator('.history-amount').evaluate((element) => getComputedStyle(element).color), 'rgb(163, 74, 7)')
+  assert.match(await first.locator('.history-meta').textContent(), /^Sortie · \S+ \d{2}:\d{2} · Sam$/)
 
   // 2. À 320 px : les quatre onglets tiennent sur une ligne sans texte coupé, et « Voir plus »,
   // en bas de page, reste au-dessus de la barre d'onglets.
@@ -835,6 +895,8 @@ async function scenarioHistory(browser) {
   assert.match(dialogs[0], /^Annuler ce mouvement \?\n.+— Léa — Sortie −38 — Coca-Cola 33 cl\nLe stock sera recalculé\.$/)
   assert.deepEqual(fake.calls.find((call) => call.fn === 'cancel_movement')?.body, { p_movement_id: 'm-c2', p_employee: 'Sam' })
   assert.equal(await cancelled.getAttribute('class'), 'cancelled')
+  assert.match(await cancelled.locator('.history-meta').textContent(), /— annulé par Sam$/)
+  assert.equal(await cancelled.locator('.history-title').evaluate((element) => getComputedStyle(element).textDecorationLine), 'line-through')
   assert.equal(await cancelled.getByRole('button').count(), 0, 'plus de bouton sur une ligne annulée')
   await tab('À racheter (2)').waitFor()
 
