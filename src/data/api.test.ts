@@ -5,8 +5,9 @@ import { createApi, HISTORY_PAGE_SIZE } from './api'
 // de la même forme que PostgREST ({ data, error, status }).
 const ok = (data: unknown) => ({ data, error: null, status: 200 })
 const SQL_COCA = { id: 'p9', name: 'Coca-Cola 33 cl', pack_size: 24, alert_threshold: 24, target_stock: 48, archived: false,
-  created_at: '2026-10-19T12:00:00Z', updated_at: '2026-10-19T12:00:00Z', stock: 0 }
-const COCA = { id: 'p9', name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 24, targetStock: 48, archived: false, stock: 0 }
+  created_at: '2026-10-19T12:00:00Z', updated_at: '2026-10-19T12:00:00Z', stock: 0, photo_path: null }
+const COCA = { id: 'p9', name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 24, targetStock: 48, archived: false, stock: 0, photoPath: null }
+const COCA_PHOTO = 'codes/5449000000996/11111111-1111-4111-8111-111111111111.jpg'
 const NEW_COCA = { id: 'p-new', name: 'Coca-Cola 33 cl', packSize: 24, alertThreshold: 24, targetStock: 48, barcodes: [{ code: '5449000000996', units: 24 }] }
 // Lignes de product_stock reçues dans l'ordre du serveur (tri différent du tri français).
 const SERVER_ORDER = ['Red Bull 25 cl', 'Évian 1,5 L', 'Coca-Cola 33 cl'].map((name, i) => ({ ...SQL_COCA, id: `p${i}`, name }))
@@ -39,10 +40,14 @@ test('recordMovement en Sortie et en saisie manuelle (sans code)', async () => {
   expect(rpc).toHaveBeenCalledWith('record_movement', { p_id: 'm2', p_product_id: 'p1', p_code: null, p_kind: 'out', p_units: 24, p_quantity: 1, p_employee: 'Sam' })
 })
 
-test('lookupBarcode transforme le JSON SQL en Product', async () => {
-  const rpc = vi.fn(async () => ({ data: { code: '3502110123091', units: 12, product: { id: 'p1', name: 'Lipton Pêche 50 cl', pack_size: 12, alert_threshold: 12, target_stock: 24, archived: false, stock: 0 } }, error: null, status: 200 }))
+test("lookupBarcode transforme le JSON SQL en Product, avec l'image du code et celle du produit", async () => {
+  const rpc = vi.fn(async () => ({ data: { code: '3502110123091', units: 1, photo_path: 'codes/3502110123091/l.jpg', photo_source: 'off',
+    product: { id: 'p1', name: 'Lipton Pêche 50 cl', pack_size: 12, alert_threshold: 12, target_stock: 24, archived: false, stock: 0,
+      photo_path: 'codes/3502110123092/p.jpg' } }, error: null, status: 200 }))
   const api = createApi({ rpc, from: vi.fn() } as never)
-  expect(await api.lookupBarcode('3502110123091')).toEqual({ found: true, units: 12, product: { id: 'p1', name: 'Lipton Pêche 50 cl', packSize: 12, alertThreshold: 12, targetStock: 24, archived: false, stock: 0 } })
+  expect(await api.lookupBarcode('3502110123091')).toEqual({ found: true, units: 1, photoPath: 'codes/3502110123091/l.jpg',
+    product: { id: 'p1', name: 'Lipton Pêche 50 cl', packSize: 12, alertThreshold: 12, targetStock: 24, archived: false, stock: 0,
+      photoPath: 'codes/3502110123092/p.jpg' } })
   expect(rpc).toHaveBeenCalledWith('lookup_barcode', { p_code: '3502110123091' })
 })
 
@@ -145,32 +150,36 @@ test('listProducts lit les produits actifs de product_stock et les trie à la fr
   expect(calls).toEqual([['select', '*'], ['eq', 'archived', false], ['order', 'name']])
 })
 
-test('listCatalog lit tous les produits, archivés compris, triés à la française', async () => {
+test("listCatalog lit tous les produits, archivés compris, triés à la française, avec l'image du produit", async () => {
   const calls: unknown[][] = []
-  const from = vi.fn(() => queryBuilder(SERVER_ORDER, calls))
+  const rows = SERVER_ORDER.map((row) => (row.name === 'Coca-Cola 33 cl' ? { ...row, photo_path: COCA_PHOTO } : row))
+  const from = vi.fn(() => queryBuilder(rows, calls))
   const list = await createApi({ rpc: vi.fn(), from } as never).listCatalog()
   expect(list.map((p) => p.name)).toEqual(['Coca-Cola 33 cl', 'Évian 1,5 L', 'Red Bull 25 cl'])
+  expect(list.map((p) => p.photoPath)).toEqual([COCA_PHOTO, null, null])
   expect(from).toHaveBeenCalledWith('product_stock')
   expect(calls).toEqual([['select', '*'], ['order', 'name']])
 })
 
-test('getProductDetail lit les codes et les 20 derniers mouvements', async () => {
+test('getProductDetail lit les codes, avec leur image, et les 20 derniers mouvements', async () => {
   const barcodeCalls: unknown[][] = []
   const movementCalls: unknown[][] = []
   const from = vi.fn((table: string) =>
     table === 'barcodes'
-      ? queryBuilder([{ code: '2000000000015', units: 24 }], barcodeCalls)
+      ? queryBuilder([{ code: '5449000000996', units: 24, photo_path: COCA_PHOTO, photo_source: 'equipe' },
+          { code: '2000000000015', units: 1, photo_path: null, photo_source: null }], barcodeCalls)
       : queryBuilder([{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', created_at: '2026-10-19T12:32:00Z',
           cancelled_at: null, cancelled_by: null }], movementCalls),
   )
   await expect(createApi({ rpc: vi.fn(), from } as never).getProductDetail('p9')).resolves.toEqual({
-    barcodes: [{ code: '2000000000015', units: 24 }],
+    barcodes: [{ code: '5449000000996', units: 24, photoPath: COCA_PHOTO, photoSource: 'equipe' },
+      { code: '2000000000015', units: 1, photoPath: null, photoSource: null }],
     movements: [{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', createdAt: '2026-10-19T12:32:00Z',
       cancelledAt: null, cancelledBy: null }],
   })
   expect(from).toHaveBeenCalledWith('barcodes')
   expect(from).toHaveBeenCalledWith('movements')
-  expect(barcodeCalls).toEqual([['select', 'code, units'], ['eq', 'product_id', 'p9'], ['order', 'created_at']])
+  expect(barcodeCalls).toEqual([['select', 'code, units, photo_path, photo_source'], ['eq', 'product_id', 'p9'], ['order', 'created_at']])
   expect(movementCalls).toEqual([['select', 'id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by'],
     ['eq', 'product_id', 'p9'], ['order', 'created_at', { ascending: false }], ['limit', 20]])
 })
@@ -186,6 +195,13 @@ test('setArchived appelle set_product_archived', async () => {
   const rpc = vi.fn(async () => ok({ ...SQL_COCA, archived: true }))
   await expect(createApi({ rpc, from: vi.fn() } as never).setArchived('p9', true)).resolves.toEqual({ ...COCA, archived: true })
   expect(rpc).toHaveBeenCalledWith('set_product_archived', { p_product_id: 'p9', p_archived: true })
+})
+
+test("setBarcodePhoto appelle set_barcode_photo avec le code, le chemin et la provenance", async () => {
+  const rpc = vi.fn(async () => ok({ code: '5449000000996', photo_path: COCA_PHOTO, photo_source: 'equipe' }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).setBarcodePhoto({ code: '5449000000996', path: COCA_PHOTO, source: 'equipe' }))
+    .resolves.toBeUndefined()
+  expect(rpc).toHaveBeenCalledWith('set_barcode_photo', { p_code: '5449000000996', p_path: COCA_PHOTO, p_source: 'equipe' })
 })
 
 test('detachBarcode appelle detach_barcode', async () => {

@@ -2,11 +2,12 @@ import { expect, test } from 'vitest'
 import type { Product } from '../data/api'
 import { flowReducer, initialFlow, UNDO_FAILED_MESSAGE, type FlowState } from './scanFlow'
 
-const lipton: Product = { id: 'p1', name: 'Lipton Pêche 50 cl', packSize: 12, alertThreshold: 12, targetStock: 24, archived: false, stock: 0 }
+const lipton: Product = { id: 'p1', name: 'Lipton Pêche 50 cl', packSize: 12, alertThreshold: 12, targetStock: 24, archived: false, stock: 0,
+  photoPath: null }
 const PACK = '3502110123091'
 const scanning = (cooldown: { code: string; until: number } | null = null): FlowState => ({ step: 'scanning', notice: null, cooldown })
 const confirmed = () => flowReducer({ step: 'looking_up', code: PACK },
-  { type: 'lookup_done', code: PACK, result: { found: true, product: lipton, units: 12 }, movementId: 'm1' })
+  { type: 'lookup_done', code: PACK, result: { found: true, product: lipton, units: 12, photoPath: null }, movementId: 'm1' })
 const saving = () => flowReducer(confirmed(), { type: 'validate' })
 
 test('code long GS1 du pack Lipton → recherche du code normalisé', () => {
@@ -19,7 +20,13 @@ test('code de lot → notice not_a_product ; clé de contrôle fausse → ignor�
   expect(flowReducer(initialFlow, { type: 'code_read', rawValue: '3502110123092', format: 'ean_13', at: 0 })).toBe(initialFlow)
 })
 test('code connu → fiche de confirmation, quantité 1', () => {
-  expect(confirmed()).toEqual({ step: 'confirm', target: { product: lipton, units: 12, code: PACK }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
+  expect(confirmed()).toEqual({ step: 'confirm', target: { product: lipton, units: 12, code: PACK, photoPath: null }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
+})
+test("la fiche montre l'image du code scanné, pas celle du produit", () => {
+  const withPhotos = { ...lipton, photoPath: 'codes/3502110123091/pack.jpg' }
+  const state = flowReducer({ step: 'looking_up', code: '3502110123092' }, { type: 'lookup_done', code: '3502110123092',
+    result: { found: true, product: withPhotos, units: 1, photoPath: 'codes/3502110123092/canette.jpg' }, movementId: 'm1' })
+  expect(state).toMatchObject({ step: 'confirm', target: { photoPath: 'codes/3502110123092/canette.jpg' } })
 })
 test('réponse arrivée pour un autre code : ignorée', () => {
   const s: FlowState = { step: 'looking_up', code: PACK }
@@ -67,7 +74,7 @@ test('étapes intermédiaires', () => {
   expect(flowReducer({ step: 'new_product', code: '9002490274658' }, { type: 'choose_attach', product: lipton }))
     .toEqual({ step: 'attach', code: '9002490274658', product: lipton })
   expect(flowReducer(initialFlow, { type: 'open_manual' })).toEqual({ step: 'manual' })
-  const target = { product: lipton, units: 24, code: '9002490274658' }
+  const target = { product: lipton, units: 24, code: '9002490274658', photoPath: null }
   expect(flowReducer({ step: 'attach', code: '9002490274658', product: lipton }, { type: 'product_ready', target, movementId: 'm2' }))
     .toEqual({ step: 'confirm', target, quantity: 1, movementId: 'm2', status: 'idle', errorKind: null, counted: null })
   expect(flowReducer(unknown, { type: 'close' })).toEqual(scanning())
@@ -83,7 +90,7 @@ test('annulation réussie ou échouée', () => {
 test('recherche en cours : Annuler revient à la lecture, la réponse tardive est ignorée', () => {
   const closed = flowReducer({ step: 'looking_up', code: PACK }, { type: 'close' })
   expect(closed).toEqual(scanning())
-  expect(flowReducer(closed, { type: 'lookup_done', code: PACK, result: { found: true, product: lipton, units: 12 }, movementId: 'm9' })).toBe(closed)
+  expect(flowReducer(closed, { type: 'lookup_done', code: PACK, result: { found: true, product: lipton, units: 12, photoPath: null }, movementId: 'm9' })).toBe(closed)
 })
 
 test("pendant l'annulation, aucun code n'est relu et le résultat s'affiche toujours", () => {
@@ -121,19 +128,19 @@ test('Inventaire enregistré : la notice porte le nombre compté', () => {
 
 test('produit archivé : réactivation puis fiche de confirmation', () => {
   const archived = flowReducer({ step: 'looking_up', code: PACK },
-    { type: 'lookup_done', code: PACK, result: { found: true, product: { ...lipton, archived: true }, units: 12 }, movementId: 'm1' })
-  expect(archived).toEqual({ step: 'archived', target: { product: { ...lipton, archived: true }, units: 12, code: PACK },
+    { type: 'lookup_done', code: PACK, result: { found: true, product: { ...lipton, archived: true }, units: 12, photoPath: null }, movementId: 'm1' })
+  expect(archived).toEqual({ step: 'archived', target: { product: { ...lipton, archived: true }, units: 12, code: PACK, photoPath: null },
     movementId: 'm1', status: 'idle', errorKind: null })
   expect(flowReducer(archived, { type: 'code_read', rawValue: '5449000000996', format: 'ean_13', at: 0 })).toBe(archived)
   const sending = flowReducer(archived, { type: 'reactivate' })
   expect(flowReducer(sending, { type: 'close' })).toBe(sending)
   expect(flowReducer(sending, { type: 'reactivate_done', product: lipton })).toEqual({ step: 'confirm',
-    target: { product: lipton, units: 12, code: PACK }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
+    target: { product: lipton, units: 12, code: PACK, photoPath: null }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
 })
 
 test('réactivation impossible : message, nouvel essai, fermeture', () => {
   const archived = flowReducer({ step: 'looking_up', code: PACK },
-    { type: 'lookup_done', code: PACK, result: { found: true, product: { ...lipton, archived: true }, units: 12 }, movementId: 'm1' })
+    { type: 'lookup_done', code: PACK, result: { found: true, product: { ...lipton, archived: true }, units: 12, photoPath: null }, movementId: 'm1' })
   const failed = flowReducer(flowReducer(archived, { type: 'reactivate' }), { type: 'reactivate_failed', kind: 'network' })
   expect(failed).toMatchObject({ step: 'archived', status: 'failed', errorKind: 'network' })
   expect(flowReducer(failed, { type: 'reactivate' })).toMatchObject({ status: 'saving', errorKind: null })

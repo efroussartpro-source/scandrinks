@@ -50,7 +50,7 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
     setFormError(null)
     try {
       const result = await api.attachBarcode({ code, productId: product.id, units: value, move })
-      if (result.status === 'attached') onReady({ product, units: value, code })
+      if (result.status === 'attached') onReady({ product, units: value, code, photoPath: null })
       else setConflict(result.productName)
     } catch (thrown) {
       const kind = classifyApiError(thrown).kind

@@ -139,7 +139,7 @@ export default function NewProductForm(props: NewProductFormProps) {
     const barcodes = [{ code, units: checked.codeUnits }, ...(unitCode ? [{ code: unitCode, units: 1 }] : [])]
     try {
       const product = await api.createProduct({ ...checked.product, barcodes, id: productId })
-      onReady({ product, units: checked.codeUnits, code })
+      onReady({ product, units: checked.codeUnits, code, photoPath: null })
     } catch (thrown) {
       const error = classifyApiError(thrown)
       if (error.kind === 'session') {

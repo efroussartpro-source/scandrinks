@@ -129,6 +129,33 @@ const SHOTS = [
     },
   },
   {
+    name: 'images-scanner',
+    fake: { catalogue: 'images' },
+    go: async (page) => {
+      await signIn(page)
+      await confirmCard(page).locator('img.thumb').waitFor({ timeout: SCAN_TIMEOUT })
+    },
+  },
+  {
+    name: 'images-stock',
+    fake: { catalogue: 'images' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Stock', exact: true }).click()
+      await page.getByRole('list', { name: 'Produits' }).locator('img.thumb').first().waitFor()
+    },
+  },
+  {
+    name: 'images-fiche',
+    fake: { catalogue: 'images' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Stock', exact: true }).click()
+      await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+      await page.getByRole('region', { name: 'Fiche produit' }).locator('.code-row img.thumb').waitFor()
+    },
+  },
+  {
     name: 'reglages',
     fake: {},
     go: async (page) => {

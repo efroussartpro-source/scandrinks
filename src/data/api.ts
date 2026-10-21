@@ -8,12 +8,14 @@
  * en paramètre : les tests utilisent un faux client, l'app celui de
  * supabaseClient.ts. Toute erreur devient une ApiError (voir apiErrors.ts).
  * Les listes de produits sont triées dans l'ordre alphabétique français.
+ * Un produit et chacun de ses codes donnent le chemin de leur image, ou null.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { HistoryMovement, Movement, MovementKind } from '../domain/movements'
 import { sortByName } from '../domain/names'
 import type { NewProductInput } from '../domain/productDraft'
 import type { MoveMode } from '../domain/stock'
+import type { PhotoSource } from '../photos/photos'
 import { classifyApiError } from './apiErrors'
 
 export interface Product {
@@ -24,15 +26,20 @@ export interface Product {
   targetStock: number
   archived: boolean
   stock: number
+  // Image du produit : celle du code de son pack Metro, sinon celle d'un autre code (vue product_stock).
+  photoPath: string | null
 }
 
-export type LookupResult = { found: true; product: Product; units: number } | { found: false }
+// photoPath : l'image du code lu, qui peut différer de celle du produit.
+export type LookupResult = { found: true; product: Product; units: number; photoPath: string | null } | { found: false }
 
 export type AttachResult = { status: 'attached' } | { status: 'already_attached'; productId: string; productName: string }
 
 export interface BarcodeEntry {
   code: string
   units: number
+  photoPath: string | null
+  photoSource: PhotoSource | null
 }
 
 export interface ProductDetail {
@@ -102,6 +109,15 @@ interface ProductRow {
   target_stock: number
   archived: boolean
   stock: number
+  // Absente des réponses de l'app des jalons 1 à 3, avant la migration des images.
+  photo_path?: string | null
+}
+
+interface BarcodeRow {
+  code: string
+  units: number
+  photo_path: string | null
+  photo_source: PhotoSource | null
 }
 
 type AttachRow = { status: 'attached' } | { status: 'already_attached'; product_id: string; product_name: string }
@@ -153,6 +169,14 @@ const toProduct = (row: ProductRow): Product => ({
   targetStock: row.target_stock,
   archived: row.archived,
   stock: row.stock,
+  photoPath: row.photo_path ?? null,
+})
+
+const toBarcodeEntry = (row: BarcodeRow): BarcodeEntry => ({
+  code: row.code,
+  units: row.units,
+  photoPath: row.photo_path,
+  photoSource: row.photo_source,
 })
 
 // Attend la réponse et lève une ApiError en cas d'échec. Le statut HTTP de la
@@ -179,8 +203,10 @@ async function run<T>(query: PromiseLike<QueryResult>): Promise<T> {
 export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
   return {
     async lookupBarcode(code: string): Promise<LookupResult> {
-      const row = await run<{ code: string; units: number; product: ProductRow } | null>(client.rpc('lookup_barcode', { p_code: code }))
-      return row ? { found: true, product: toProduct(row.product), units: row.units } : { found: false }
+      const row = await run<{ code: string; units: number; photo_path?: string | null; product: ProductRow } | null>(
+        client.rpc('lookup_barcode', { p_code: code }),
+      )
+      return row ? { found: true, product: toProduct(row.product), units: row.units, photoPath: row.photo_path ?? null } : { found: false }
     },
 
     async listProducts(): Promise<Product[]> {
@@ -196,7 +222,9 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
 
     async getProductDetail(productId: string): Promise<ProductDetail> {
       const [barcodes, movements] = await Promise.all([
-        run<BarcodeEntry[] | null>(client.from('barcodes').select('code, units').eq('product_id', productId).order('created_at')),
+        run<BarcodeRow[] | null>(
+          client.from('barcodes').select('code, units, photo_path, photo_source').eq('product_id', productId).order('created_at'),
+        ),
         run<MovementRow[] | null>(
           client
             .from('movements')
@@ -206,7 +234,7 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
             .limit(20),
         ),
       ])
-      return { barcodes: barcodes ?? [], movements: (movements ?? []).map(toMovement) }
+      return { barcodes: (barcodes ?? []).map(toBarcodeEntry), movements: (movements ?? []).map(toMovement) }
     },
 
     // L'identifiant vient du téléphone : une création rejouée renvoie la fiche déjà créée.
@@ -240,6 +268,13 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
     async setArchived(productId: string, archived: boolean): Promise<Product> {
       const row = await run<ProductRow>(client.rpc('set_product_archived', { p_product_id: productId, p_archived: archived }))
       return toProduct(row)
+    },
+
+    // Une fois le fichier envoyé dans « photos » : il devient l'image du code. Rejouable.
+    async setBarcodePhoto(input: { code: string; path: string; source: PhotoSource }): Promise<void> {
+      await run<{ code: string; photo_path: string; photo_source: PhotoSource }>(
+        client.rpc('set_barcode_photo', { p_code: input.code, p_path: input.path, p_source: input.source }),
+      )
     },
 
     async detachBarcode(code: string): Promise<void> {

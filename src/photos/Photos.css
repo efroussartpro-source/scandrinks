@@ -1,0 +1,15 @@
+/* Vignettes des images (maquettes I-confirm, I-stock, I-fiche) : un carré arrondi, l'image recadrée au centre. */
+.thumb {
+  flex: none;
+  display: block;
+  object-fit: cover;
+  background: var(--thumb);
+}
+
+/* Sans image : l'icône grise du produit sur le fond de la vignette. */
+.thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+}

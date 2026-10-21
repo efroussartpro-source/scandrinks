@@ -26,9 +26,9 @@
   margin: 0;
 }
 
-/* Une ligne par produit : le nom et son état, le stock en grand à droite ; en rouge à racheter. */
+/* Une ligne par produit : son image, le nom et son état, le stock en grand à droite ; en rouge à racheter. */
 .stock-list .row {
-  padding: 11px 10px 11px 16px;
+  padding: 9px 10px 9px 12px;
 }
 
 .product-name {
@@ -169,12 +169,22 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  padding: 6px 4px 6px 16px;
+  padding: 6px 4px 6px 12px;
+}
+
+.code-row > .thumb {
+  margin-right: 8px;
+}
+
+/* Le numéro ne se coupe jamais : quand la place manque, les liens passent dessous. */
+.code-row .row-text {
+  min-width: auto;
 }
 
 .code-value {
   font-size: 17px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .code-meta {
@@ -187,6 +197,7 @@
 }
 
 .code-actions button {
+  padding: 0 6px;
   font-size: 15px;
 }
 

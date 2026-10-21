@@ -19,6 +19,7 @@ import { apiErrorMessage } from '../data/apiErrors'
 import { formatClock } from '../domain/movements'
 import { isLow, listState } from '../domain/restock'
 import { formatUnits } from '../domain/stock'
+import Thumb from '../photos/Thumb'
 import { filterProducts } from '../products/search'
 import { IconChevronRight, IconPlus, IconSearch } from '../ui/icons'
 import ProductCreateForm from './ProductCreateForm'
@@ -122,6 +123,7 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
                   className={!product.archived && isLow(product) ? 'row product-row stock-low' : 'row product-row'}
                   onClick={() => setOpenId(product.id)}
                 >
+                  <Thumb path={product.photoPath} size={44} />
                   <span className="row-text">
                     <span className="product-name">{product.name}</span>
                     {state !== null && <span className="product-state">{state}</span>}

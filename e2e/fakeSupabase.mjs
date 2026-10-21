@@ -6,13 +6,22 @@
  * fonctions SQL, vue product_stock et tables barcodes et movements
  * (PostgREST), avec les mêmes formes de réponse que les migrations de
  * supabase/migrations/. Comme private.is_allowed(), un jeton dont la session
- * est fermée est refusé (401, PT401), lectures comprises. Intercepte aussi
- * Open Food Facts. Aucune requête ne sort vers Internet.
+ * est fermée est refusé (401, PT401), lectures comprises. Simule aussi le
+ * stockage des images (compartiment privé « photos », liens signés) et Open
+ * Food Facts, images comprises. Aucune requête ne sort vers Internet.
  */
+import { PHOTO_JPEG } from './jpeg.mjs'
 
 export const SUPABASE_URL = 'https://e2e-scandrinks.supabase.co'
 export const GOOD_PASSWORD = 'bon-mot-de-passe'
 export const COCA_CODE = '5449000000996'
+// L'image du Coca chez Open Food Facts (adresse de la vraie base, servie ici par PHOTO_JPEG).
+export const OFF_COCA_IMAGE = 'https://images.openfoodfacts.org/images/products/544/900/000/0996/front_fr.4.400.jpg'
+
+// Catalogue « images » : le Coca a une photo de l'équipe, présente au stockage ; celle du Lipton (Open Food Facts) manque.
+const IMAGES_COCA_PHOTO = 'codes/5449000000996/11111111-1111-4111-8111-111111111111.jpg'
+const IMAGES_LIPTON_PHOTO = 'codes/3502110123091/22222222-2222-4222-8222-222222222222.jpg'
+const PHOTO_NAME = /^codes\/([0-9]{8,14})\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -51,7 +60,12 @@ function movementRow(productId, kind, delta, employee, createdAt, counted = null
   return { product_id: productId, kind, delta, counted, employee, created_at: createdAt, cancelled_at: null, cancelled_by: null }
 }
 
-const barcodeRow = (productId, units, createdAt = '2026-10-19T08:00:00Z') => ({ product_id: productId, units, created_at: createdAt })
+const barcodeRow = (productId, units, createdAt = '2026-10-19T08:00:00Z', photo = { photo_path: null, photo_source: null }) => ({
+  product_id: productId,
+  units,
+  created_at: createdAt,
+  ...photo,
+})
 
 function initialCatalogue(name) {
   const products = new Map()
@@ -78,6 +92,16 @@ function initialCatalogue(name) {
     movements.set('m-e1', movementRow('p-evian', 'in', 4, 'Sam', '2026-10-18T09:00:00Z'))
     movements.set('m-o1', movementRow('p-oasis', 'in', 24, 'Sam', '2026-10-17T08:00:00Z'))
   }
+  if (name === 'images') {
+    products.set('p-coca', productRow('p-coca', 'Coca-Cola 33 cl', 24))
+    products.set('p-lipton', productRow('p-lipton', 'Lipton Pêche 50 cl', 12))
+    products.set('p-evian', productRow('p-evian', 'Évian 50 cl', 24))
+    barcodes.set(COCA_CODE, barcodeRow('p-coca', 24, undefined, { photo_path: IMAGES_COCA_PHOTO, photo_source: 'equipe' }))
+    barcodes.set('3502110123091', barcodeRow('p-lipton', 12, undefined, { photo_path: IMAGES_LIPTON_PHOTO, photo_source: 'off' }))
+    movements.set('m-i1', movementRow('p-coca', 'in', 10, 'Sam', '2026-10-19T08:00:00Z'))
+    movements.set('m-i2', movementRow('p-lipton', 'in', 6, 'Sam', '2026-10-19T08:05:00Z'))
+    movements.set('m-i3', movementRow('p-evian', 'in', 30, 'Sam', '2026-10-19T08:10:00Z'))
+  }
   return { products, barcodes, movements }
 }
 
@@ -94,7 +118,7 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
 
 /**
  * Installe le faux backend sur une page.
- * options.catalogue : 'coca_with_code' (par défaut), 'coca_without_code', 'coca_archived', 'pilotage' ou 'empty'.
+ * options.catalogue : 'coca_with_code' (par défaut), 'coca_without_code', 'coca_archived', 'pilotage', 'images' ou 'empty'.
  * options.failNextRecord : coupe le premier record_movement (réseau perdu).
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
  * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
@@ -103,18 +127,24 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  *   se perd ; 'auth:user' fait de même pour le changement de mot de passe.
  * options.extraMovements : nombre d'entrées de +1 sur le Lipton ajoutées avant le catalogue, une par minute (Historique).
  * options.longNames : chaque nom de produit reçoit la suite « — édition limitée, format familial » (rien ne doit déborder).
+ * options.photos : images déjà au stockage, { chemin: octets } (la vidéo du jalon 4 s'en sert).
+ * options.offImage : false retire l'image du Coca de la réponse d'Open Food Facts.
  * options.cutReads : 'movements' ou 'barcodes' : les lectures de cette table sont coupées (réseau perdu) jusqu'à
  *   restoreReads(). Une seule coupure ne suffit pas : supabase-js relance seul une lecture jusqu'à trois fois.
- * Renvoie { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
+ * Renvoie { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
  * - calls : appels des fonctions SQL ; authCalls : 'token', 'user' et 'logout:<portée>', dans l'ordre ;
+ * - storageCalls : { kind: 'upload' | 'sign' | 'get', paths, contentType? }, dans l'ordre ; photos : chemin → octets ;
  * - addMovement et cancelElsewhere simulent un mouvement ou une annulation faits sur un autre téléphone ;
  * - revokeAllSessions ferme toutes les sessions, comme un changement de mot de passe sur un autre téléphone ;
  * - restoreReads rétablit les lectures coupées par cutReads.
  */
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
-    loseFirst = [], extraMovements = 0, cutReads = null, longNames = false } = options
+    loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true } = options
   const db = initialCatalogue(catalogue)
+  const photos = new Map(Object.entries(givenPhotos))
+  if (catalogue === 'images' && !photos.has(IMAGES_COCA_PHOTO)) photos.set(IMAGES_COCA_PHOTO, PHOTO_JPEG)
+  const storageCalls = []
   addExtraMovements(db, extraMovements)
   if (longNames) for (const product of db.products.values()) product.name += ' — édition limitée, format familial'
   const calls = []
@@ -133,7 +163,13 @@ export async function installFakeSupabase(page, options = {}) {
   const now = () => new Date().toISOString()
   const stockOf = (productId) =>
     [...db.movements.values()].filter((m) => m.product_id === productId && m.cancelled_at === null).reduce((sum, m) => sum + m.delta, 0)
-  const withStock = (product) => ({ ...product, stock: stockOf(product.id) })
+  // Image du produit, comme la vue product_stock : celle du code du pack Metro, sinon la première par date puis par code.
+  const photoOf = (product) =>
+    [...db.barcodes.entries()]
+      .filter(([, b]) => b.product_id === product.id && b.photo_path !== null)
+      .sort(([codeA, a], [codeB, b]) => Number(b.units === product.pack_size) - Number(a.units === product.pack_size)
+        || a.created_at.localeCompare(b.created_at) || codeA.localeCompare(codeB))[0]?.[1].photo_path ?? null
+  const withStock = (product) => ({ ...product, stock: stockOf(product.id), photo_path: photoOf(product) })
   const byName = (a, b) => a.name.localeCompare(b.name, 'fr')
 
   // Comme Supabase Auth : trop court d'abord (moins de 8 caractères), puis identique à l'actuel.
@@ -158,7 +194,10 @@ export async function installFakeSupabase(page, options = {}) {
   const rpc = {
     lookup_barcode: ({ p_code }) => {
       const barcode = db.barcodes.get(p_code)
-      return barcode ? { code: p_code, units: barcode.units, product: withStock(db.products.get(barcode.product_id)) } : null
+      return barcode
+        ? { code: p_code, units: barcode.units, photo_path: barcode.photo_path, photo_source: barcode.photo_source,
+            product: withStock(db.products.get(barcode.product_id)) }
+        : null
     },
     create_product: ({ p_name, p_pack_size, p_alert_threshold, p_target_stock, p_barcodes, p_id = null }) => {
       // Même identifiant déjà reçu : la fiche créée est renvoyée (création rejouable).
@@ -188,8 +227,20 @@ export async function installFakeSupabase(page, options = {}) {
       if (current && current.product_id !== p_product_id && !p_move) {
         return { status: 'already_attached', product_id: current.product_id, product_name: db.products.get(current.product_id).name }
       }
-      db.barcodes.set(p_code, barcodeRow(p_product_id, p_units, current?.created_at ?? now()))
+      // Comme la base : rattacher un code garde son image.
+      db.barcodes.set(p_code, barcodeRow(p_product_id, p_units, current?.created_at ?? now(),
+        { photo_path: current?.photo_path ?? null, photo_source: current?.photo_source ?? null }))
       return { status: 'attached' }
+    },
+    // Mêmes contrôles, dans le même ordre, que la base : code, provenance, chemin, puis fichier au stockage.
+    set_barcode_photo: ({ p_code, p_path, p_source }) => {
+      const barcode = db.barcodes.get(p_code)
+      if (!barcode) return invalid('code')
+      if (p_source !== 'off' && p_source !== 'equipe') return invalid('source')
+      if (PHOTO_NAME.exec(p_path ?? '')?.[1] !== p_code) return invalid('path')
+      if (!photos.has(p_path)) return invalid('photo')
+      Object.assign(barcode, { photo_path: p_path, photo_source: p_source })
+      return { code: p_code, photo_path: p_path, photo_source: p_source }
     },
     detach_barcode: ({ p_code }) => {
       db.barcodes.delete(p_code)
@@ -303,7 +354,7 @@ export async function installFakeSupabase(page, options = {}) {
       const rows = [...db.barcodes.entries()]
         .filter(([, b]) => b.product_id === productId)
         .sort(([, a], [, b]) => a.created_at.localeCompare(b.created_at))
-        .map(([code, b]) => ({ code, units: b.units }))
+        .map(([code, b]) => ({ code, units: b.units, photo_path: b.photo_path, photo_source: b.photo_source }))
       return reply(200, rows)
     }
 
@@ -347,6 +398,36 @@ export async function installFakeSupabase(page, options = {}) {
       return reply(200, result)
     }
 
+    // Stockage : envoi d'une image (octets bruts), liens signés, puis lecture par un lien signé.
+    const uploadPrefix = '/storage/v1/object/photos/'
+    const signedPrefix = '/storage/v1/object/sign/photos/'
+    if (request.method() === 'POST' && url.pathname.startsWith(uploadPrefix)) {
+      const path = decodeURIComponent(url.pathname.slice(uploadPrefix.length))
+      const contentType = request.headers()['content-type']
+      storageCalls.push({ kind: 'upload', paths: [path], contentType })
+      if (!signedIn()) return reply(400, { statusCode: '403', error: 'Unauthorized', message: 'Invalid JWT' })
+      if (contentType !== 'image/jpeg') return reply(400, { statusCode: '415', error: 'invalid_mime_type', message: `mime type ${contentType} is not supported` })
+      if (!PHOTO_NAME.test(path)) return reply(400, { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' })
+      if (photos.has(path)) return reply(409, { statusCode: '409', error: 'Duplicate', message: 'The resource already exists' })
+      photos.set(path, request.postDataBuffer())
+      return reply(200, { Id: crypto.randomUUID(), Key: `photos/${path}` })
+    }
+    if (request.method() === 'POST' && url.pathname === '/storage/v1/object/sign/photos') {
+      const paths = request.postDataJSON()?.paths ?? []
+      storageCalls.push({ kind: 'sign', paths })
+      if (!signedIn()) return reply(400, { statusCode: '403', error: 'Unauthorized', message: 'Invalid JWT' })
+      return reply(200, paths.map((path) => photos.has(path)
+        ? { path, signedURL: `/object/sign/photos/${path}?token=e2e`, error: null }
+        : { path, signedURL: null, error: 'Either the object does not exist or you do not have access to it' }))
+    }
+    if (request.method() === 'GET' && url.pathname.startsWith(signedPrefix)) {
+      const path = decodeURIComponent(url.pathname.slice(signedPrefix.length))
+      storageCalls.push({ kind: 'get', paths: [path] })
+      const bytes = photos.get(path)
+      if (!bytes) return reply(400, { statusCode: '404', error: 'not_found', message: 'Object not found' })
+      return route.fulfill({ status: 200, headers: { ...CORS, 'content-type': 'image/jpeg', 'cache-control': 'max-age=3600' }, body: bytes })
+    }
+
     return reply(404, { message: `Route simulée inconnue : ${url.pathname}` })
   })
 
@@ -355,9 +436,14 @@ export async function installFakeSupabase(page, options = {}) {
     return route.fulfill({
       status: found ? 200 : 404,
       contentType: 'application/json',
-      body: JSON.stringify(found ? { status: 1, product: { product_name_fr: 'Coca-Cola', quantity: '330 ml' } } : { status: 0 }),
+      body: JSON.stringify(found
+        ? { status: 1, product: { product_name_fr: 'Coca-Cola', quantity: '330 ml', ...(offImage ? { image_front_url: OFF_COCA_IMAGE } : {}) } }
+        : { status: 0 }),
     })
   })
+  // Les images d'Open Food Facts : toujours la même photo de test, lisible depuis l'app (CORS).
+  await page.route('https://images.openfoodfacts.org/**', (route) =>
+    route.fulfill({ status: 200, headers: { 'content-type': 'image/jpeg', 'access-control-allow-origin': '*' }, body: PHOTO_JPEG }))
 
   const addMovement = ({ productId, kind, delta, employee }) => {
     db.movements.set(`m-other-${++otherPhoneCount}`, movementRow(productId, kind, delta, employee, now()))
@@ -374,5 +460,5 @@ export async function installFakeSupabase(page, options = {}) {
     readsCut = false
   }
 
-  return { calls, authCalls, addMovement, revokeAllSessions, cancelElsewhere, restoreReads }
+  return { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads }
 }

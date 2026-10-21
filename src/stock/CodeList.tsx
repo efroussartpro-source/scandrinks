@@ -16,6 +16,8 @@ import type { BarcodeEntry, Product } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { parseIntInRange } from '../domain/productDraft'
+import { photoSourceLabel } from '../photos/photos'
+import Thumb from '../photos/Thumb'
 import { FIELD_HELP } from '../products/fieldHelp'
 import HelpField from '../products/HelpField'
 import { IconPlus } from '../ui/icons'
@@ -30,6 +32,10 @@ interface CodeListProps {
 }
 
 const unitsLabel = (units: number) => `${units} ${units > 1 ? 'unités' : 'unité'}`
+
+// Ce que vaut le code, puis d'où vient son image : « 24 unités · photo de l'équipe ».
+const codeMeta = (barcode: BarcodeEntry) =>
+  barcode.photoSource ? `${unitsLabel(barcode.units)} · ${photoSourceLabel(barcode.photoSource)}` : unitsLabel(barcode.units)
 
 export default function CodeList({ product, barcodes, readOnly = false, onAdd, onChanged, onSessionExpired }: CodeListProps) {
   const [editing, setEditing] = useState<string | null>(null)
@@ -96,9 +102,10 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
         )}
         {barcodes.map((barcode) => (
           <li key={barcode.code} className="code-row">
+            <Thumb path={barcode.photoPath} size={48} />
             <span className="row-text">
               <span className="code-value">{barcode.code}</span>
-              <span className="code-meta">{unitsLabel(barcode.units)}</span>
+              <span className="code-meta">{codeMeta(barcode)}</span>
             </span>
             {!readOnly && editing !== barcode.code && (
               <span className="code-actions">

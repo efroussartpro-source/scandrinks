@@ -15,6 +15,7 @@ import type { Catalog } from '../app/useCatalog'
 import { apiErrorMessage } from '../data/apiErrors'
 import { formatClock } from '../domain/movements'
 import { describeShoppingLine, shoppingList, shoppingParts, shoppingSummary } from '../domain/restock'
+import Thumb from '../photos/Thumb'
 import ProductSheet from '../stock/ProductSheet'
 import { IconChevronRight, IconTriangleAlert } from '../ui/icons'
 import './Shopping.css'
@@ -75,6 +76,7 @@ export default function ShoppingScreen({ catalog, employee, onCatalogChanged, on
                     aria-label={describeShoppingLine(line)}
                     onClick={() => setOpenId(line.product.id)}
                   >
+                    <Thumb path={line.product.photoPath} size={44} />
                     <span className="row-text">
                       <span className="row-title">{line.product.name}</span>
                       <span className="row-sub">

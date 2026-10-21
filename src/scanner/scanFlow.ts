@@ -28,11 +28,12 @@ import { SCAN_COOLDOWN_MS } from '../scan/deduper'
 export const NOT_A_PRODUCT_MESSAGE = "Ce code n'identifie pas un produit (lot, date…)."
 export const UNDO_FAILED_MESSAGE = "L'annulation n'a pas pu être faite. Pour corriger, scanne le produit dans l'autre mode."
 
-// code null : saisie manuelle.
+// code null : saisie manuelle. photoPath : l'image du code lu, ou celle du produit en saisie manuelle.
 export interface ConfirmTarget {
   product: Product
   units: number
   code: string | null
+  photoPath: string | null
 }
 
 // counted : le nombre compté, après un inventaire ; null après une entrée ou une sortie.
@@ -130,7 +131,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
     case 'lookup_done': {
       if (state.step !== 'looking_up' || state.code !== event.code) return state
       if (!event.result.found) return { step: 'unknown', code: event.code }
-      const target = { product: event.result.product, units: event.result.units, code: event.code }
+      const target = { product: event.result.product, units: event.result.units, code: event.code, photoPath: event.result.photoPath }
       return target.product.archived
         ? { step: 'archived', target, movementId: event.movementId, status: 'idle', errorKind: null }
         : confirmFor(target, event.movementId)

@@ -3,7 +3,7 @@ import type { Product } from '../data/api'
 import { describeShoppingLine, isLow, listState, restockLine, shoppingList, shoppingParts, shoppingSummary } from './restock'
 
 const p = (name: string, packSize: number, alertThreshold: number, targetStock: number, stock: number, archived = false): Product =>
-  ({ id: name, name, packSize, alertThreshold, targetStock, archived, stock })
+  ({ id: name, name, packSize, alertThreshold, targetStock, archived, stock, photoPath: null })
 
 test('RG-6 : il manque 38 → 2 packs de 24 (exemple de la spec)', () => {
   expect(describeShoppingLine(restockLine(p('Coca-Cola 33 cl', 24, 24, 48, 10)))).toBe('Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24')

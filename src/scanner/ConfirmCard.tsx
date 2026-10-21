@@ -3,9 +3,10 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §6.7, §7)
  *
- * Le mode est rappelé en couleur et par le signe : « Pack de 24 » sous le
- * nom, « +24 » en très gros, et « Valider », dans la couleur du mode
- * (maquette docs/maquettes/Main.dc.html). Pendant l'envoi et après un
+ * L'image du code lu ouvre la fiche (maquette I-confirm). Le mode est
+ * rappelé en couleur et par le signe : « Pack de 24 » sous le nom, « +24 »
+ * en très gros, et « Valider », dans la couleur du mode (maquette
+ * docs/maquettes/Main.dc.html). Pendant l'envoi et après un
  * échec, la quantité ne change plus : ce qui est réessayé est exactement ce
  * qui était affiché.
  */
@@ -14,6 +15,7 @@ import { selectAllSoon } from '../app/selectAll'
 import { saveErrorMessage } from '../data/apiErrors'
 import { parseIntInRange } from '../domain/productDraft'
 import { confirmParts, QUANTITY_MAX, QUANTITY_MIN, type MoveMode } from '../domain/stock'
+import Thumb from '../photos/Thumb'
 import type { ConfirmState } from './scanFlow'
 
 interface ConfirmCardProps {
@@ -43,6 +45,7 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
   return (
     <section className="card confirm" data-mode={mode} aria-label="Fiche de confirmation">
       <div className="confirm-head">
+        <Thumb path={target.photoPath} size={64} />
         <div className="confirm-text">
           <h2 className="card-title">{target.product.name}</h2>
           <span className="confirm-what">{what}</span>

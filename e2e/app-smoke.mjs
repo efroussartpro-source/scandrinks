@@ -1213,6 +1213,74 @@ async function scenarioAppearance(browser) {
   console.log('Scénario R (apparence) : OK')
 }
 
+// Attend qu'une image soit chargée : complète, avec une largeur.
+async function waitForImage(image) {
+  await image.waitFor()
+  await image.page().waitForFunction((element) => element.complete && element.naturalWidth > 0, await image.elementHandle())
+}
+
+// Images des codes (spec §4.7) : vignettes par liens signés, gardés ; l'icône grise sans image ou sans fichier.
+async function scenarioImages(browser) {
+  const signedPaths = (fake) => fake.storageCalls.filter((call) => call.kind === 'sign').map((call) => call.paths)
+  {
+    const { context, page, fake } = await openApp(browser, { catalogue: 'images' })
+    const offRequests = []
+    page.on('request', (request) => {
+      if (new URL(request.url()).hostname === 'world.openfoodfacts.org') offRequests.push(request.url())
+    })
+    const tab = (name) => page.getByRole('button', { name, exact: true })
+    await signIn(page)
+
+    // 1. La fiche de confirmation : l'image du code scanné, par un lien signé.
+    const card = confirmCard(page)
+    await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
+    await waitForImage(card.locator('img.thumb'))
+    assert.ok((await card.locator('img.thumb').getAttribute('src')).includes('/storage/v1/object/sign/photos/codes/5449000000996/11111111-'),
+      "lien signé de l'image du Coca")
+
+    // 2. Le Stock : l'image de chaque produit ; l'icône grise sans image (Évian) ou sans fichier (Lipton).
+    // Un seul appel de liens pour la liste : celui du Coca est gardé depuis l'étape 1.
+    const signsBefore = signedPaths(fake).length
+    await tab('Stock').click()
+    const list = page.getByRole('list', { name: 'Produits' })
+    const productRow = (name) => list.getByRole('button', { name: new RegExp(`^${name}`) })
+    await waitForImage(productRow('Coca-Cola 33 cl').locator('img.thumb'))
+    await productRow('Évian 50 cl').locator('.thumb-empty').waitFor()
+    await productRow('Lipton Pêche 50 cl').locator('.thumb-empty').waitFor()
+    assert.deepEqual(signedPaths(fake).slice(signsBefore), [['codes/3502110123091/22222222-2222-4222-8222-222222222222.jpg']])
+
+    // 3. La fiche du Coca : l'image du produit en tête, celle du code dans sa ligne, avec sa provenance.
+    await productRow('Coca-Cola 33 cl').click()
+    const sheet = page.getByRole('region', { name: 'Fiche produit' })
+    await waitForImage(sheet.locator('.sheet-head img.thumb'))
+    const codes = sheet.getByRole('list', { name: 'Codes' })
+    await waitForImage(codeRow(codes, COCA_CODE).locator('img.thumb'))
+    assert.equal(await codeRow(codes, COCA_CODE).locator('.code-meta').textContent(), "24 unités · photo de l'équipe")
+
+    // 4. À racheter : l'image du Coca, l'icône grise du Lipton.
+    await tab('À racheter (2)').click()
+    const shopping = page.getByRole('list', { name: 'À racheter' })
+    await waitForImage(shopping.getByRole('button', { name: /^Coca-Cola 33 cl/ }).locator('img.thumb'))
+    await shopping.getByRole('button', { name: /^Lipton Pêche 50 cl/ }).locator('.thumb-empty').waitFor()
+
+    // 5. Tous les codes scannés sont connus : aucune question à Open Food Facts.
+    assert.deepEqual(offRequests, [])
+    await context.close()
+  }
+  {
+    // 6. Image coupée (réseau perdu pendant son chargement) : l'icône grise, jamais l'image cassée du navigateur.
+    const { context, page } = await openApp(browser, { catalogue: 'images' })
+    await page.route('**/object/sign/photos/codes/5449000000996/**', (route) => route.abort('internetdisconnected'))
+    await signIn(page)
+    await page.getByRole('button', { name: 'Stock', exact: true }).click()
+    await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).locator('.thumb-empty').waitFor()
+    // Une image en échec laisse place à l'icône dès son erreur ; une image cassée qui resterait affichée bloquerait l'attente.
+    await page.waitForFunction(() => [...document.querySelectorAll('img.thumb')].every((image) => image.naturalWidth > 0))
+    await context.close()
+  }
+  console.log('Scénario S (images) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -1245,6 +1313,7 @@ try {
     ['N', scenarioPassword],
     ['O', scenarioFinishing],
     ['R', scenarioAppearance],
+    ['S', scenarioImages],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

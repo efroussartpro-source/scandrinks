@@ -4,22 +4,24 @@ import { formatSuggestedName, lookupProduct, offProductUrl } from './openFoodFac
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 const fetchReturning = (res: Response) => vi.fn<typeof fetch>(() => Promise.resolve(res))
-const coca = { product_name_fr: 'Coca-Cola', product_name: 'Coca-Cola Original', quantity: '330 ml', brands: 'COCA-COLA SERVICES SA/NV' }
+const COCA_IMAGE = 'https://images.openfoodfacts.org/images/products/544/900/000/0996/front_fr.4.400.jpg'
+const coca = { product_name_fr: 'Coca-Cola', product_name: 'Coca-Cola Original', quantity: '330 ml', brands: 'COCA-COLA SERVICES SA/NV',
+  image_front_url: COCA_IMAGE }
 
 afterEach(() => { vi.useRealTimers() })
 
 describe('offProductUrl', () => {
   test('URL exacte du cahier des charges', () => {
     expect(offProductUrl('5449000000996')).toBe(
-      'https://world.openfoodfacts.org/api/v2/product/5449000000996.json?fields=product_name,product_name_fr,brands,quantity')
+      'https://world.openfoodfacts.org/api/v2/product/5449000000996.json?fields=product_name,product_name_fr,brands,quantity,image_front_url')
   })
 })
 
 describe('lookupProduct', () => {
-  test('produit trouvé : nom français + contenance', async () => {
+  test("produit trouvé : nom français + contenance, et l'image d'Open Food Facts", async () => {
     const fetchImpl = fetchReturning(json(200, { status: 1, product: coca }))
     expect(await lookupProduct('5449000000996', { fetchImpl })).toEqual(
-      { status: 'found', name: 'Coca-Cola', quantity: '330 ml', suggestedName: 'Coca-Cola 330 ml' })
+      { status: 'found', name: 'Coca-Cola', quantity: '330 ml', suggestedName: 'Coca-Cola 330 ml', imageUrl: COCA_IMAGE })
     expect(fetchImpl.mock.calls[0][0]).toBe(offProductUrl('5449000000996'))
   })
   test('sans nom français, prend product_name', async () => {
@@ -29,7 +31,11 @@ describe('lookupProduct', () => {
   test('supprime les espaces autour du nom et de la contenance', async () => {
     const fetchImpl = fetchReturning(json(200, { status: 1, product: { product_name_fr: '  Cristaline  ', quantity: ' 1500 ml ' } }))
     expect(await lookupProduct('3274080005003', { fetchImpl })).toEqual(
-      { status: 'found', name: 'Cristaline', quantity: '1500 ml', suggestedName: 'Cristaline 1500 ml' })
+      { status: 'found', name: 'Cristaline', quantity: '1500 ml', suggestedName: 'Cristaline 1500 ml', imageUrl: null })
+  })
+  test("une image hors d'Open Food Facts n'est pas reprise", async () => {
+    const fetchImpl = fetchReturning(json(200, { status: 1, product: { ...coca, image_front_url: 'https://example.org/coca.jpg' } }))
+    expect(await lookupProduct('5449000000996', { fetchImpl })).toMatchObject({ status: 'found', imageUrl: null })
   })
   test('HTTP 404 (produit inconnu) → not_found', async () => {
     const fetchImpl = fetchReturning(json(404, { status: 0, status_verbose: 'product not found' }))

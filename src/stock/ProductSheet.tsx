@@ -23,6 +23,7 @@ import { api } from '../data/supabaseClient'
 import { isLow } from '../domain/restock'
 import { formatPacks, formatStock, formatUnits } from '../domain/stock'
 import CorrectStockForm from '../inventory/CorrectStockForm'
+import Thumb from '../photos/Thumb'
 import { IconChevronLeft } from '../ui/icons'
 import AddCodeForm from './AddCodeForm'
 import CodeList from './CodeList'
@@ -170,6 +171,7 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
         Retour
       </button>
       <div className="sheet-head">
+        <Thumb path={product.photoPath} size={76} />
         <h1 className="sheet-title">{product.name}</h1>
       </div>
       <section className="card sheet-stock" aria-label="Stock du produit">
