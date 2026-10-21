@@ -658,3 +658,41 @@ Expected : `scandrinks.pages.dev` sert le jalon 3 (même paquet que la préversi
 - **Pas de service worker** (voir « Périmètre »).
 - **Comptage vide (p5) :** « Valider » reste grisé, sans message tant que rien n'est tapé. À défaut d'un autre choix du porteur du projet, le comportement du jalon 2 est gardé.
 - **Anciennes adresses de test :** fermées par une page d'explication plutôt que supprimées. Une icône installée depuis l'une d'elles montre ainsi comment réinstaller l'app.
+
+## Bilan (21/10/2026)
+
+- **Feu vert** du porteur du projet (« C'est ok enchaîne »), puis fusion dans `main` (a7cc8b5) et mise en ligne sur https://scandrinks.pages.dev.
+- **Base réelle :** migration `suivi` appliquée au projet `scandrinks` par le connecteur, sans confirmation à attendre (aucune instruction destructive). Version 20261020234704, empreinte des instructions identique au fichier.
+  - Avant : essai à blanc du contrôle de session avec une vraie session du compte du tabac → OK.
+  - Juste après : une vraie session reconnue, stock et historique lus. Les 5 téléphones connectés le sont restés, et l'app du jalon 2 est restée compatible jusqu'à la fusion.
+  - Tests SQL OK sur le vrai projet, données inchangées.
+  - Conseils de Supabase : aucune alerte ERROR. Une alerte WARN, déjà là au jalon 2 : la protection contre les mots de passe divulgués est désactivée (réglage Auth).
+- **Relecture finale** par un relecteur neuf : « prête à fusionner avec corrections ». Quatre corrections, chacune avec un test vu en échec :
+  - « Voir plus », touché pendant la relecture du retour dans l'app, cachait des lignes sans le dire ;
+  - la mise en service de `is_allowed` avait besoin d'un retour arrière prêt et d'un essai à blanc avant d'appliquer ;
+  - la marge sous un champ amené à l'écran (p8) oubliait la barre d'accueil de l'iPhone ;
+  - l'écran de démarrage impossible disait « recharge la page », impossible dans l'app installée : il porte maintenant « Recharger ».
+- **Anciennes adresses de test :** jalon-1 et jalon-2 affichent une page qui renvoie vers l'app (commits 89599da et 018823b ; jalon-2 à la demande du porteur du projet). jalon-0 n'avait plus de déploiement et n'a pas été touchée.
+- **Retour arrière** de la migration, testé en local mais jamais exécuté sur le vrai projet : `git show a7cc8b5:.superpowers/sdd/2026-10-20-jalon-3-suivi/rollback-suivi.sql`. Essai à blanc : `git show a7cc8b5:.superpowers/sdd/2026-10-20-jalon-3-suivi/precheck-suivi.sql`.
+- **Journal d'exécution**, avec toutes les décisions prises en cours de route : retiré du dépôt à la fin du jalon. Il reste lisible dans l'historique Git : `git show a7cc8b5:.superpowers/sdd/2026-10-20-jalon-3-suivi/progress.md`.
+
+### Points reportés par la relecture finale (21/10/2026)
+
+- **s1 — `ChangePasswordScreen.tsx` :** « Annuler » reste actif quand le changement est incertain, sans confirmation. Après un échec à la seule déconnexion générale, « changement non confirmé » est inexact : le mot de passe est déjà changé.
+- **s2 — `changePassword.ts` :** l'état incertain ne retombe jamais, même après un refus net à la reprise. Seule issue : « Annuler ».
+- **s3 — `ProductSheet.tsx` :** après une lecture échouée, ouvrir puis fermer un panneau (« Modifier », puis « Annuler ») efface le message et « Réessayer ». La fiche reste sur « Chargement… ». Contournement : « Retour », puis rouvrir la fiche.
+- **s4 :** aucun délai maximal sur les appels d'authentification du changement de mot de passe. Sur un réseau bloqué, « Changement… » dure jusqu'au délai du système.
+- **s5 :** la proposition « mot de passe fort » d'iOS sur les champs du nouveau mot de passe. Le protocole de test dit de choisir son propre mot de passe.
+- **s6 — tests à compléter :** une écriture avec une session fermée (cas SQL 21) ; « Corriger le stock » pendant un changement de mot de passe (scénario N).
+- **s7 — écran allumé :** un relâchement par le système, page visible, n'est pas écouté. Le verrou revient au prochain changement d'onglet ou de visibilité.
+- **s8 :** un commentaire périmé dans `AppShell.tsx` (« jamais celle de toute l'équipe »).
+
+### À revoir plus tard
+
+- **Jalon 4 :**
+  - l'écran allumé et la marge du bas dans l'app installée, avec la version d'iOS des téléphones (protocole de test, « Après la fusion ») ;
+  - un message dédié sur les autres téléphones après un changement de mot de passe, au lieu de « Ta session a expiré » ;
+  - la protection contre les mots de passe divulgués, si l'offre du projet la permet ;
+  - une page blanche reste possible sur une erreur d'affichage après le démarrage ;
+  - l'historique des migrations Supabase : ses versions sont horodatées à l'application et ne correspondent pas aux noms des fichiers.
+
