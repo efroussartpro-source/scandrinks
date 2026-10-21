@@ -1,6 +1,6 @@
--- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3).
+-- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3, puis les images des codes).
 --
--- Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§5, §6.3, §6.4, §8)
+-- Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.7, §5, §6.3, §6.4, §8)
 --
 -- À lancer sur une base où les migrations sont appliquées : le vrai projet
 -- (outil execute_sql) ou le PostgreSQL local (supabase/tests/run-local.sh).
@@ -40,6 +40,18 @@ begin
   execute p_sql;
   get diagnostics v_count = row_count;
   return v_count;
+end
+$$;
+
+-- Essaie une instruction et ignore son erreur : une écriture que la RLS doit rendre sans effet (cas 26).
+create function pg_temp.attempt(p_sql text) returns void
+language plpgsql
+as $$
+begin
+  execute p_sql;
+exception
+  when others then
+    null;
 end
 $$;
 
@@ -546,6 +558,155 @@ begin
 end
 $$;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+
+-- 25 à 29. Images des codes (§4.7, §6.3, §6.4). Mise en place, en tant que postgres : le produit
+-- « Test images », le code de la canette, puis celui du pack, ajouté après lui (sans la préférence
+-- du pack, l'image de la canette, plus ancienne, l'emporterait). Les noms des images sont tirés au hasard.
+reset role;
+insert into public.products (id, name, pack_size, alert_threshold, target_stock)
+  values ('00000000-0000-4000-8000-00000000f070', 'Test images', 6, 6, 12);
+insert into public.barcodes (code, product_id, units, created_at) values
+  ('2000000000084', '00000000-0000-4000-8000-00000000f070', 1, now()),
+  ('2000000000077', '00000000-0000-4000-8000-00000000f070', 6, now() + interval '1 minute');
+select set_config('scandrinks_test.unit_photo', format('codes/2000000000084/%s.jpg', gen_random_uuid()), true),
+  set_config('scandrinks_test.pack_photo', format('codes/2000000000077/%s.jpg', gen_random_uuid()), true);
+
+-- 25. Le compartiment des images : privé, des JPEG de 256 Ko au plus.
+do $$
+begin
+  if not exists (select 1 from storage.buckets where id = 'photos' and name = 'photos' and not public
+                 and file_size_limit = 262144 and allowed_mime_types = array['image/jpeg']) then
+    raise exception 'ÉCHEC : compartiment photos (%)', (select to_jsonb(b) from storage.buckets b where b.id = 'photos');
+  end if;
+end
+$$;
+
+-- 26. Stockage : A ajoute puis lit les images ; sans connexion ou sans accès (B), ni ajout ni lecture ;
+-- un nom hors de codes/<code>/<uuid>.jpg est refusé ; une image ne se modifie ni ne se supprime.
+-- Toute instruction de suppression reste dans une chaîne, essayée par pg_temp.attempt.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+insert into storage.objects (bucket_id, name) values
+  ('photos', current_setting('scandrinks_test.unit_photo')),
+  ('photos', current_setting('scandrinks_test.pack_photo'));
+do $$
+begin
+  if (select count(*) from storage.objects where bucket_id = 'photos'
+      and name in (current_setting('scandrinks_test.unit_photo'), current_setting('scandrinks_test.pack_photo'))) <> 2 then
+    raise exception 'ÉCHEC : A ne lit pas les images ajoutées';
+  end if;
+end
+$$;
+select pg_temp.expect_error(format($q$insert into storage.objects (bucket_id, name) values ('photos', 'autre/%s.jpg')$q$,
+  gen_random_uuid()), '42501');
+select pg_temp.expect_error(format($q$insert into storage.objects (bucket_id, name) values ('photos', 'codes/abc/%s.jpg')$q$,
+  gen_random_uuid()), '42501');
+select pg_temp.expect_error(format($q$insert into storage.objects (bucket_id, name) values ('photos', 'codes/2000000000084/%s.png')$q$,
+  gen_random_uuid()), '42501');
+select pg_temp.attempt(format($q$update storage.objects set name = 'codes/2000000000084/%s.jpg' where name = %L$q$,
+  gen_random_uuid(), current_setting('scandrinks_test.unit_photo')));
+select pg_temp.attempt(format($q$delete from storage.objects where name = %L$q$, current_setting('scandrinks_test.unit_photo')));
+set local role anon;
+select pg_temp.expect_error(format($q$insert into storage.objects (bucket_id, name) values ('photos', 'codes/2000000000084/%s.jpg')$q$,
+  gen_random_uuid()), '42501');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
+select pg_temp.expect_error(format($q$insert into storage.objects (bucket_id, name) values ('photos', 'codes/2000000000084/%s.jpg')$q$,
+  gen_random_uuid()), '42501');
+do $$
+begin
+  if exists (select 1 from storage.objects where bucket_id = 'photos') then
+    raise exception 'ÉCHEC : B voit les images';
+  end if;
+end
+$$;
+reset role;
+do $$
+begin
+  if not exists (select 1 from storage.objects where bucket_id = 'photos' and name = current_setting('scandrinks_test.unit_photo')) then
+    raise exception 'ÉCHEC : une image a été modifiée ou supprimée';
+  end if;
+end
+$$;
+
+-- 27. set_barcode_photo : l'image d'un code. Celle du produit est celle du code du pack, sinon celle
+-- d'un autre code ; la recherche d'un code donne les deux. Rejouée, la fonction répond pareil.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+do $$
+declare
+  unit_photo text := current_setting('scandrinks_test.unit_photo');
+  pack_photo text := current_setting('scandrinks_test.pack_photo');
+  product_photo text;
+  saved jsonb;
+  replayed jsonb;
+  found jsonb;
+begin
+  saved := public.set_barcode_photo('2000000000084', unit_photo, 'off');
+  if saved <> jsonb_build_object('code', '2000000000084', 'photo_path', unit_photo, 'photo_source', 'off') then
+    raise exception 'ÉCHEC : image du code de la canette (%)', saved;
+  end if;
+  select ps.photo_path into product_photo from public.product_stock ps where ps.id = '00000000-0000-4000-8000-00000000f070';
+  if product_photo is distinct from unit_photo then
+    raise exception 'ÉCHEC : sans image du pack, le produit prend celle de la canette (%)', product_photo;
+  end if;
+  perform public.set_barcode_photo('2000000000077', pack_photo, 'equipe');
+  select ps.photo_path into product_photo from public.product_stock ps where ps.id = '00000000-0000-4000-8000-00000000f070';
+  if product_photo is distinct from pack_photo then
+    raise exception 'ÉCHEC : le produit prend l''image du pack (%)', product_photo;
+  end if;
+  found := public.lookup_barcode('2000000000084');
+  if found ->> 'photo_path' is distinct from unit_photo or found ->> 'photo_source' is distinct from 'off'
+     or found -> 'product' ->> 'photo_path' is distinct from pack_photo then
+    raise exception 'ÉCHEC : recherche du code de la canette (%)', found;
+  end if;
+  replayed := public.set_barcode_photo('2000000000084', unit_photo, 'off');
+  if replayed <> saved then
+    raise exception 'ÉCHEC : enregistrement rejoué (%, %)', saved, replayed;
+  end if;
+end
+$$;
+select pg_temp.expect_error(format($q$select public.set_barcode_photo('2000000000091', 'codes/2000000000091/%s.jpg', 'off')$q$,
+  gen_random_uuid()), 'invalid_input:code');
+select pg_temp.expect_error(format($q$select public.set_barcode_photo('2000000000084', %L, 'autre')$q$,
+  current_setting('scandrinks_test.unit_photo')), 'invalid_input:source');
+select pg_temp.expect_error(format($q$select public.set_barcode_photo('2000000000084', %L, 'off')$q$,
+  current_setting('scandrinks_test.pack_photo')), 'invalid_input:path');
+select pg_temp.expect_error(format($q$select public.set_barcode_photo('2000000000084', 'codes/2000000000084/%s.jpg', 'off')$q$,
+  gen_random_uuid()), 'invalid_input:photo');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
+select pg_temp.expect_error(format($q$select public.set_barcode_photo('2000000000084', %L, 'off')$q$,
+  current_setting('scandrinks_test.unit_photo')), '42501');
+set local role anon;
+select pg_temp.expect_error(format($q$select public.set_barcode_photo('2000000000084', %L, 'off')$q$,
+  current_setting('scandrinks_test.unit_photo')), '42501');
+
+-- 28. Contraintes : un chemin d'un autre code, une provenance sans chemin ou un chemin sans provenance
+-- sont refusés, même écrits directement.
+reset role;
+select pg_temp.expect_error(format($q$update public.barcodes set photo_path = %L where code = '2000000000084'$q$,
+  current_setting('scandrinks_test.pack_photo')), '23514');
+select pg_temp.expect_error($q$update public.barcodes set photo_path = null where code = '2000000000084'$q$, '23514');
+select pg_temp.expect_error($q$update public.barcodes set photo_source = null where code = '2000000000084'$q$, '23514');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+select pg_temp.expect_error($q$update public.barcodes set photo_path = 'codes/2000000000084/pas-une-image.jpg'
+  where code = '2000000000084'$q$, '23514');
+
+-- 29. Sans image : la recherche du code et le produit le disent par un chemin vide.
+do $$
+declare
+  found jsonb := public.lookup_barcode('2000000000015');
+begin
+  if not (found ? 'photo_path' and found ? 'photo_source' and found -> 'product' ? 'photo_path')
+     or found ->> 'photo_path' is not null or found ->> 'photo_source' is not null then
+    raise exception 'ÉCHEC : recherche d''un code sans image (%)', found;
+  end if;
+  if (select ps.photo_path from public.product_stock ps where ps.id = '00000000-0000-4000-8000-00000000c0ca') is not null then
+    raise exception 'ÉCHEC : le Coca n''a pas d''image';
+  end if;
+end
+$$;
 
 reset role;
 rollback;
