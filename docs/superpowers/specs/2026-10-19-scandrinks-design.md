@@ -46,6 +46,8 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 - Historique de tous les mouvements, avec annulation.
 - Compte unique du tabac, prénom par téléphone, changement de mot de passe.
 - Vidéo tuto et feuille A4 de la réserve.
+- Une image par code-barres : celle d'Open Food Facts, recopiée, ou une photo prise par l'équipe.
+- Apparence claire ou sombre, au choix de chaque téléphone.
 
 ### Hors version 1 (possible plus tard)
 
@@ -53,7 +55,7 @@ Notifications, lien avec la caisse, prix et budget Metro, import des factures Me
 
 ## 4. Parcours et écrans
 
-L'app a quatre onglets en bas : **Scanner**, **À racheter**, **Stock**, **Historique**. Une icône en haut de l'écran ouvre les **Réglages**.
+L'app a quatre onglets en bas, chacun avec son icône : **Scanner**, **À racheter**, **Stock**, **Historique**. Une roue dentée, en haut de l'écran, ouvre les **Réglages**. L'aspect de chaque écran suit la charte visuelle (§6.7).
 
 ### 4.1 Première ouverture (une fois par téléphone)
 
@@ -67,18 +69,18 @@ Le téléphone reste ensuite connecté.
 ### 4.2 Scanner (écran principal)
 
 ```
-+------------------------------+
-|                              |
-|          [ caméra ]          |
-|                              |
-+------------------------------+
-| ENTRÉE + | SORTIE - | INV =  |
-+------------------------------+
-| Coca-Cola 33 cl              |
-| Pack de 24               +24 |
-| Quantité      [-]  1  [+]    |
-| [         VALIDER          ] |
-+------------------------------+
++--------------------------------+
+| [logo] ScanDrinks    (Sam)  ⚙  |
+| [ ENTRÉE + | SORTIE − | INV = ]|
+| +----------------------------+ |
+| |         [ caméra ]         | |
+| +----------------------------+ |
+| [image] Coca-Cola 33 cl   +24  |
+|         Pack de 24             |
+| Quantité         [−]  1  [+]   |
+| [      VALIDER      ] Annuler  |
++--------------------------------+
+| Scanner  À racheter  Stock  Historique |
 ```
 
 **Modes.** Trois modes, chacun avec sa couleur :
@@ -89,7 +91,7 @@ Le téléphone reste ensuite connecté.
 
 Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappelle toujours le mode, en couleur et avec le signe (+24 ou −24).
 
-**Code connu.** La fiche du produit s'affiche avec la quantité du code, par exemple « Pack de 24 → +24 ». Le sélecteur de quantité (×1 à ×99) permet de compter plusieurs packs identiques en un seul scan. Après « Valider » :
+**Code connu.** La fiche du produit s'affiche avec l'image du code scanné (§4.7), le nom, « Pack de 24 » et la quantité en très gros, dans la couleur du mode : « +24 ». Le bouton « Valider » prend lui aussi la couleur du mode. Le sélecteur de quantité (×1 à ×99) permet de compter plusieurs packs identiques en un seul scan. Après « Valider » :
 
 - un message confirme l'action et donne le nouveau stock, avec un bouton « Annuler » pendant 5 secondes (ensuite, l'annulation se fait depuis l'Historique) ;
 - la caméra est aussitôt prête pour le scan suivant.
@@ -102,8 +104,10 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
    - **Pack Metro** : le nombre d'unités du pack acheté d'habitude chez Metro. Pré-rempli avec N si N > 1, à saisir sinon.
    - **Seuil d'alerte** et **stock idéal** : pré-remplis à 1 et 2 packs Metro, modifiables. Ils suivent le pack Metro tant qu'on ne les a pas changés à la main.
 
+   - **Image** (facultative, §4.7) : celle d'Open Food Facts si le code y est connu, sinon « Prendre la photo », prise par la caméra du Scanner.
+
    Une fois la fiche créée, l'app affiche la fiche de confirmation du mode en cours : « +24 » en Entrée, « −24 » en Sortie, la saisie du comptage en Inventaire.
-2. **Ajouter ce code à un produit existant.** On choisit le produit dans la liste, puis on indique combien d'unités vaut ce code. Exemple : le code d'une canette seule, pour une fiche créée depuis le pack (1 unité).
+2. **Ajouter ce code à un produit existant.** On choisit le produit dans la liste, puis on indique combien d'unités vaut ce code. Exemple : le code d'une canette seule, pour une fiche créée depuis le pack (1 unité). L'image du code se choisit comme pour un nouveau produit.
 
 **Inventaire.** On scanne un produit, ou on le choisit dans la liste, puis on saisit ce qu'on compte en packs Metro + unités (« 2 packs + 5 » = 53). L'app affiche le stock qu'elle connaissait et l'écart. C'est aussi la **mise en place du premier jour** : un tour de la réserve, un scan par produit (avec création de la fiche si besoin), puis le comptage.
 
@@ -114,19 +118,25 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 ### 4.3 À racheter
 
 - La liste montre les produits dont le stock est inférieur ou égal au seuil (RG-5).
-- Chaque ligne donne le nom, le stock restant et **le nombre de packs à prendre**. Exemple : « Coca-Cola 33 cl — reste 10 — prendre 2 packs de 24 ».
+- Chaque ligne donne l'image du produit, le nom, le stock restant et **le nombre de packs à prendre**, mis en avant dans une pastille. Exemple : « Coca-Cola 33 cl — reste 10 — 2 packs de 24 ».
 - Les produits en rupture (stock ≤ 0) viennent en premier, les autres suivent par ordre alphabétique.
 - Un badge sur l'onglet indique le nombre de produits à racheter.
 - Une ligne disparaît dès qu'une entrée fait repasser le stock au-dessus du seuil.
 
 ### 4.4 Stock et fiche produit
 
-- La liste montre tous les produits actifs par ordre alphabétique, avec le stock au format « 53 (2 packs + 5) ». Un produit est en rouge si son stock est inférieur ou égal au seuil (il figure alors dans À racheter) ou négatif. Un champ de recherche est placé en haut.
+- La liste montre tous les produits actifs par ordre alphabétique : l'image du produit, le nom, son état ou ses packs (« 2 packs + 5 ») et le stock en gros à droite. Un produit est en rouge si son stock est inférieur ou égal au seuil (il figure alors dans À racheter) ou négatif. Un champ de recherche est placé en haut.
 - Le filtre « Archivés » affiche les produits archivés, que l'on peut réactiver.
-- La fiche produit contient : nom, pack Metro, seuil, stock idéal, codes associés avec leurs unités, et les 20 derniers mouvements.
+- La fiche produit contient, de haut en bas :
+  - « Retour », puis l'image et le nom du produit ;
+  - le stock en très gros, avec le pack Metro, le seuil et le stock idéal ;
+  - deux boutons : « Corriger le stock » et « Modifier » ;
+  - les codes, chacun avec son image, ses unités et la provenance de l'image ; « Modifier » et « Retirer » en liens sur la ligne ; « Ajouter un code » en fin de liste ;
+  - les 20 derniers mouvements, le type en couleur ;
+  - « Archiver le produit », en bas, en rouge.
 - Depuis la fiche, on peut :
   - modifier les champs ;
-  - ajouter, modifier ou retirer un code ;
+  - ajouter, modifier ou retirer un code, et changer son image en la touchant (appareil photo de l'iPhone) ;
   - « Corriger le stock », c'est-à-dire faire l'inventaire de ce seul produit ;
   - archiver le produit. Il n'y a pas de suppression définitive : l'archivage la remplace et préserve l'historique.
 - Le bouton « Nouveau produit » crée une fiche sans scan, pour un produit dont le code est illisible.
@@ -137,14 +147,29 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 - Chaque ligne donne la date et l'heure (heure de Paris), le prénom, le type, le produit et la quantité. Exemples :
   - « lun. 14:32 — Sam — Entrée +24 — Coca-Cola 33 cl » ;
   - « Inventaire : 53 comptés (−3) ».
-- Toute ligne active peut être annulée, après confirmation. Une ligne annulée reste visible, barrée, avec la mention « annulé par [prénom] ».
+- À l'écran, chaque ligne tient sur deux lignes : le produit et la quantité en couleur (orange pour une sortie, vert pour une entrée, bleu pour un inventaire), puis le type, la date et le prénom.
+- Toute ligne active peut être annulée, après confirmation, par le lien « Annuler » de la ligne. Une ligne annulée reste visible, barrée, avec la mention « annulé par [prénom] ».
 
 ### 4.6 Réglages
 
+- **Changer de prénom**, avec le prénom du téléphone affiché.
+- **Apparence** : « Automatique » (par défaut : comme l'iPhone), « Clair » ou « Sombre ». Le choix ne vaut que pour ce téléphone.
 - **Tutoriel** : la vidéo tuto, lue sans quitter l'app (§9, « Mise en service »).
-- **Changer de prénom.**
 - **Changer le mot de passe du tabac.** Tous les téléphones sont déconnectés, celui-ci compris, et chacun retape le nouveau mot de passe.
-- **Se déconnecter.**
+- **Se déconnecter**, en rouge, à part.
+
+### 4.7 Images des codes
+
+- Chaque code-barres peut avoir une image : celle du pack pour le code du pack, celle de la canette pour le code de la canette. Elle est facultative.
+- **Provenance :**
+  - Open Food Facts, quand il connaît le code (souvent les canettes et les bouteilles) : l'image est proposée à la création, puis recopiée dans le stockage de ScanDrinks, avec la mention « Image : Open Food Facts » ;
+  - sinon, une photo de l'équipe (souvent les packs Metro) : « Prendre la photo » à la création, par la caméra du Scanner, ou plus tard depuis la fiche, en touchant l'image d'un code, avec l'appareil photo de l'iPhone.
+- **Affichage :**
+  - après un scan, sur la fiche de confirmation : l'image du code scanné ;
+  - dans la fiche produit : l'image du produit en haut, et celle de chaque code ;
+  - dans Stock et À racheter : l'image du produit.
+- L'image du produit est celle du code dont les unités valent le pack Metro, sinon la première image disponible. Sans image, une icône grise la remplace.
+- Les images montrent les produits, jamais les personnes.
 
 ## 5. Règles de gestion
 
@@ -224,6 +249,8 @@ déploiement automatique depuis GitHub
 | `code` | text | clé : un code appartient à un seul produit |
 | `product_id` | uuid | renvoie à `products` |
 | `units` | int | de 1 à 999 |
+| `photo_path` | text | chemin de l'image du code dans le stockage, vide sans image (§4.7) |
+| `photo_source` | text | `off` (Open Food Facts) ou `equipe` (photo de l'équipe), vide sans image |
 | `created_at` | timestamptz | |
 
 **`movements`**
@@ -241,7 +268,9 @@ déploiement automatique depuis GitHub
 | `cancelled_at` | timestamptz | vide tant que le mouvement est actif |
 | `cancelled_by` | text | prénom de la personne qui annule |
 
-**Vue `product_stock`** : pour chaque produit, le stock est la somme des `delta` des mouvements non annulés.
+**Vue `product_stock`** : pour chaque produit, le stock est la somme des `delta` des mouvements non annulés. Elle donne aussi `photo_path`, l'image du produit (§4.7).
+
+**Stockage des images** : Supabase Storage, compartiment privé `photos`, chemin `codes/<code>/<identifiant>.jpg`. Chaque image est un JPEG de 480 px de côté au plus, en qualité 0,8 (environ 30 à 60 Ko). Une nouvelle image a un nouveau nom ; l'ancienne reste dans le stockage, sans être affichée.
 
 **Fonctions appelées par l'app.** Chacune s'exécute en une seule transaction et verrouille le produit concerné : deux scans simultanés ne peuvent pas fausser un calcul.
 
@@ -254,6 +283,8 @@ déploiement automatique depuis GitHub
 - `set_product_archived(product_id, archived)` : archive ou réactive un produit.
 - `attach_barcode(code, product_id, units, move)` : associe un code à un produit, ou le déplace si `move` est vrai.
 - `detach_barcode(code)` : retire un code de son produit. Les mouvements passés gardent le code en texte.
+- `lookup_barcode(code)` : le produit d'un code, ses unités et son image.
+- `set_barcode_photo(code, path, source)` : relie au code une image déjà envoyée dans le stockage, et en note la provenance.
 
 Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une action ne crée pas de doublon.
 
@@ -264,6 +295,7 @@ Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une ac
 - **Row Level Security sur toutes les tables.** Seuls les comptes inscrits dans la table `allowed_users`, c'est-à-dire le compte du tabac, peuvent lire ou écrire. Sans connexion, tout est refusé, même avec le lien de l'app et la clé publique Supabase, qui est publique par conception.
 - **Changement de mot de passe** depuis les Réglages : le mot de passe actuel est vérifié, le nouveau enregistré, puis toutes les sessions sont révoquées, celle du téléphone compris.
 - **Session vérifiée à chaque appel** : la fonction d'accès (`is_allowed`) refuse un jeton dont la session est fermée. Un téléphone déconnecté par un changement de mot de passe est donc refusé tout de suite, sans attendre l'expiration de son jeton (jusqu'à une heure).
+- **Images** : le compartiment `photos` est privé. Seuls les comptes de `allowed_users` y lisent et y ajoutent des images ; personne ne les modifie ni ne les supprime depuis l'app. L'app les affiche par des liens signés, valables une heure.
 - **Données personnelles** : uniquement des prénoms. Pas de suivi d'audience, pas de publicité, pas d'outil de mesure.
 
 ### 6.5 Hébergement, comptes et coûts
@@ -274,21 +306,79 @@ Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une ac
 | Fichiers de l'app | Cloudflare Pages, relié au dépôt GitHub, en https | 0 € |
 | Noms des produits | API Open Food Facts | 0 € |
 | Code source | GitHub, dépôt privé | 0 € |
+| Images des codes | Supabase Storage, offre gratuite (1 Go) | 0 € |
 | Vidéo tuto et sa page | Cloudflare Pages, avec l'app | 0 € |
 
 Limites connues :
 
-- L'offre gratuite de Supabase donne 500 Mo de base, ce qui suffit largement.
+- L'offre gratuite de Supabase donne 500 Mo de base, ce qui suffit largement, et 1 Go de stockage : environ 20 000 images de 50 Ko.
 - Supabase **met le projet en pause après 7 jours sans utilisation**. Les données sont conservées, et on le relance à la main depuis le tableau de bord (procédure dans le guide).
 - Le projet a sa propre organisation, « ScanDrinks » : l'organisation « Webia » n'est pas touchée.
 - Cloudflare Pages refuse les fichiers de plus de 25 Mo : la vidéo tuto, découpée en morceaux, reste bien en dessous.
 
 ### 6.6 Open Food Facts
 
-- L'app ne l'appelle que pour un code inconnu : `GET https://world.openfoodfacts.org/api/v2/product/{code}.json?fields=product_name,product_name_fr,brands,quantity`.
+- L'app ne l'appelle que pour un code inconnu : `GET https://world.openfoodfacts.org/api/v2/product/{code}.json?fields=product_name,product_name_fr,brands,quantity,image_front_url`.
 - L'appel part directement du navigateur : Open Food Facts l'autorise (CORS), vérifié le 19/10/2026.
+- **Image** : si `image_front_url` existe, l'app la propose ; à l'enregistrement, elle la télécharge (autorisé aussi, vérifié le 21/10/2026), la réduit et la recopie dans le stockage de ScanDrinks. Les images d'Open Food Facts sont sous licence libre (CC BY-SA) : la mention « Image : Open Food Facts » les accompagne dans la fiche.
 - Le délai maximal est de 3 secondes. En cas d'échec ou de réponse vide, le nom reste à saisir.
 - Le nom proposé reste modifiable, car les données sont parfois fausses : la Cristaline 1,5 L y est enregistrée sous le nom « isabelle ».
+
+### 6.7 Charte visuelle (refonte du 21/10/2026)
+
+Style « comme une app iPhone » : fond gris clair, cartes blanches, listes groupées, onglets avec icônes, et le vert ScanDrinks en accent. Maquettes de référence : https://claude.ai/artifact/K9LaQSBEFJ44is1kVoCb8a, page « Style A — tous les écrans ».
+
+**Apparence.** Deux thèmes, jour et nuit, avec les mêmes écrans et les mêmes places. Le choix se fait dans Réglages › Apparence (§4.6) ; « Automatique » suit le réglage de l'iPhone.
+
+**Couleurs.**
+
+| Rôle | Jour | Nuit |
+|---|---|---|
+| Fond | `#F2F2F7` | `#000000` |
+| Cartes et listes | `#FFFFFF` | `#1C1C1E` |
+| Champs | `#F2F2F7` | `#2C2C2E` |
+| Pistes (sélecteurs, recherche) | `#E3E3E8` | `#2C2C2E` |
+| Séparateurs | `#E5E5EA` | `#38383A` |
+| Texte | `#1C1C1E` | `#FFFFFF` |
+| Texte secondaire | `#6C6C70` | `#98989F` |
+| Vert (boutons pleins) | `#1F6F3F` | `#26804A` |
+| Vert (textes, icônes) | `#1F6F3F` | `#4CD07D` |
+| Vert pâle (boutons teintés, pastilles) | `#E7F1EB` | `#1E3326` |
+| Orange Sortie (bouton plein / texte) | `#B45309` / `#A34A07` | `#A9520B` / `#FFA94D` |
+| Bleu Inventaire (bouton plein / texte) | `#1D4ED8` / `#1D4ED8` | `#2F5FE0` / `#7FB2FF` |
+| Rouge (textes) / rouge pâle (fonds) | `#C0392B` / `#FDECEA` | `#FF6961` / `#3A1D1B` |
+| Pastille de l'onglet À racheter | `#D70015` | `#D70015` |
+| Barre d'onglets | `#F9F9F9` | `#121214` |
+
+**Contrastes.** Dans les deux thèmes, un texte atteint au moins 4,5:1 sur son fond, et un élément d'interface 3:1. Un test unitaire le vérifie sur les couleurs de la charte.
+
+**Typographie.**
+- La police du système : San Francisco sur iPhone.
+- Grand titre en 32 px (800), titre de carte en 20 px (700).
+- Texte en 17 px, texte secondaire en 15 px, note en 13 px, libellé d'onglet en 12 px.
+- Grands nombres en 34 à 40 px (800). Champs de saisie en 17 px.
+
+**Formes.**
+- Cartes et listes arrondies (14 à 18 px), boutons et champs aussi (12 à 14 px), pastilles rondes.
+- Zones tactiles de 44 px au moins.
+
+**Icônes.** Des icônes au trait, dessinées dans le code (SVG), reprises de la bibliothèque libre Lucide, sous licence ISC, mentionnée dans le code. Aucune dépendance.
+
+**Composants.**
+- **En-tête :** le logo, « ScanDrinks », le prénom dans une pastille, puis la roue dentée.
+- **Barre d'onglets :** une icône et un nom par onglet ; l'onglet actif en vert ; la pastille rouge du nombre de produits à racheter.
+- **Sélecteur de mode :** trois segments, dont l'actif est rempli de sa couleur (vert, orange, bleu).
+- **Boutons :** principal (plein), teinté (fond pâle), lien (texte seul) et destructif (rouge). « Valider » prend la couleur du mode.
+- **Cartes et listes groupées :** des séparateurs fins, et un chevron pour ouvrir une ligne.
+- **Champs :** le libellé au-dessus, l'aide en petit dessous.
+- **Messages :** une bande teintée avec une icône.
+- **Images :** une vignette arrondie ; une icône grise quand il n'y a pas d'image.
+
+**Mise en page.**
+- Une seule colonne.
+- « Retour » en haut des écrans secondaires.
+- Les actions rares (archiver, se déconnecter) en bas, en rouge.
+- La caméra du Scanner se réduit quand une fiche longue s'ouvre, pour laisser la place aux champs.
 
 ## 7. Gestion des erreurs
 
@@ -305,6 +395,9 @@ Limites connues :
 | Nouvelle version publiée | Installation automatique à l'ouverture suivante. |
 | Erreur d'affichage imprévue | « L'app a rencontré un problème. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks. », avec le bouton « Recharger ». |
 | Vidéo tuto injoignable | « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. », sous le lecteur. |
+| Image impossible à enregistrer (réseau) | La fiche ou le code est enregistré quand même, avec « Photo non enregistrée : réessaie depuis la fiche du produit. ». |
+| Image d'Open Food Facts introuvable ou trop lente | Rien de bloquant : le cadre propose « Prendre la photo ». |
+| Image impossible à afficher | Une icône grise la remplace. |
 
 ## 8. Stratégie de test
 
@@ -322,7 +415,9 @@ Limites connues :
   - la remise à zéro, sur une base locale : tout est effacé sauf le compte du tabac ; relancée, elle ne change rien ; sur une base sans les objets de ScanDrinks, elle s'arrête sans rien toucher ;
   - la feuille A4 : le PDF tient sur une page A4, et son QR code, relu par ZXing, mène à la page de la vidéo ;
   - le script de la vidéo vérifie chaque écran avant le geste suivant : si l'app a changé, le tournage s'arrête au lieu de filmer un écran faux ;
-  - le bouton « Tutoriel » et le filet de sécurité, dans les tests de bout en bout.
+  - le bouton « Tutoriel » et le filet de sécurité, dans les tests de bout en bout ;
+  - la charte : les contrastes de ses couleurs, jour et nuit, par un test unitaire ; le choix de l'Apparence, gardé et appliqué, dans les tests de bout en bout ;
+  - les images : la base (colonnes, fonction, droits du stockage) en tests SQL ; la copie depuis Open Food Facts, la photo, l'envoi, l'affichage et un envoi qui échoue, dans les tests de bout en bout, avec un stockage simulé.
 - **Recette en boutique** avec le porteur du projet, le jour J et pendant la semaine d'essai (§9, « Mise en service »), à partir d'une liste à cocher :
   - scans de vrais packs Metro et création de 3 fiches ;
   - une sortie et un inventaire ;
@@ -354,13 +449,15 @@ Limites connues :
 | 1. Le cœur | Projet Supabase, tables, sécurité (dont l'inscription du compte du tabac dans `allowed_users`), connexion, prénom, scan Entrée/Sortie, création de fiches, ajout de codes. | Scanner et créer des fiches sur iPhone. |
 | 2. Le pilotage | Stock, fiche produit, À racheter, Inventaire. | Une liste d'achat cohérente après quelques scans. |
 | 3. Le suivi | Historique, annulation, changement de mot de passe, finitions. | Annuler une erreur, changer le mot de passe. |
-| 4. La mise en service | Vidéo tuto (bouton « Tutoriel » et QR code), feuille A4 de la réserve, quatre corrections ; puis le jour J : remise à zéro, installation sur les iPhones de l'équipe, inventaire du premier jour. | Une semaine d'utilisation par l'équipe (détail ci-dessous). |
+| 4. La mise en service | Refonte visuelle (style iPhone, jour et nuit) et images des codes ; vidéo tuto (bouton « Tutoriel » et QR code), feuille A4 de la réserve, quatre corrections ; puis le jour J : remise à zéro, installation sur les iPhones de l'équipe, inventaire du premier jour. | Une semaine d'utilisation par l'équipe (détail ci-dessous). |
 
 Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai dépend surtout des moments disponibles pour tester en boutique.
 
 ### Mise en service (jalon 4)
 
 Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **feuille A4** affichée en réserve.
+
+**La refonte visuelle et les images** (§4.7, §6.7) viennent en premier, à la demande du porteur du projet : la vidéo et la feuille montrent l'app finale.
 
 **La vidéo tuto**
 
@@ -370,7 +467,7 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
   1. se connecter et choisir son prénom ;
   2. une livraison Metro : « Entrée + » ;
   3. un pack sorti de la réserve : « Sortie − » ;
-  4. un produit inconnu : créer sa fiche ;
+  4. un produit inconnu : créer sa fiche, avec sa photo ;
   5. compter : « Inventaire » ;
   6. avant Metro : « À racheter » ;
   7. le stock et la fiche d'un produit ;
@@ -395,7 +492,7 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 - « Chaque fois que… » :
   - livraison Metro → « Entrée + » ;
   - je sors un pack → « Sortie − » ;
-  - code inconnu → la fiche s'ouvre ;
+  - code inconnu → la fiche s'ouvre : photo du pack, nom, unités ;
   - je compte → « Inventaire » ;
   - avant Metro → « À racheter » ;
   - une erreur → « Historique » › « Annuler ».
@@ -416,7 +513,7 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 1. La veille : chaque iPhone est en iOS 16.4 ou plus (Réglages › Général › Informations), la feuille est imprimée et affichée, et l'équipe est prévenue d'apporter son iPhone chargé.
 2. Le matin : la remise à zéro, en 5 minutes.
 3. L'installation, en 15 minutes environ : chacun installe l'app depuis Safari avec la feuille ; le porteur du projet donne le mot de passe à voix haute ; chacun choisit son prénom. Les icônes installées depuis une préversion sont supprimées.
-4. L'inventaire, boutique fermée ou avant l'ouverture. La réserve est partagée en zones, une par personne. Dans chaque zone : « Scanner » › « Inventaire », un scan par produit, la fiche créée si besoin (seuils pré-remplis, RG-7), puis le comptage en packs et unités. Avec moins de 30 références et 4 à 6 personnes, compter une quinzaine de minutes. Deux règles :
+4. L'inventaire, boutique fermée ou avant l'ouverture. La réserve est partagée en zones, une par personne. Dans chaque zone : « Scanner » › « Inventaire », un scan par produit, la fiche créée si besoin (seuils pré-remplis, RG-7) avec la photo du pack, facultative (une dizaine de secondes par code), puis le comptage en packs et unités. Avec moins de 30 références et 4 à 6 personnes, compter une quinzaine de minutes. Deux règles :
    - **un produit = une seule personne**, même s'il est rangé à deux endroits : un second comptage remplacerait le premier au lieu de s'y ajouter (RG-4) ;
    - **pas d'entrée ni de sortie pendant l'inventaire**.
 5. Les contrôles restants de la recette (§8) : l'écran allumé et la marge du bas dans l'app installée, avec la version d'iOS ; une coupure réseau simulée (mode avion) au moment de valider un recomptage, sans effet sur le stock.
@@ -444,7 +541,7 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 
 **Déroulé**
 
-1. Un essai de lecture sur l'iPhone du porteur du projet, avec une vidéo HLS de 10 secondes, avant de fabriquer la vraie.
+1. La refonte visuelle et les images, puis un essai sur l'iPhone du porteur du projet, dans la préversion : le nouveau look, le mode nuit, les photos, et la lecture d'une vidéo HLS de 10 secondes, avant de fabriquer la vraie.
 2. Le reste du jalon, puis la validation sur iPhone dans la préversion.
 3. La fusion.
 4. Le jour J, à la date choisie par le porteur du projet.
@@ -464,6 +561,8 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 | La vidéo tuto ne se lit pas sur iPhone depuis Cloudflare Pages | Faible | Moyen | Format HLS, qui se passe des demandes partielles ; essai sur iPhone avec une vidéo de 10 secondes avant de fabriquer la vraie. Repli : héberger la vidéo sur Supabase Storage, avec l'accord du porteur du projet. |
 | Un iPhone de l'équipe a une version d'iOS trop ancienne | Faible | Moyen | Vérifié la veille du jour J ; mise à jour d'iOS, ou un autre iPhone pour cette personne. |
 | Un produit compté deux fois à l'inventaire | Moyenne | Moyen | Un produit = une seule personne ; l'Historique montre les deux comptages, il suffit de recompter. |
+| L'équipe ne prend pas les photos | Moyenne | Faible | Elles sont facultatives : une icône grise les remplace, et on peut les ajouter plus tard depuis la fiche. |
+| L'appareil photo de l'iPhone coupe la caméra du Scanner | Moyenne | Faible | À la création, la photo vient de la caméra du Scanner, sans ouvrir l'appareil photo ; depuis la fiche, la caméra du Scanner est déjà arrêtée. |
 | La remise à zéro lancée sur le mauvais projet | Faible | Fort | Le script vérifie d'abord les tables et les fonctions de ScanDrinks, et s'arrête sinon ; le guide dit de choisir le projet « scandrinks ». |
 
 ## 11. Journal des décisions
@@ -509,6 +608,13 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 | 21/10/2026 | Inventaire du premier jour par zones ; un produit = une seule personne ; pas d'entrée ni de sortie pendant l'inventaire | Un second comptage remplace le premier (RG-4) |
 | 21/10/2026 | Avant la semaine d'essai : page blanche remplacée par « Recharger », écran allumé redemandé (s7), « Réessayer » gardé sur la fiche (s3), commentaire périmé (s8) ; les autres points reportés attendent | Ce qui gênerait pendant la semaine ; le changement de mot de passe est rare |
 | 21/10/2026 | Jalon 4 validé après une semaine d'usage : rien de bloquant, « À racheter » juste avant chaque passage chez Metro, écart expliqué au recomptage de 5 produits | Un critère vérifiable |
+| 21/10/2026 | Refonte visuelle avant la vidéo : style « comme une app iPhone » (piste A sur trois), jour et nuit ; Réglages › Apparence, « Automatique » par défaut, choix par téléphone | Choix du porteur du projet, sur maquettes : l'app faisait brute, peu lisible, chargée et sans identité |
+| 21/10/2026 | Refonte maison : couleurs, tailles et composants définis une fois ; icônes Lucide dans le code ; aucune dépendance | Le moins de risque ; les tests gardés |
+| 21/10/2026 | « Valider » et la quantité en très gros prennent la couleur du mode | Un rappel de plus contre l'erreur de mode |
+| 21/10/2026 | Fiche produit : deux boutons au lieu de sept ; Historique sur deux lignes, « Annuler » en lien | Des écrans moins chargés |
+| 21/10/2026 | Une image par code, facultative : celle d'Open Food Facts, recopiée chez nous, ou une photo de l'équipe | Choix du porteur du projet ; les packs sont inconnus d'Open Food Facts |
+| 21/10/2026 | La photo d'une création vient de la caméra du Scanner ; depuis la fiche, de l'appareil photo de l'iPhone | Ne pas couper la caméra du Scanner pendant une création |
+| 21/10/2026 | Images dans un stockage privé, affichées par des liens signés d'une heure | Seul le compte du tabac voit les images |
 
 ## 12. Glossaire
 
@@ -520,3 +626,5 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 - **Stock idéal** : le stock visé après les courses.
 - **HLS** : format vidéo d'Apple, découpé en petits morceaux, que l'iPhone lit directement.
 - **Jour J** : le jour de la mise en service : remise à zéro, installation sur les iPhones et inventaire du premier jour.
+- **Image d'un code** : la photo du pack ou de la canette qui porte ce code-barres.
+- **Apparence** : le thème de l'app, jour (clair) ou nuit (sombre).
