@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { ean13Y4m } from './ean13.mjs'
 import { COCA_CODE, GOOD_PASSWORD, SUPABASE_URL, installFakeSupabase } from './fakeSupabase.mjs'
+import { signIn } from './helpers.mjs'
 
 const PORT = 4173
 const BASE = `http://localhost:${PORT}`
@@ -48,14 +49,6 @@ async function openApp(browser, fakeOptions, { initScript = null } = {}) {
   const fake = await installFakeSupabase(page, fakeOptions)
   await page.goto(`${BASE}/`)
   return { context, page, fake, pageErrors }
-}
-
-async function signIn(page) {
-  await page.getByLabel('Mot de passe').fill(GOOD_PASSWORD)
-  await page.getByRole('button', { name: 'Se connecter' }).click()
-  await page.getByRole('heading', { name: 'Qui es-tu ?' }).waitFor()
-  await page.getByLabel('Nouveau prénom').fill('Sam')
-  await page.getByRole('button', { name: "C'est moi" }).click()
 }
 
 const confirmCard = (page) => page.getByRole('region', { name: 'Fiche de confirmation' })
@@ -102,7 +95,7 @@ async function scenarioMain(browser) {
   await page.getByRole('button', { name: 'Sortie −' }).click()
   await card.getByText('Pack de 24 → −24').waitFor()
   assert.equal(await card.getAttribute('data-mode'), 'out')
-  assert.equal(await card.locator('.confirm-line').evaluate((el) => getComputedStyle(el).color), 'rgb(180, 83, 9)')
+  assert.equal(await card.locator('.confirm-line').evaluate((el) => getComputedStyle(el).color), 'rgb(163, 74, 7)')
   await page.getByRole('button', { name: 'Entrée +' }).click()
   await card.getByText('Pack de 24 → +24').waitFor()
 
@@ -1024,6 +1017,87 @@ async function scenarioFinishing(browser) {
   console.log('Scénario O (finitions) : OK')
 }
 
+// Apparence (refonte, §4.6, §6.7) : jour par défaut, « Sombre » gardé par le téléphone, « Automatique » suit l'iPhone.
+async function scenarioAppearance(browser) {
+  const { context, page } = await openApp(browser)
+  const look = () =>
+    page.evaluate(() => ({
+      theme: document.documentElement.getAttribute('data-theme'),
+      background: getComputedStyle(document.body).backgroundColor,
+      bar: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? null,
+    }))
+  // Les changements de l'iPhone arrivent par un événement : on attend l'état voulu, puis on compare.
+  const expectLook = async (expected) => {
+    await page
+      .waitForFunction(
+        (wanted) =>
+          JSON.stringify({
+            theme: document.documentElement.getAttribute('data-theme'),
+            background: getComputedStyle(document.body).backgroundColor,
+            bar: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? null,
+          }) === wanted,
+        JSON.stringify(expected),
+        { timeout: 5000 },
+      )
+      .catch(() => {})
+    assert.deepEqual(await look(), expected)
+  }
+  const DAY = { theme: null, background: 'rgb(242, 242, 247)', bar: '#F2F2F7' }
+  const scannerTab = page.getByRole('button', { name: 'Scanner', exact: true })
+  const appearance = page.getByRole('group', { name: 'Apparence' })
+  const choice = (name) => appearance.getByRole('button', { name, exact: true })
+  await signIn(page)
+  await scannerTab.waitFor()
+
+  // 1. Le jour par défaut, avec l'onglet actif en vert.
+  assert.deepEqual(await look(), DAY)
+  assert.equal(await scannerTab.evaluate((tab) => getComputedStyle(tab).color), 'rgb(31, 111, 63)')
+
+  // 2. « Sombre » : la nuit, la barre d'état noire, « Se déconnecter » en rouge de nuit.
+  await page.getByRole('button', { name: 'Réglages' }).click()
+  assert.deepEqual(await appearance.getByRole('button').allTextContents(), ['Automatique', 'Clair', 'Sombre'])
+  assert.equal(await choice('Automatique').getAttribute('aria-pressed'), 'true')
+  await choice('Sombre').click()
+  assert.equal(await choice('Sombre').getAttribute('aria-pressed'), 'true')
+  assert.deepEqual(await look(), { theme: 'dark', background: 'rgb(0, 0, 0)', bar: '#000000' })
+  assert.equal(await page.getByRole('button', { name: 'Se déconnecter' }).evaluate((button) => getComputedStyle(button).color), 'rgb(255, 105, 97)')
+
+  // 3. Le choix est gardé par le téléphone.
+  await page.reload()
+  await scannerTab.waitFor()
+  assert.deepEqual(await look(), { theme: 'dark', background: 'rgb(0, 0, 0)', bar: '#000000' })
+
+  // 4. « Automatique » suit le réglage de l'iPhone, barre d'état comprise.
+  await page.getByRole('button', { name: 'Réglages' }).click()
+  await choice('Automatique').click()
+  assert.deepEqual(await look(), DAY)
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expectLook({ theme: null, background: 'rgb(0, 0, 0)', bar: '#000000' })
+  await page.emulateMedia({ colorScheme: 'light' })
+  await expectLook(DAY)
+
+  // 5. « Clair » l'emporte sur un iPhone en mode sombre.
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await choice('Clair').click()
+  assert.deepEqual(await look(), { theme: 'light', background: 'rgb(242, 242, 247)', bar: '#F2F2F7' })
+
+  // 6. À 320 px : rien ne dépasse, et l'en-tête tient sur une ligne.
+  await page.setViewportSize({ width: 320, height: 640 })
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= 320), 'Réglages sans défilement horizontal à 320 px')
+  await page.getByRole('button', { name: 'Retour' }).click()
+  await scannerTab.waitFor()
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= 320), 'Scanner sans défilement horizontal à 320 px')
+  const centers = await page.evaluate(() =>
+    ['.brand-tile', '.brand', '.employee', '.app-header .icon-button'].map((selector) => {
+      const box = document.querySelector(selector).getBoundingClientRect()
+      return box.top + box.height / 2
+    }),
+  )
+  assert.ok(Math.max(...centers) - Math.min(...centers) <= 4, `en-tête sur une ligne : ${JSON.stringify(centers)}`)
+  await context.close()
+  console.log('Scénario R (apparence) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -1055,6 +1129,7 @@ try {
     ['M', scenarioHistory],
     ['N', scenarioPassword],
     ['O', scenarioFinishing],
+    ['R', scenarioAppearance],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

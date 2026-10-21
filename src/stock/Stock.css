@@ -44,8 +44,7 @@
 }
 
 .product-row.stock-low {
-  border-color: #b91c1c;
-  color: #8a1c13;
+  color: var(--red-text);
 }
 
 .product-sheet h3 {
@@ -60,7 +59,7 @@
 }
 
 .sheet-stock.stock-low {
-  color: #8a1c13;
+  color: var(--red-text);
 }
 
 /* Chaque « libellé : valeur » reste sur une ligne. */
@@ -70,9 +69,8 @@
 
 /* Filtre choisi (Actifs ou Archivés). */
 .stock .choices button[aria-pressed='true'] {
-  border-color: #1a1a1a;
-  background: #1a1a1a;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-color);
 }
 
 /* Corriger le stock et Modifier, côte à côte sous les chiffres. */
@@ -98,7 +96,7 @@
   justify-content: space-between;
   gap: 6px 8px;
   padding: 6px 0;
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid var(--separator);
 }
 
 .code-actions {
@@ -119,6 +117,6 @@
 }
 
 .movement-list li.cancelled {
-  color: #777777;
+  color: var(--text-2);
   text-decoration: line-through;
 }

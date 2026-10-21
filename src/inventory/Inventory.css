@@ -9,10 +9,10 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #1d4ed8;
+  color: var(--blue-text);
 }
 
 /* « Corriger le stock » : même repère bleu que le mode Inventaire du Scanner. */
 .card.correct-stock {
-  border-left: 6px solid #1d4ed8;
+  border-left: 6px solid var(--blue);
 }

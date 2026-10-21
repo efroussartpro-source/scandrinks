@@ -35,7 +35,7 @@
   justify-content: space-between;
   gap: 6px 8px;
   padding: 8px 0;
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid var(--separator);
 }
 
 .history-line {
@@ -45,6 +45,6 @@
 }
 
 .history-list li.cancelled .history-line {
-  color: #777777;
+  color: var(--text-2);
   text-decoration: line-through;
 }

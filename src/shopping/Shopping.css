@@ -36,6 +36,5 @@
 }
 
 .shopping-list button.out-of-stock {
-  border-color: #b91c1c;
-  color: #8a1c13;
+  color: var(--red-text);
 }

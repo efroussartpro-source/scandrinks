@@ -65,7 +65,7 @@ export default function ChangePasswordScreen({ onDone, onCancel, beforeLocalSign
     <main className="screen">
       <h1>Mot de passe du tabac</h1>
       <p>Tous les téléphones seront déconnectés, celui-ci compris : chacun devra retaper le nouveau mot de passe.</p>
-      <form className="form" onSubmit={(event) => void submit(event)}>
+      <form className="card form" onSubmit={(event) => void submit(event)}>
         <input
           className="visually-hidden"
           type="email"

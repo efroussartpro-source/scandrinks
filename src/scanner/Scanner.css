@@ -1,8 +1,5 @@
 /* Écran Scanner : viseur en haut, modes, puis la fiche ou les messages. */
 .scanner {
-  --mode-in: #1f6f3f;
-  --mode-out: #b45309;
-  --mode-inv: #1d4ed8;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -15,7 +12,7 @@
   height: min(45vh, 420px);
   border-radius: 14px;
   overflow: hidden;
-  background: #000000;
+  background: var(--camera);
 }
 
 .viewfinder video {
@@ -32,9 +29,8 @@
   right: 8%;
   top: 38%;
   height: 24%;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--on-color);
   border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
   pointer-events: none;
 }
 
@@ -57,34 +53,35 @@
   white-space: nowrap;
 }
 
+.modes .mode {
+  background: var(--card);
+}
+
 .modes .mode-in {
-  color: var(--mode-in);
-  border-color: var(--mode-in);
+  color: var(--green-text);
 }
 
 .modes .mode-out {
-  color: var(--mode-out);
-  border-color: var(--mode-out);
-}
-
-.modes .mode-in[aria-pressed='true'] {
-  background: var(--mode-in);
-  color: #ffffff;
-}
-
-.modes .mode-out[aria-pressed='true'] {
-  background: var(--mode-out);
-  color: #ffffff;
+  color: var(--orange-text);
 }
 
 .modes .mode-inv {
-  color: var(--mode-inv);
-  border-color: var(--mode-inv);
+  color: var(--blue-text);
+}
+
+.modes .mode-in[aria-pressed='true'] {
+  background: var(--green);
+  color: var(--on-color);
+}
+
+.modes .mode-out[aria-pressed='true'] {
+  background: var(--orange);
+  color: var(--on-color);
 }
 
 .modes .mode-inv[aria-pressed='true'] {
-  background: var(--mode-inv);
-  color: #ffffff;
+  background: var(--blue);
+  color: var(--on-color);
 }
 
 .panel {
@@ -93,30 +90,16 @@
   gap: 10px;
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid #dddddd;
-  border-radius: 14px;
-}
-
-.card-title {
-  margin: 0;
-  font-size: 20px;
-}
-
 .confirm[data-mode='in'] {
-  border-left: 6px solid var(--mode-in);
+  border-left: 6px solid var(--green);
 }
 
 .confirm[data-mode='out'] {
-  border-left: 6px solid var(--mode-out);
+  border-left: 6px solid var(--orange);
 }
 
 .confirm[data-mode='inventory'] {
-  border-left: 6px solid var(--mode-inv);
+  border-left: 6px solid var(--blue);
 }
 
 .confirm-line {
@@ -126,11 +109,11 @@
 }
 
 .confirm[data-mode='in'] .confirm-line {
-  color: var(--mode-in);
+  color: var(--green-text);
 }
 
 .confirm[data-mode='out'] .confirm-line {
-  color: var(--mode-out);
+  color: var(--orange-text);
 }
 
 .quantity {
@@ -155,14 +138,10 @@
   font: inherit;
   font-size: 20px;
   text-align: center;
-  border: 1px solid #c8c8c8;
+  color: var(--text);
+  border: 2px solid transparent;
   border-radius: 10px;
-}
-
-.card-actions {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 8px;
+  background: var(--field);
 }
 
 .notice {

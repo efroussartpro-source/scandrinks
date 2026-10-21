@@ -1,0 +1,13 @@
+/* Réglages (§4.6) : des listes groupées, l'Apparence dans sa carte, « Se déconnecter » à part. */
+.settings .appearance {
+  padding: 10px;
+}
+
+.settings-note {
+  margin: -4px 16px 0;
+}
+
+.settings > .danger {
+  margin-top: 10px;
+  min-height: 50px;
+}

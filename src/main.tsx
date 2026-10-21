@@ -11,7 +11,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isConfigurationMissing, startupErrorMessage } from './startup'
+import { startAppearance } from './theme/appearance'
+import './theme/tokens.css'
 import './styles.css'
+
+// Le thème du téléphone est posé avant le premier rendu : pas d'éclair blanc la nuit.
+startAppearance()
 
 const root = document.getElementById('root')!
 

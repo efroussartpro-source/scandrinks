@@ -9,6 +9,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
+import { IconChevronLeft } from '../ui/icons'
 import { validateEmployeeName } from './employee'
 
 interface NameScreenProps {
@@ -54,6 +55,12 @@ export default function NameScreen({ onChosen, onSessionExpired, onCancel }: Nam
 
   return (
     <main className="screen">
+      {onCancel && (
+        <button type="button" className="link back" onClick={onCancel}>
+          <IconChevronLeft />
+          Retour
+        </button>
+      )}
       <h1>Qui es-tu ?</h1>
       {names === null && <p className="muted">Chargement…</p>}
       {names !== null && names.length > 0 && (
@@ -65,7 +72,7 @@ export default function NameScreen({ onChosen, onSessionExpired, onCancel }: Nam
           ))}
         </div>
       )}
-      <form className="form" onSubmit={submit}>
+      <form className="card form" onSubmit={submit}>
         <label className="field">
           <span>Nouveau prénom</span>
           <input
@@ -90,11 +97,6 @@ export default function NameScreen({ onChosen, onSessionExpired, onCancel }: Nam
           C'est moi
         </button>
       </form>
-      {onCancel && (
-        <button type="button" onClick={onCancel}>
-          Retour
-        </button>
-      )}
     </main>
   )
 }

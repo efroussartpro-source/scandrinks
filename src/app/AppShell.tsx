@@ -24,6 +24,7 @@ import ChangePasswordScreen from '../settings/ChangePasswordScreen'
 import SettingsScreen from '../settings/SettingsScreen'
 import ShoppingScreen from '../shopping/ShoppingScreen'
 import StockScreen from '../stock/StockScreen'
+import { IconBarcode, IconSettings } from '../ui/icons'
 import { nextSessionState, type SessionState } from './authState'
 import TabBar, { type Tab } from './TabBar'
 import { useCatalog } from './useCatalog'
@@ -116,10 +117,13 @@ export default function AppShell() {
     <>
       <div className="app" hidden={overlay !== null}>
         <header className="app-header">
+          <span className="brand-tile" aria-hidden="true">
+            <IconBarcode size={18} strokeWidth={2.2} />
+          </span>
           <span className="brand">ScanDrinks</span>
           <span className="employee">{employee}</span>
           <button type="button" className="icon-button" aria-label="Réglages" onClick={() => setOverlay('settings')}>
-            ⚙
+            <IconSettings strokeWidth={1.8} />
           </button>
         </header>
         <div hidden={tab !== 'scanner'}>

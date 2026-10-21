@@ -7,10 +7,12 @@
  * Le champ e-mail en lecture seule permet au trousseau iCloud d'enregistrer
  * le mot de passe avec la bonne adresse. Le message d'accueil dit pourquoi
  * se reconnecter : en vert après un changement de mot de passe, en rouge
- * après une session perdue.
+ * après une session perdue. Le logo et le formulaire sont centrés dans la
+ * hauteur (maquette docs/maquettes/J-connexion.dc.html).
  */
 import { useState, type FormEvent } from 'react'
 import { SHOP_EMAIL, supabase } from '../data/supabaseClient'
+import { IconBarcode } from '../ui/icons'
 import { loginErrorMessage } from './loginError'
 
 export interface LoginNotice {
@@ -40,8 +42,14 @@ export default function LoginScreen({ notice }: { notice: LoginNotice | null }) 
   }
 
   return (
-    <main className="screen">
-      <h1>ScanDrinks</h1>
+    <main className="screen login">
+      <div className="login-head">
+        <span className="brand-tile large" aria-hidden="true">
+          <IconBarcode size={40} strokeWidth={2.2} />
+        </span>
+        <h1>ScanDrinks</h1>
+        <p className="subtitle">Le stock de la réserve, sur ton iPhone.</p>
+      </div>
       {notice?.tone === 'ok' && (
         <p role="status" className="message message-ok">
           {notice.text}
@@ -52,7 +60,7 @@ export default function LoginScreen({ notice }: { notice: LoginNotice | null }) 
           {notice.text}
         </p>
       )}
-      <form className="form" onSubmit={submit}>
+      <form className="card form" onSubmit={submit}>
         <label className="field">
           <span>Compte du tabac</span>
           <input type="email" name="username" autoComplete="username" value={SHOP_EMAIL} readOnly />
@@ -76,6 +84,7 @@ export default function LoginScreen({ notice }: { notice: LoginNotice | null }) 
           {submitting ? 'Connexion…' : 'Se connecter'}
         </button>
       </form>
+      <p className="note">Un souci ? Préviens la personne qui gère ScanDrinks.</p>
     </main>
   )
 }
