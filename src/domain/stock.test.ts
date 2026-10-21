@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { clampQuantity, describeConfirm, formatStock, movementDelta, type MoveMode } from './stock'
+import { clampQuantity, confirmParts, formatStock, movementDelta, type MoveMode } from './stock'
 
 // Le signe moins est U+2212 (−), pas le tiret du clavier.
 test.each([
@@ -13,7 +13,8 @@ test('movementDelta', () => {
 test('clampQuantity borne entre 1 et 99, et tronque', () => {
   expect([clampQuantity(0), clampQuantity(5), clampQuantity(150), clampQuantity(Number.NaN), clampQuantity(2.7)]).toEqual([1, 5, 99, 1, 2])
 })
+// La fiche de confirmation : « Pack de 24 » sous le nom, « +24 » en grand dans la couleur du mode.
 test.each([
-  [24, 1, 'in', 'Pack de 24 → +24'], [24, 3, 'in', 'Pack de 24 × 3 → +72'], [1, 1, 'out', "À l'unité → −1"], [1, 6, 'out', "À l'unité × 6 → −6"],
-])('describeConfirm(%i, %i, %s)', (units, q, mode, text) => { expect(describeConfirm(units, q, mode as MoveMode)).toBe(text) })
+  [24, 1, 'in', 'Pack de 24', '+24'], [24, 3, 'in', 'Pack de 24 × 3', '+72'], [1, 1, 'out', "À l'unité", '−1'], [1, 6, 'out', "À l'unité × 6", '−6'],
+])('confirmParts(%i, %i, %s)', (units, q, mode, what, delta) => { expect(confirmParts(units, q, mode as MoveMode)).toEqual({ what, delta }) })
 

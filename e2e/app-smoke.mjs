@@ -52,6 +52,29 @@ async function openApp(browser, fakeOptions, { initScript = null } = {}) {
 }
 
 const confirmCard = (page) => page.getByRole('region', { name: 'Fiche de confirmation' })
+
+// Texte exact, pour un filtre hasText.
+const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
+
+// Ligne de la fiche de confirmation, écrite comme avant la refonte (« Pack de 24 → +24 ») :
+// « Pack de 24 » sous le nom, « +24 » en grand.
+async function waitForConfirmLine(card, line, options = {}) {
+  const [what, delta] = line.split(' → ')
+  await card.locator('.confirm-what').filter({ hasText: exactly(what) }).waitFor(options)
+  await card.locator('.confirm-delta').filter({ hasText: exactly(delta) }).waitFor(options)
+}
+
+// Message du Scanner après un enregistrement : sa première ligne, puis « Stock : … ».
+async function waitForSaved(page, title, detail) {
+  const notice = page.getByRole('status').filter({ has: page.locator('.notice-title').filter({ hasText: exactly(title) }) })
+  await notice.locator('.notice-detail').filter({ hasText: exactly(detail) }).waitFor()
+}
+
+// Total et écart d'un comptage d'inventaire.
+async function waitForCount(scope, total, gap) {
+  await scope.locator('.count-total').filter({ hasText: exactly(total) }).waitFor()
+  await scope.locator('.count-gap').filter({ hasText: exactly(gap) }).waitFor()
+}
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const recordCalls = (fake) => fake.calls.filter((call) => call.fn === 'record_movement')
 
@@ -87,17 +110,30 @@ async function scenarioMain(browser) {
 
   // 3. Code connu : fiche en Entrée.
   const card = confirmCard(page)
-  await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+  await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
   await card.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
   assert.equal(await card.getAttribute('data-mode'), 'in')
+  // Le sélecteur de mode est au-dessus de la caméra.
+  assert.ok(
+    await page.evaluate(() =>
+      Boolean(document.querySelector('[role="group"][aria-label="Mode"]').compareDocumentPosition(document.querySelector('.viewfinder')) &
+        Node.DOCUMENT_POSITION_FOLLOWING),
+    ),
+    'le sélecteur de mode précède le viseur',
+  )
 
-  // 4. La fiche suit le mode, en couleur et par le signe.
+  // 4. La fiche suit le mode, en couleur et par le signe : la variation en grand et « Valider » prennent sa couleur.
+  const colors = async () => ({
+    delta: await card.locator('.confirm-delta').evaluate((el) => getComputedStyle(el).color),
+    validate: await card.getByRole('button', { name: 'Valider' }).evaluate((el) => getComputedStyle(el).backgroundColor),
+  })
   await page.getByRole('button', { name: 'Sortie −' }).click()
-  await card.getByText('Pack de 24 → −24').waitFor()
+  await waitForConfirmLine(card, 'Pack de 24 → −24')
   assert.equal(await card.getAttribute('data-mode'), 'out')
-  assert.equal(await card.locator('.confirm-line').evaluate((el) => getComputedStyle(el).color), 'rgb(163, 74, 7)')
+  assert.deepEqual(await colors(), { delta: 'rgb(163, 74, 7)', validate: 'rgb(180, 83, 9)' })
   await page.getByRole('button', { name: 'Entrée +' }).click()
-  await card.getByText('Pack de 24 → +24').waitFor()
+  await waitForConfirmLine(card, 'Pack de 24 → +24')
+  assert.deepEqual(await colors(), { delta: 'rgb(31, 111, 63)', validate: 'rgb(31, 111, 63)' })
 
   // La quantité se tape au clavier : on efface le chiffre, puis on tape le nouveau.
   const quantity = card.getByLabel('Quantité')
@@ -105,10 +141,10 @@ async function scenarioMain(browser) {
   await quantity.press('End')
   await quantity.press('Backspace')
   await quantity.pressSequentially('6')
-  await card.getByText('Pack de 24 × 6 → +144').waitFor()
+  await waitForConfirmLine(card, 'Pack de 24 × 6 → +144')
   await quantity.press('Backspace')
   await quantity.pressSequentially('1')
-  await card.getByText('Pack de 24 → +24').waitFor()
+  await waitForConfirmLine(card, 'Pack de 24 → +24')
 
   // Toute l'image analysée est visible : l'app ne lit pas un code que l'employé ne voit pas.
   const shown = await page.evaluate(() => {
@@ -124,7 +160,7 @@ async function scenarioMain(browser) {
 
   // 5. Valider : un seul mouvement, avec les bons paramètres.
   await card.getByRole('button', { name: 'Valider' }).click()
-  await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 48 (2 packs)').waitFor()
+  await waitForSaved(page, '+24 Coca-Cola 33 cl', 'Stock : 48 (2 packs)')
   const records = recordCalls(fake)
   assert.equal(records.length, 1, 'un seul record_movement')
   assert.match(records[0].body.p_id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'identifiant généré par le téléphone')
@@ -144,9 +180,9 @@ async function scenarioMain(browser) {
   await page.getByRole('button', { name: 'Saisie manuelle' }).click()
   await page.getByRole('region', { name: 'Saisie manuelle' }).getByRole('button', { name: 'Coca-Cola 33 cl' }).click()
   await page.getByRole('button', { name: 'Par pack de 24' }).click()
-  await card.getByText('Pack de 24 → +24').waitFor()
+  await waitForConfirmLine(card, 'Pack de 24 → +24')
   await card.getByRole('button', { name: 'Valider' }).click()
-  await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 48 (2 packs)').waitFor()
+  await waitForSaved(page, '+24 Coca-Cola 33 cl', 'Stock : 48 (2 packs)')
   const manual = recordCalls(fake).at(-1)
   assert.equal(recordCalls(fake).length, 2)
   assert.equal(manual.body.p_code, null)
@@ -156,7 +192,7 @@ async function scenarioMain(browser) {
   await page.getByRole('button', { name: 'Réglages' }).click()
   await page.getByRole('heading', { name: 'Réglages' }).waitFor()
   await page.getByRole('button', { name: 'Retour' }).click()
-  await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+  await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
 
   // 9. Pendant tout le parcours.
   assert.equal(page.url(), firstUrl, "l'URL ne change jamais")
@@ -174,11 +210,11 @@ async function scenarioNetworkCut(browser) {
   const { context, page, fake } = await openApp(browser, { failNextRecord: true })
   await signIn(page)
   const card = confirmCard(page)
-  await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+  await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
   await card.getByRole('button', { name: 'Valider' }).click()
   await card.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor()
   await card.getByRole('button', { name: 'Réessayer' }).click()
-  await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 48 (2 packs)').waitFor()
+  await waitForSaved(page, '+24 Coca-Cola 33 cl', 'Stock : 48 (2 packs)')
   const records = recordCalls(fake)
   assert.equal(records.length, 2, 'deux tentatives')
   assert.equal(records[0].body.p_id, records[1].body.p_id, 'le nouvel essai garde le même identifiant')
@@ -225,7 +261,7 @@ async function scenarioNewProduct(browser) {
     ['24', '24', '48'],
   )
   await page.getByRole('button', { name: 'Créer le produit' }).click()
-  await confirmCard(page).getByText('Pack de 24 → +24').waitFor()
+  await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24')
   const create = fake.calls.find((call) => call.fn === 'create_product')
   assert.deepEqual(create?.body.p_barcodes, [{ code: COCA_CODE, units: 24 }])
   await context.close()
@@ -243,7 +279,7 @@ async function scenarioNewProduct(browser) {
     assert.ok(await page.getByLabel('Ce code vaut (unités)').isDisabled(), 'champs figés après une réponse perdue')
     assert.ok(await page.getByRole('button', { name: 'Scanner une canette du pack' }).isDisabled(), 'capture figée')
     await page.getByRole('button', { name: 'Réessayer' }).click()
-    await confirmCard(page).getByText('Pack de 24 → +24').waitFor()
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24')
     const creates = fake.calls.filter((call) => call.fn === 'create_product')
     assert.equal(creates.length, 2, 'deux tentatives')
     assert.equal(creates[0].body.p_id, creates[1].body.p_id, 'le nouvel essai garde le même identifiant')
@@ -265,7 +301,7 @@ async function scenarioAttach(browser) {
   assert.equal(await page.getByLabel('Ce code vaut (unités)').inputValue(), '1')
   assert.notEqual(await fieldHelp(page.getByLabel('Ce code vaut (unités)')), '', 'aide sous « Ce code vaut »')
   await page.getByRole('button', { name: 'Ajouter le code' }).click()
-  await confirmCard(page).getByText("À l'unité → +1").waitFor()
+  await waitForConfirmLine(confirmCard(page), "À l'unité → +1")
   const attach = fake.calls.find((call) => call.fn === 'attach_barcode')
   assert.deepEqual(attach?.body, { p_code: COCA_CODE, p_product_id: 'p-coca', p_units: 1, p_move: false })
   await context.close()
@@ -280,7 +316,7 @@ async function scenarioTabs(browser) {
     const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage' })
     await signIn(page)
     const card = confirmCard(page)
-    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     await tab(page, 'À racheter (3)').waitFor()
 
     // 2. À racheter : ruptures en premier, heure de mise à jour, caméra arrêtée.
@@ -306,11 +342,11 @@ async function scenarioTabs(browser) {
 
     // 4. La fiche du Scanner est gardée pendant le changement d'onglet.
     await tab(page, 'Scanner').click()
-    await card.getByText('Pack de 24 → +24').waitFor()
+    await waitForConfirmLine(card, 'Pack de 24 → +24')
     await card.getByRole('button', { name: 'Plus' }).click()
-    await card.getByText('Pack de 24 × 2 → +48').waitFor()
+    await waitForConfirmLine(card, 'Pack de 24 × 2 → +48')
     await card.getByRole('button', { name: 'Valider' }).click()
-    await page.getByText('✓ +48 Coca-Cola 33 cl — stock : 58 (2 packs + 10)').waitFor()
+    await waitForSaved(page, '+48 Coca-Cola 33 cl', 'Stock : 58 (2 packs + 10)')
     await tab(page, 'À racheter (1)').waitFor()
     await context.close()
   }
@@ -319,14 +355,14 @@ async function scenarioTabs(browser) {
     const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', failNextRecord: true })
     await signIn(page)
     const card = confirmCard(page)
-    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     await card.getByRole('button', { name: 'Valider' }).click()
     await card.getByRole('button', { name: 'Réessayer' }).waitFor()
     await page.getByRole('button', { name: 'Réglages' }).click()
     await page.getByRole('heading', { name: 'Réglages' }).waitFor()
     await page.getByRole('button', { name: 'Retour' }).click()
     await card.getByRole('button', { name: 'Réessayer' }).click()
-    await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 34 (1 pack + 10)').waitFor()
+    await waitForSaved(page, '+24 Coca-Cola 33 cl', 'Stock : 34 (1 pack + 10)')
     const records = recordCalls(fake)
     assert.equal(records.length, 2, 'deux tentatives')
     assert.equal(records[0].body.p_id, records[1].body.p_id, 'le nouvel essai garde le même identifiant')
@@ -363,9 +399,16 @@ async function scenarioInventory(browser) {
     assert.equal(await card.getAttribute('data-mode'), 'inventory')
     await card.getByLabel('Packs de 24').fill('2')
     await card.getByLabel('Unités en plus').fill('5')
-    await card.getByText('= 53 (2 packs + 5) — écart : +29').waitFor()
+    await waitForCount(card, '= 53 (2 packs + 5)', 'écart : +29')
+    // La fiche d'Inventaire est longue : la caméra se réduit, et « Valider » est bleu.
+    const viewfinderHeight = () => page.locator('.viewfinder').evaluate((el) => el.getBoundingClientRect().height)
+    assert.ok((await viewfinderHeight()) <= 150, 'caméra réduite pendant le comptage')
+    assert.equal(await card.getByRole('button', { name: 'Valider' }).evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(29, 78, 216)')
     await card.getByRole('button', { name: 'Valider' }).click()
-    await page.getByText('✓ Inventaire : 53 comptés (+29) Coca-Cola 33 cl — stock : 53 (2 packs + 5)').waitFor()
+    await waitForSaved(page, 'Inventaire : 53 comptés (+29) Coca-Cola 33 cl', 'Stock : 53 (2 packs + 5)')
+    // De retour au scan (le code n'est pas relu pendant 2 s), la caméra reprend sa taille.
+    const scanningHeight = await viewfinderHeight()
+    assert.ok(scanningHeight > 150 && scanningHeight <= 300, `caméra de retour à sa taille : ${scanningHeight}`)
     const inventories = fake.calls.filter((call) => call.fn === 'record_inventory')
     assert.equal(inventories.length, 1, 'un seul record_inventory')
     assert.match(inventories[0].body.p_id, UUID, 'identifiant généré par le téléphone')
@@ -411,7 +454,7 @@ async function scenarioArchived(browser) {
   const archived = page.getByRole('region', { name: 'Produit archivé' })
   await archived.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor({ timeout: SCAN_TIMEOUT })
   await archived.getByRole('button', { name: 'Réactiver' }).click()
-  await confirmCard(page).getByText('Pack de 24 → +24').waitFor()
+  await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24')
   assert.deepEqual(fake.calls.find((call) => call.fn === 'set_product_archived')?.body, { p_product_id: 'p-coca', p_archived: false })
   await context.close()
   console.log('Scénario J (produit archivé) : OK')
@@ -579,7 +622,7 @@ async function scenarioSheetEdits(browser) {
   const correct = page.getByRole('region', { name: 'Corriger le stock' })
   await correct.getByLabel('Packs de 24').fill('1')
   await correct.getByLabel('Unités en plus').fill('2')
-  await correct.getByText('= 26 (1 pack + 2) — écart : +16').waitFor()
+  await waitForCount(correct, '= 26 (1 pack + 2)', 'écart : +16')
   await correct.getByRole('button', { name: 'Valider' }).click()
   await correct.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor()
   assert.ok(await correct.getByLabel('Packs de 24').isDisabled(), 'comptage figé après un échec')
@@ -667,11 +710,11 @@ async function scenarioStalledDatabase(browser) {
     const { context, page, fake } = await openApp(browser, { hangFirst: 'record_movement' })
     await signIn(page)
     const card = confirmCard(page)
-    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     await card.getByRole('button', { name: 'Valider' }).click()
     await card.getByText('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».').waitFor({ timeout: 25_000 })
     await card.getByRole('button', { name: 'Réessayer' }).click()
-    await page.getByText('✓ +24 Coca-Cola 33 cl — stock : 48 (2 packs)').waitFor()
+    await waitForSaved(page, '+24 Coca-Cola 33 cl', 'Stock : 48 (2 packs)')
     const records = recordCalls(fake)
     assert.equal(records.length, 2, 'deux tentatives')
     assert.equal(records[0].body.p_id, records[1].body.p_id, 'le nouvel essai garde le même identifiant')
@@ -687,6 +730,16 @@ async function scenarioReaderAndCamera(browser) {
     await page.route('**/*.wasm', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>x</title>' }))
     await signIn(page)
     await page.getByRole('alert').filter({ hasText: "Le lecteur de codes-barres n'a pas pu se charger" }).waitFor({ timeout: SCAN_TIMEOUT })
+    // Sans lecteur, le Scanner reste au scan : la consigne est posée dans le viseur.
+    await page.locator('.aim-hint').filter({ hasText: exactly('Vise le code-barres du pack ou de la bouteille.') }).waitFor()
+    assert.ok(
+      await page.evaluate(() => {
+        const hint = document.querySelector('.aim-hint').getBoundingClientRect()
+        const box = document.querySelector('.viewfinder').getBoundingClientRect()
+        return hint.top >= box.top && hint.bottom <= box.bottom && hint.left >= box.left && hint.right <= box.right
+      }),
+      'la consigne est dans le viseur',
+    )
     await page.getByRole('button', { name: 'Démarrer la caméra' }).waitFor()
     await context.close()
   }
@@ -694,7 +747,7 @@ async function scenarioReaderAndCamera(browser) {
   {
     const { context, page } = await openApp(browser)
     await signIn(page)
-    await confirmCard(page).getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     const setVisibility = (state) =>
       page.evaluate((value) => {
         Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
@@ -881,7 +934,7 @@ async function scenarioPassword(browser) {
     const { context, page, fake } = await openApp(browser)
     await signIn(page)
     const card = confirmCard(page)
-    await card.getByText('Pack de 24 → +24').waitFor({ timeout: SCAN_TIMEOUT })
+    await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     fake.revokeAllSessions()
     const recorded = page.waitForResponse((response) => response.url().endsWith('/rest/v1/rpc/record_movement'))
     await card.getByRole('button', { name: 'Valider' }).click()

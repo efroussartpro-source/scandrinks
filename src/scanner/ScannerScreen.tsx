@@ -1,13 +1,16 @@
 /**
- * ScannerScreen.tsx — Écran principal : viseur, modes Entrée/Sortie/Inventaire, fiche et messages.
+ * ScannerScreen.tsx — Écran principal : modes Entrée/Sortie/Inventaire, caméra, fiche et messages.
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §7)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §6.7, §7)
  *
  * La logique vit dans scanFlow.ts ; cet écran fait les appels réseau selon
  * l'étape obtenue et affiche le résultat. La caméra tourne en continu tant
  * que l'écran est actif, même pendant qu'une fiche est affichée : le scan
  * suivant est prêt aussitôt. Sur un autre onglet ou dans les Réglages, elle
- * s'arrête, mais l'écran reste monté : la fiche en cours est gardée.
+ * s'arrête, mais l'écran reste monté : la fiche en cours est gardée. Le
+ * sélecteur de mode est au-dessus de la caméra, qui se réduit quand une
+ * fiche longue s'ouvre (maquettes docs/maquettes/Main, J-message,
+ * J-inventaire et J-nouveau).
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { classifyApiError, type ApiErrorKind } from '../data/apiErrors'
@@ -207,8 +210,7 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
                 }}
               />
             )}
-            <p className="muted">Vise le code-barres du pack ou de la bouteille.</p>
-            <button type="button" onClick={() => dispatch({ type: 'open_manual' })}>
+            <button type="button" className="plain block" onClick={() => dispatch({ type: 'open_manual' })}>
               Saisie manuelle
             </button>
           </>
@@ -249,7 +251,7 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
             <button type="button" onClick={() => dispatch({ type: 'choose_attach' })}>
               Ajouter à un produit existant
             </button>
-            <button type="button" onClick={close}>
+            <button type="button" className="link" onClick={close}>
               Annuler
             </button>
           </section>
@@ -283,23 +285,13 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
     }
   }
 
+  // Une fiche longue laisse la place à ses champs : la caméra se réduit (§6.7).
+  const compact =
+    flow.step === 'new_product' || flow.step === 'attach' || flow.step === 'manual' || (flow.step === 'confirm' && mode === 'inventory')
+
   return (
     <section className="scanner">
-      <div className="viewfinder">
-        <video ref={videoRef} playsInline muted autoPlay aria-label="Image de la caméra" />
-        <div className="aim" aria-hidden="true" />
-      </div>
-      {scanner.status === 'error' && scanner.errorKind && (
-        <div className="camera-problem">
-          <p role="alert" className="message message-error">
-            {scannerErrorMessage(scanner.errorKind)}
-          </p>
-          <button type="button" onClick={() => void startCamera()}>
-            Démarrer la caméra
-          </button>
-        </div>
-      )}
-      <div className="modes" role="group" aria-label="Mode">
+      <div className="segmented modes" role="group" aria-label="Mode">
         <button type="button" className="mode mode-in" aria-pressed={mode === 'in'} disabled={modeLocked} onClick={() => changeMode('in')}>
           Entrée +
         </button>
@@ -316,6 +308,24 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
           Inventaire =
         </button>
       </div>
+      <div className="viewfinder" data-compact={compact || undefined}>
+        <video ref={videoRef} playsInline muted autoPlay aria-label="Image de la caméra" />
+        <span className="corner corner-tl" aria-hidden="true" />
+        <span className="corner corner-tr" aria-hidden="true" />
+        <span className="corner corner-bl" aria-hidden="true" />
+        <span className="corner corner-br" aria-hidden="true" />
+        {flow.step === 'scanning' && <p className="aim-hint">Vise le code-barres du pack ou de la bouteille.</p>}
+      </div>
+      {scanner.status === 'error' && scanner.errorKind && (
+        <div className="camera-problem">
+          <p role="alert" className="message message-error">
+            {scannerErrorMessage(scanner.errorKind)}
+          </p>
+          <button type="button" onClick={() => void startCamera()}>
+            Démarrer la caméra
+          </button>
+        </div>
+      )}
       <div className="panel">{renderPanel()}</div>
     </section>
   )

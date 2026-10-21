@@ -28,7 +28,6 @@ import { IconBarcode, IconSettings } from '../ui/icons'
 import { nextSessionState, type SessionState } from './authState'
 import TabBar, { type Tab } from './TabBar'
 import { useCatalog } from './useCatalog'
-import './AppShell.css'
 
 type Overlay = 'settings' | 'name' | 'password' | null
 

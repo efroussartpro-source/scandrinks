@@ -14,6 +14,9 @@ import { isConfigurationMissing, startupErrorMessage } from './startup'
 import { startAppearance } from './theme/appearance'
 import './theme/tokens.css'
 import './styles.css'
+// Les composants communs avant les feuilles des écrans (chargées avec l'app), qui peuvent les préciser.
+// L'écran « l'app ne peut pas démarrer » en a besoin aussi.
+import './app/AppShell.css'
 
 // Le thème du téléphone est posé avant le premier rendu : pas d'éclair blanc la nuit.
 startAppearance()

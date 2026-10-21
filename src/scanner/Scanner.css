@@ -1,60 +1,23 @@
-/* Écran Scanner : viseur en haut, modes, puis la fiche ou les messages. */
+/* Écran Scanner (§4.2, §6.7) : le sélecteur de mode, la caméra dans un cadre arrondi, puis la fiche ou les messages. */
 .scanner {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Toute l'image analysée reste visible (contain) : l'employé voit le code
-   réellement lu. Le viseur laisse la moitié de l'écran à la fiche. */
-.viewfinder {
-  position: relative;
-  height: min(45vh, 420px);
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--camera);
-}
-
-.viewfinder video {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* Bande de visée : on centre le code-barres dedans. */
-.viewfinder .aim {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 38%;
-  height: 24%;
-  border: 2px solid var(--on-color);
-  border-radius: 8px;
-  pointer-events: none;
-}
-
-.camera-problem {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+/* Sélecteur de mode : chaque mode a sa couleur ; le mode choisi en est plein. */
 .modes {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 13px;
 }
 
 .modes .mode {
+  min-height: 42px;
   padding: 0 4px;
+  border-radius: 10px;
   font-size: 16px;
   font-weight: 600;
-  white-space: nowrap;
-}
-
-.modes .mode {
-  background: var(--card);
 }
 
 .modes .mode-in {
@@ -69,88 +32,253 @@
   color: var(--blue-text);
 }
 
+.modes .mode[aria-pressed='true'] {
+  color: var(--on-color);
+  font-weight: 700;
+}
+
 .modes .mode-in[aria-pressed='true'] {
   background: var(--green);
-  color: var(--on-color);
 }
 
 .modes .mode-out[aria-pressed='true'] {
   background: var(--orange);
-  color: var(--on-color);
 }
 
 .modes .mode-inv[aria-pressed='true'] {
   background: var(--blue);
+}
+
+/* Toute l'image analysée reste visible (contain) : l'employé voit le code réellement lu. La caméra se réduit
+   quand une fiche longue s'ouvre (data-compact), pour laisser la place aux champs. */
+.viewfinder {
+  position: relative;
+  height: min(300px, 38vh);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--camera);
+}
+
+.viewfinder[data-compact] {
+  height: min(150px, 20vh);
+}
+
+.viewfinder video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Les quatre coins du viseur. */
+.corner {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 0 solid var(--on-color);
+  pointer-events: none;
+}
+
+.corner-tl {
+  left: 24px;
+  top: 24px;
+  border-left-width: 4px;
+  border-top-width: 4px;
+  border-top-left-radius: 12px;
+}
+
+.corner-tr {
+  right: 24px;
+  top: 24px;
+  border-right-width: 4px;
+  border-top-width: 4px;
+  border-top-right-radius: 12px;
+}
+
+.corner-bl {
+  left: 24px;
+  bottom: 24px;
+  border-left-width: 4px;
+  border-bottom-width: 4px;
+  border-bottom-left-radius: 12px;
+}
+
+.corner-br {
+  right: 24px;
+  bottom: 24px;
+  border-right-width: 4px;
+  border-bottom-width: 4px;
+  border-bottom-right-radius: 12px;
+}
+
+.viewfinder[data-compact] .corner {
+  width: 24px;
+  height: 24px;
+}
+
+.viewfinder[data-compact] .corner-tl,
+.viewfinder[data-compact] .corner-bl {
+  left: 14px;
+}
+
+.viewfinder[data-compact] .corner-tr,
+.viewfinder[data-compact] .corner-br {
+  right: 14px;
+}
+
+.viewfinder[data-compact] .corner-tl,
+.viewfinder[data-compact] .corner-tr {
+  top: 14px;
+}
+
+.viewfinder[data-compact] .corner-bl,
+.viewfinder[data-compact] .corner-br {
+  bottom: 14px;
+}
+
+/* Consigne posée en bas de la caméra, au-dessus des coins, pendant le scan (maquette J-message).
+   Trop longue pour une ligne : elle passe sur deux lignes égales. */
+.aim-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(240px, calc(100% - 32px));
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: 16px;
+  background: var(--overlay);
   color: var(--on-color);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.camera-problem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.confirm[data-mode='in'] {
-  border-left: 6px solid var(--green);
-}
-
+/* Fiche de confirmation : le nom et « Pack de 24 », puis la variation en grand ; tout prend la couleur du mode. */
 .confirm[data-mode='out'] {
-  border-left: 6px solid var(--orange);
+  --accent: var(--orange);
+  --accent-text: var(--orange-text);
+  --accent-pale: var(--orange-pale);
 }
 
 .confirm[data-mode='inventory'] {
-  border-left: 6px solid var(--blue);
+  --accent: var(--blue);
+  --accent-text: var(--blue-text);
+  --accent-pale: var(--blue-pale);
 }
 
-.confirm-line {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+.confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.confirm[data-mode='in'] .confirm-line {
-  color: var(--green-text);
+.confirm-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.confirm[data-mode='out'] .confirm-line {
-  color: var(--orange-text);
+.confirm-what {
+  font-size: 15px;
+  color: var(--text-2);
+}
+
+.confirm-delta {
+  flex: none;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent-text);
 }
 
 .quantity {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.quantity label {
-  margin-right: auto;
-}
-
-.quantity button {
-  min-width: 48px;
-  padding: 0;
-  font-size: 22px;
-}
-
-.quantity input {
-  width: 72px;
-  min-height: 48px;
-  font: inherit;
-  font-size: 20px;
-  text-align: center;
-  color: var(--text);
-  border: 2px solid transparent;
-  border-radius: 10px;
-  background: var(--field);
-}
-
-.notice {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.notice button {
-  flex: none;
+.stepper {
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  background: var(--field);
+}
+
+.stepper button {
+  width: 48px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font-size: 24px;
+  font-weight: 500;
+}
+
+/* 16 px au moins : en dessous, iOS zoome sur le champ touché. */
+.stepper input {
+  width: 48px;
+  min-height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: 19px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.stepper input:focus {
+  outline: 2px solid var(--accent);
+}
+
+/* Message après une action : ce qui est enregistré et le stock, « Annuler » à droite. */
+.notice {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.notice::before {
+  grid-row: 1;
+}
+
+.notice > button {
+  grid-column: 3;
+  grid-row: 1;
+  margin: -8px -8px -8px 0;
+}
+
+.notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notice-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.notice-detail {
+  font-size: 15px;
+  color: var(--text-2);
 }

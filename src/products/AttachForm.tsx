@@ -74,7 +74,7 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
           }}
           onSessionExpired={onSessionExpired}
         />
-        <button type="button" onClick={onCancel}>
+        <button type="button" className="link" onClick={onCancel}>
           Annuler
         </button>
       </section>
@@ -114,7 +114,7 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
             </button>
           </div>
           {preselected === null && (
-            <button type="button" disabled={submitting} onClick={() => setProduct(null)}>
+            <button type="button" className="link" disabled={submitting} onClick={() => setProduct(null)}>
               Choisir un autre produit
             </button>
           )}

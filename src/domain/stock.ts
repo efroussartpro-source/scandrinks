@@ -41,9 +41,10 @@ export function formatDelta(delta: number): string {
   return delta < 0 ? MINUS + String(-delta) : '+' + String(delta)
 }
 
-// Ligne de la fiche de confirmation : « Pack de 24 × 3 → +72 », « À l'unité → −1 ».
-export function describeConfirm(units: number, quantity: number, mode: MoveMode): string {
+// Fiche de confirmation : ce qui est compté (« Pack de 24 × 3 », « À l'unité »), sous le nom,
+// et la variation (« +72 », « −1 »), en grand dans la couleur du mode.
+export function confirmParts(units: number, quantity: number, mode: MoveMode): { what: string; delta: string } {
   const what = units === 1 ? "À l'unité" : `Pack de ${units}`
   const times = quantity > 1 ? ` × ${quantity}` : ''
-  return `${what}${times} → ${formatDelta(movementDelta(mode, units, quantity))}`
+  return { what: `${what}${times}`, delta: formatDelta(movementDelta(mode, units, quantity)) }
 }

@@ -1,21 +1,12 @@
-/* Formulaires et liste de produits (code inconnu, saisie manuelle). */
+/* Formulaires et choix d'un produit (code inconnu, saisie manuelle) : la recherche, puis la liste. */
 .picker {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.product-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Dans une carte, la liste se détache par un trait, sans ombre. */
+.card .group {
+  box-shadow: none;
+  border: 1px solid var(--separator);
 }
-
-.product-list button {
-  width: 100%;
-  text-align: left;
-}
-

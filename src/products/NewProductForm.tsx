@@ -176,7 +176,7 @@ export default function NewProductForm(props: NewProductFormProps) {
         />
 
         <div className="field">
-          <button type="button" aria-describedby={unitHelpId} disabled={capture !== 'idle' || unconfirmed} onClick={startCapture}>
+          <button type="button" className="block" aria-describedby={unitHelpId} disabled={capture !== 'idle' || unconfirmed} onClick={startCapture}>
             Scanner une canette du pack
           </button>
           <span id={unitHelpId} className="field-help">

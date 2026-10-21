@@ -39,11 +39,53 @@ const SHOTS = [
     },
   },
   {
-    name: 'scanner',
+    name: 'scanner-entree',
     fake: { catalogue: 'pilotage' },
     go: async (page) => {
       await signIn(page)
       await confirmCard(page).waitFor({ timeout: SCAN_TIMEOUT })
+    },
+  },
+  {
+    name: 'scanner-sortie',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await confirmCard(page).waitFor({ timeout: SCAN_TIMEOUT })
+      await page.getByRole('button', { name: 'Sortie −' }).click()
+      await confirmCard(page).locator('.confirm-delta', { hasText: '−24' }).waitFor()
+    },
+  },
+  {
+    name: 'scanner-message',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await confirmCard(page).waitFor({ timeout: SCAN_TIMEOUT })
+      await confirmCard(page).getByRole('button', { name: 'Valider' }).click()
+      await page.getByRole('status').waitFor()
+    },
+  },
+  {
+    name: 'scanner-inventaire',
+    fake: { catalogue: 'coca_with_code' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Inventaire =' }).click()
+      await confirmCard(page).getByText('Stock connu').waitFor({ timeout: SCAN_TIMEOUT })
+      await confirmCard(page).getByLabel('Packs de 24').fill('2')
+      await confirmCard(page).getByLabel('Unités en plus').fill('5')
+      await page.evaluate(() => document.activeElement?.blur())
+    },
+  },
+  {
+    name: 'nouveau-produit',
+    fake: { catalogue: 'empty' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Nouveau produit' }).click({ timeout: SCAN_TIMEOUT })
+      await page.getByLabel('Ce code vaut (unités)').fill('24')
+      await page.evaluate(() => document.activeElement?.blur())
     },
   },
   {

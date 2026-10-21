@@ -33,7 +33,7 @@ export default function ManualEntry({ mode, onReady, onCancel, onSessionExpired 
       <section className="card" aria-label="Saisie manuelle">
         <h2 className="card-title">Saisie manuelle</h2>
         <ProductPicker initialQuery="" onPick={pick} onSessionExpired={onSessionExpired} />
-        <button type="button" onClick={onCancel}>
+        <button type="button" className="link" onClick={onCancel}>
           Annuler
         </button>
       </section>

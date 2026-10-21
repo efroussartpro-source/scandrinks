@@ -1,18 +1,53 @@
-/* Saisie d'un comptage d'inventaire : le total et l'écart, bien visibles. */
+/* Saisie d'un comptage d'inventaire : packs et unités côte à côte, le total et l'écart bien visibles, en bleu. */
 .count-fields {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.count-total {
-  margin: 0;
-  font-size: 20px;
+.count-inputs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.count-inputs input {
+  min-width: 0;
+  font-size: 22px;
   font-weight: 700;
+}
+
+.count-help {
+  margin: -4px 0 0;
+}
+
+.count-result {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--blue-pale);
   color: var(--blue-text);
 }
 
-/* « Corriger le stock » : même repère bleu que le mode Inventaire du Scanner. */
-.card.correct-stock {
-  border-left: 6px solid var(--blue);
+.count-total {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.count-gap {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* « Corriger le stock » : l'inventaire d'un seul produit, avec le bleu du mode Inventaire. */
+.correct-stock {
+  --accent: var(--blue);
+  --accent-text: var(--blue-text);
+  --accent-pale: var(--blue-pale);
 }

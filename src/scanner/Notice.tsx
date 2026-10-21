@@ -1,11 +1,12 @@
 /**
- * Notice.tsx — Message affiché sous le viseur après une action.
+ * Notice.tsx — Message affiché sous la caméra après une action.
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §6.7)
  *
- * Après « Valider », le message donne le nouveau stock et propose « Annuler »
- * pendant 5 secondes. Après un inventaire, il rappelle le nombre compté et
- * l'écart : « ✓ Inventaire : 53 comptés (+29) … ».
+ * Après « Valider », une bande verte donne ce qui est enregistré, puis le
+ * nouveau stock, et propose « Annuler » pendant 5 secondes (maquette
+ * docs/maquettes/J-message.dc.html). Après un inventaire, elle rappelle le
+ * nombre compté et l'écart : « Inventaire : 53 comptés (+29) … ».
  */
 import { describeInventory } from '../domain/inventory'
 import { formatDelta, formatStock } from '../domain/stock'
@@ -23,10 +24,13 @@ export default function Notice({ notice, undoing, onUndo }: NoticeProps) {
       const what = notice.counted === null ? formatDelta(notice.delta) : describeInventory(notice.counted, notice.delta)
       return (
         <div role="status" className="message message-ok notice">
-          <span>
-            ✓ {what} {notice.productName} — stock : {formatStock(notice.stock, notice.packSize)}
+          <span className="notice-text">
+            <span className="notice-title">
+              {what} {notice.productName}
+            </span>
+            <span className="notice-detail">Stock : {formatStock(notice.stock, notice.packSize)}</span>
           </span>
-          <button type="button" disabled={undoing} onClick={onUndo}>
+          <button type="button" className="link" disabled={undoing} onClick={onUndo}>
             {undoing ? 'Annulation…' : 'Annuler'}
           </button>
         </div>
@@ -35,7 +39,7 @@ export default function Notice({ notice, undoing, onUndo }: NoticeProps) {
     case 'cancelled':
       return (
         <p role="status" className="message notice">
-          Annulé — stock : {formatStock(notice.stock, notice.packSize)}
+          <span className="notice-title">Annulé — stock : {formatStock(notice.stock, notice.packSize)}</span>
         </p>
       )
     case 'not_a_product':
