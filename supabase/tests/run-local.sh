@@ -2,8 +2,10 @@
 # run-local.sh — Lance les tests SQL sur le PostgreSQL local du poste.
 #
 # Recrée une base jetable, y charge l'imitation de Supabase puis la migration,
-# et exécute database.test.sql (tout y est annulé à la fin). Ne touche jamais
-# au vrai projet Supabase. À lancer avec un compte qui peut créer des bases :
+# et exécute database.test.sql (tout y est annulé à la fin). Lance ensuite le
+# test de la remise à zéro (reset.test.sh), sur ses propres bases jetables.
+# Ne touche jamais au vrai projet Supabase. À lancer avec un compte qui peut
+# créer des bases :
 #   su postgres -c "bash supabase/tests/run-local.sh"
 set -euo pipefail
 shopt -s nullglob
@@ -18,3 +20,4 @@ for migration in "$ROOT"/supabase/migrations/*.sql; do
   "${PSQL[@]}" -d "$DB" -f "$migration"
 done
 psql -X -v ON_ERROR_STOP=1 -At -d "$DB" -f "$ROOT/supabase/tests/database.test.sql"
+bash "$ROOT/supabase/tests/reset.test.sh"
