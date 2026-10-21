@@ -26,7 +26,7 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 
 ## 2. Utilisateurs et contexte d'usage
 
-- Les employés du tabac, **chacun sur son propre iPhone**.
+- Les employés du tabac, **chacun sur son propre iPhone** : 4 à 6 iPhone, sous **iOS 16.4 ou plus** (la version que vise la construction de l'app).
 - **Moins de 30 références** de boissons.
 - **Bon réseau** (wifi ou 4G) en boutique comme en réserve.
 - **Pas de compte Apple développeur** : ScanDrinks est une app web installable, ouverte dans Safari puis ajoutée à l'écran d'accueil.
@@ -45,6 +45,7 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 - Inventaire (comptage) et correction du stock.
 - Historique de tous les mouvements, avec annulation.
 - Compte unique du tabac, prénom par téléphone, changement de mot de passe.
+- Vidéo tuto et feuille A4 de la réserve.
 
 ### Hors version 1 (possible plus tard)
 
@@ -140,6 +141,7 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 
 ### 4.6 Réglages
 
+- **Tutoriel** : la vidéo tuto, lue sans quitter l'app (§9, « Mise en service »).
 - **Changer de prénom.**
 - **Changer le mot de passe du tabac.** Tous les téléphones sont déconnectés, celui-ci compris, et chacun retape le nouveau mot de passe.
 - **Se déconnecter.**
@@ -195,6 +197,10 @@ déploiement automatique depuis GitHub
   - elle utilise la détection native quand le navigateur la propose, et ZXing sinon (c'est le cas de Safari) ;
   - formats lus : EAN-13, EAN-8, UPC-A, UPC-E, ITF-14, Code 128 ;
   - le fichier WebAssembly est servi avec l'app, sans dépendre d'un CDN tiers.
+- **Vidéo tuto au format HLS** : une liste `.m3u8` et de petits morceaux de vidéo, servis avec l'app.
+  - Cloudflare Pages ne répond pas aux demandes partielles (en-tête `Range`, mesuré le 21/10/2026), dont un iPhone a besoin pour lire un fichier MP4. Une vidéo HLS n'en a pas besoin.
+  - Lecteur natif de l'iPhone (`<video playsinline>`) ; rien n'est chargé avant le toucher de lecture.
+- **Erreur d'affichage imprévue** : un filet de sécurité remplace l'écran par un message et « Recharger », au lieu d'une page blanche (§7).
 - Conventions de code (comme ScamScanner) : identifiants en anglais ; commentaires, documentation et interface en français.
 
 ### 6.3 Données (PostgreSQL, Supabase)
@@ -268,12 +274,14 @@ Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une ac
 | Fichiers de l'app | Cloudflare Pages, relié au dépôt GitHub, en https | 0 € |
 | Noms des produits | API Open Food Facts | 0 € |
 | Code source | GitHub, dépôt privé | 0 € |
+| Vidéo tuto et sa page | Cloudflare Pages, avec l'app | 0 € |
 
 Limites connues :
 
 - L'offre gratuite de Supabase donne 500 Mo de base, ce qui suffit largement.
 - Supabase **met le projet en pause après 7 jours sans utilisation**. Les données sont conservées, et on le relance à la main depuis le tableau de bord (procédure dans le guide).
 - Le projet a sa propre organisation, « ScanDrinks » : l'organisation « Webia » n'est pas touchée.
+- Cloudflare Pages refuse les fichiers de plus de 25 Mo : la vidéo tuto, découpée en morceaux, reste bien en dessous.
 
 ### 6.6 Open Food Facts
 
@@ -295,6 +303,8 @@ Limites connues :
 | Session expirée ou mot de passe changé | Retour à l'écran de connexion, avec une explication. |
 | Base injoignable (panne ou projet en pause) | Message « Base injoignable » avec un renvoi vers la procédure du guide. |
 | Nouvelle version publiée | Installation automatique à l'ouverture suivante. |
+| Erreur d'affichage imprévue | « L'app a rencontré un problème. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks. », avec le bouton « Recharger ». |
+| Vidéo tuto injoignable | « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. », sous le lecteur. |
 
 ## 8. Stratégie de test
 
@@ -308,7 +318,12 @@ Limites connues :
   - les contraintes ;
   - la sécurité : refus sans connexion, refus pour un compte absent de `allowed_users`.
 - **Contrôles à chaque étape** : TypeScript en mode strict et construction de la version de production.
-- **Recette en boutique** avec le porteur du projet, à partir d'une liste à cocher :
+- **Jalon 4** :
+  - la remise à zéro, sur une base locale : tout est effacé sauf le compte du tabac ; relancée, elle ne change rien ; sur une base sans les objets de ScanDrinks, elle s'arrête sans rien toucher ;
+  - la feuille A4 : le PDF tient sur une page A4, et son QR code, relu par ZXing, mène à la page de la vidéo ;
+  - le script de la vidéo vérifie chaque écran avant le geste suivant : si l'app a changé, le tournage s'arrête au lieu de filmer un écran faux ;
+  - le bouton « Tutoriel » et le filet de sécurité, dans les tests de bout en bout.
+- **Recette en boutique** avec le porteur du projet, le jour J et pendant la semaine d'essai (§9, « Mise en service »), à partir d'une liste à cocher :
   - scans de vrais packs Metro et création de 3 fiches ;
   - une sortie et un inventaire ;
   - la liste d'achat ;
@@ -325,8 +340,9 @@ Limites connues :
 2. Créer un compte Cloudflare gratuit et le relier au dépôt (jalon 0).
 3. Dans Supabase, créer le compte du tabac (e-mail + mot de passe) et désactiver les inscriptions (jalon 1).
 4. Tester sur iPhone à chaque jalon, puis faire la recette en boutique (jalon 4).
+5. Le jour J : lancer la remise à zéro dans l'éditeur SQL de Supabase, installer l'app avec l'équipe et mener l'inventaire (jalon 4).
 
-**Claude** : le code, les tests, la base de données, la documentation et le guide d'une page. Claude demande l'accord du porteur du projet avant de créer le projet Supabase.
+**Claude** : le code, les tests, la base de données, la documentation, la vidéo tuto, la feuille A4 de la réserve et le guide du jour J. Claude demande l'accord du porteur du projet avant de créer le projet Supabase.
 
 ### Jalons
 
@@ -338,9 +354,101 @@ Limites connues :
 | 1. Le cœur | Projet Supabase, tables, sécurité (dont l'inscription du compte du tabac dans `allowed_users`), connexion, prénom, scan Entrée/Sortie, création de fiches, ajout de codes. | Scanner et créer des fiches sur iPhone. |
 | 2. Le pilotage | Stock, fiche produit, À racheter, Inventaire. | Une liste d'achat cohérente après quelques scans. |
 | 3. Le suivi | Historique, annulation, changement de mot de passe, finitions. | Annuler une erreur, changer le mot de passe. |
-| 4. La mise en service | Installation sur les iPhones de l'équipe, inventaire du premier jour, guide d'une page. | Une semaine d'utilisation par l'équipe. |
+| 4. La mise en service | Vidéo tuto (bouton « Tutoriel » et QR code), feuille A4 de la réserve, quatre corrections ; puis le jour J : remise à zéro, installation sur les iPhones de l'équipe, inventaire du premier jour. | Une semaine d'utilisation par l'équipe (détail ci-dessous). |
 
 Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai dépend surtout des moments disponibles pour tester en boutique.
+
+### Mise en service (jalon 4)
+
+Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **feuille A4** affichée en réserve.
+
+**La vidéo tuto**
+
+- Fabriquée par un script : un robot utilise la vraie app sur un iPhone simulé, avec une base simulée, des produits et des prénoms fictifs, et une fausse caméra qui montre les codes-barres. Un rond marque chaque toucher. Le même script la refait à l'identique quand l'app change.
+- Environ 3 minutes, format vertical, sans le son : le titre du chapitre en haut, une phrase courte en bas qui dit quoi faire.
+- Neuf chapitres :
+  1. se connecter et choisir son prénom ;
+  2. une livraison Metro : « Entrée + » ;
+  3. un pack sorti de la réserve : « Sortie − » ;
+  4. un produit inconnu : créer sa fiche ;
+  5. compter : « Inventaire » ;
+  6. avant Metro : « À racheter » ;
+  7. le stock et la fiche d'un produit ;
+  8. corriger une erreur : « Historique » › « Annuler » ;
+  9. la fin : installer l'app (renvoi à la feuille) et qui prévenir en cas de souci.
+- Elle ne montre ni l'installation depuis Safari, impossible sur un iPhone simulé, ni un vrai pack. La feuille A4 explique l'installation.
+- Trois accès :
+  - le bouton « Tutoriel » des Réglages ;
+  - la page https://scandrinks.pages.dev/tutoriel/, qu'ouvre le QR code de la feuille ;
+  - le fichier MP4, remis au porteur du projet pour le groupe de l'équipe.
+
+**L'écran « Tutoriel »** (Réglages)
+
+- Le lecteur vidéo, avec une image d'attente, la mention « Environ 3 minutes, sans le son : tout est écrit. » et le bouton « Retour ». Comme pour tous les Réglages, la caméra du Scanner est arrêtée pendant ce temps.
+- Rien n'est chargé avant le toucher de lecture. Sans réseau : « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. » (§7).
+
+**La page de la vidéo** (`/tutoriel/`) : le même lecteur, et un lien « Ouvrir ScanDrinks ». Un navigateur qui ne lit pas le format HLS affiche « Ouvre cette page sur un iPhone pour voir la vidéo. ».
+
+**La feuille A4 de la réserve** : un PDF d'une page, lisible en noir et blanc.
+
+- En haut, le QR code de la vidéo.
+- « Chaque fois que… » :
+  - livraison Metro → « Entrée + » ;
+  - je sors un pack → « Sortie − » ;
+  - code inconnu → la fiche s'ouvre ;
+  - je compte → « Inventaire » ;
+  - avant Metro → « À racheter » ;
+  - une erreur → « Historique » › « Annuler ».
+- « Installer l'app sur un iPhone » : les étapes du §4.1, avec iOS 16.4 ou plus.
+- « Si l'app affiche… » : les messages courants du §7, et quoi faire.
+- En bas : « Un souci ? Préviens la personne qui gère ScanDrinks. »
+
+**La remise à zéro**
+
+- Avant l'inventaire du premier jour, la base repart vide : produits, codes et mouvements sont effacés. Le compte du tabac reste : ni `allowed_users` ni Supabase Auth ne sont touchés. Chaque fiche se recrée au premier scan, et l'Historique commence propre.
+- Un script SQL, hors des migrations. Claude le prépare et le teste en local ; le porteur du projet le lance dans l'éditeur SQL de Supabase, le matin du jour J. Claude ne le lance jamais lui-même : c'est une action destructive.
+- Il vérifie d'abord qu'il tourne bien sur le projet ScanDrinks, en y cherchant ses tables et ses fonctions. Sinon, il s'arrête sans rien toucher.
+- Tout se fait en une seule transaction, et il affiche ce qu'il a effacé. Relancé, il ne change rien.
+- Ensuite, Claude vérifie la base, en lecture seule.
+
+**Le jour J** : un guide d'une page pour le porteur du projet, à cocher au fur et à mesure.
+
+1. La veille : chaque iPhone est en iOS 16.4 ou plus (Réglages › Général › Informations), la feuille est imprimée et affichée, et l'équipe est prévenue d'apporter son iPhone chargé.
+2. Le matin : la remise à zéro, en 5 minutes.
+3. L'installation, en 15 minutes environ : chacun installe l'app depuis Safari avec la feuille ; le porteur du projet donne le mot de passe à voix haute ; chacun choisit son prénom. Les icônes installées depuis une préversion sont supprimées.
+4. L'inventaire, boutique fermée ou avant l'ouverture. La réserve est partagée en zones, une par personne. Dans chaque zone : « Scanner » › « Inventaire », un scan par produit, la fiche créée si besoin (seuils pré-remplis, RG-7), puis le comptage en packs et unités. Avec moins de 30 références et 4 à 6 personnes, compter une quinzaine de minutes. Deux règles :
+   - **un produit = une seule personne**, même s'il est rangé à deux endroits : un second comptage remplacerait le premier au lieu de s'y ajouter (RG-4) ;
+   - **pas d'entrée ni de sortie pendant l'inventaire**.
+5. Les contrôles restants de la recette (§8) : l'écran allumé et la marge du bas dans l'app installée, avec la version d'iOS ; une coupure réseau simulée (mode avion) au moment de valider un recomptage, sans effet sur le stock.
+6. Après : le porteur du projet ajuste dans « Stock » les seuils des produits qui partent vite ou lentement, puis relit « À racheter ».
+
+**La semaine d'essai** (validation du jalon)
+
+- L'équipe scanne chaque livraison et chaque pack sorti. Avant chaque passage chez Metro, le porteur du projet compare « À racheter » avec la réserve. Les soucis sont notés au fil de l'eau.
+- En fin de semaine, 5 produits sont recomptés en « Inventaire » : l'app affiche l'écart avec son stock. Puis vient le bilan avec Claude.
+- **Validé** si rien n'a bloqué et si « À racheter » était juste. Un écart au recomptage doit s'expliquer, par exemple par un scan oublié, retrouvé dans l'Historique.
+
+**Corrigé avant le jour J** : ce qui gênerait pendant la semaine.
+
+- Une erreur d'affichage imprévue laisse une page blanche : un message et « Recharger » à la place (§7).
+- L'écran allumé, relâché par le système alors que la page est visible (en économie d'énergie par exemple), est redemandé (s7 du jalon 3).
+- La fiche produit garde « Réessayer » après une lecture échouée, même après l'ouverture et la fermeture d'un panneau (s3).
+- Un commentaire périmé (s8).
+
+**Reporté**, car le changement de mot de passe est rare :
+
+- les points s1, s2, s4, s5 et s6 du jalon 3 ;
+- un message dédié sur les autres téléphones après un changement de mot de passe ;
+- la protection contre les mots de passe divulgués, sans doute réservée à l'offre payante de Supabase ;
+- les noms de l'historique des migrations.
+
+**Déroulé**
+
+1. Un essai de lecture sur l'iPhone du porteur du projet, avec une vidéo HLS de 10 secondes, avant de fabriquer la vraie.
+2. Le reste du jalon, puis la validation sur iPhone dans la préversion.
+3. La fusion.
+4. Le jour J, à la date choisie par le porteur du projet.
+5. La semaine d'essai, puis le bilan.
 
 ## 10. Risques et parades
 
@@ -348,11 +456,15 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 |---|---|---|---|
 | Le scan web est trop lent ou peu fiable sur iPhone | Moyenne | Fort | Le jalon 0 vient avant tout développement. Plan B : une app native Expo (compte Apple à 99 €/an), avec la même base de données. |
 | iOS redemande l'autorisation caméra | Moyenne | Moyen | Page unique sans changement d'adresse et flux caméra conservé. Vérifié dès le jalon 1. |
-| L'équipe oublie de scanner | Forte | Moyen | Inventaire rapide, stock négatif signalé, guide d'une page, historique pour retrouver les écarts. |
+| L'équipe oublie de scanner | Forte | Moyen | Inventaire rapide, stock négatif signalé, vidéo tuto et feuille A4 en réserve, historique pour retrouver les écarts. |
 | Projet Supabase en pause (7 jours sans utilisation) | Faible | Moyen | Procédure de relance dans le guide. Les données sont conservées. |
 | Le mot de passe partagé circule | Moyenne | Moyen | Changement de mot de passe en un geste, qui déconnecte tous les téléphones. |
 | Données Open Food Facts fausses | Moyenne | Faible | Le nom reste toujours modifiable. |
 | iOS efface les données locales d'un téléphone peu utilisé | Faible | Faible | Il suffit de se reconnecter : les données sont sur Supabase. |
+| La vidéo tuto ne se lit pas sur iPhone depuis Cloudflare Pages | Faible | Moyen | Format HLS, qui se passe des demandes partielles ; essai sur iPhone avec une vidéo de 10 secondes avant de fabriquer la vraie. Repli : héberger la vidéo sur Supabase Storage, avec l'accord du porteur du projet. |
+| Un iPhone de l'équipe a une version d'iOS trop ancienne | Faible | Moyen | Vérifié la veille du jour J ; mise à jour d'iOS, ou un autre iPhone pour cette personne. |
+| Un produit compté deux fois à l'inventaire | Moyenne | Moyen | Un produit = une seule personne ; l'Historique montre les deux comptages, il suffit de recompter. |
+| La remise à zéro lancée sur le mauvais projet | Faible | Fort | Le script vérifie d'abord les tables et les fonctions de ScanDrinks, et s'arrête sinon ; le guide dit de choisir le projet « scandrinks ». |
 
 ## 11. Journal des décisions
 
@@ -388,6 +500,15 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 | 20/10/2026 | Pas de service worker (§6.2) ; « Recharger » si l'app ne peut pas démarrer | Pas de mode hors ligne en version 1 ; l'app installée n'a pas d'autre moyen de recharger |
 | 20/10/2026 | Comptage vide : « Valider » reste grisé, sans message | Comportement du jalon 2 gardé |
 | 20/10/2026 | Anciennes adresses de test fermées par une page qui renvoie vers l'app, plutôt que supprimées | Une icône installée depuis l'une d'elles montre comment réinstaller l'app |
+| 21/10/2026 | Avant l'inventaire du premier jour, tout effacer sauf le compte du tabac ; script préparé et testé par Claude, lancé par le porteur du projet dans l'éditeur SQL | Historique propre ; une action destructive reste entre les mains du porteur du projet |
+| 21/10/2026 | Le guide d'une page devient une vidéo tuto et une feuille A4 affichée en réserve | Choix du porteur du projet |
+| 21/10/2026 | Vidéo fabriquée par un script, sur un iPhone simulé avec des produits fictifs ; film en continu plutôt que diaporama ; sous-titres, sans le son | Les gestes se voient ; refaite à l'identique quand l'app change |
+| 21/10/2026 | Vidéo en ligne avec l'app : QR code sur la feuille, bouton « Tutoriel » dans les Réglages, fichier MP4 pour le groupe de l'équipe | Choix du porteur du projet |
+| 21/10/2026 | Vidéo au format HLS | Cloudflare Pages ne répond pas aux demandes partielles (mesuré le 21/10/2026), dont un iPhone a besoin pour lire un MP4 |
+| 21/10/2026 | Équipe de 4 à 6 iPhone, sous iOS 16.4 ou plus | Version que vise la construction de l'app (Vite 8) |
+| 21/10/2026 | Inventaire du premier jour par zones ; un produit = une seule personne ; pas d'entrée ni de sortie pendant l'inventaire | Un second comptage remplace le premier (RG-4) |
+| 21/10/2026 | Avant la semaine d'essai : page blanche remplacée par « Recharger », écran allumé redemandé (s7), « Réessayer » gardé sur la fiche (s3), commentaire périmé (s8) ; les autres points reportés attendent | Ce qui gênerait pendant la semaine ; le changement de mot de passe est rare |
+| 21/10/2026 | Jalon 4 validé après une semaine d'usage : rien de bloquant, « À racheter » juste avant chaque passage chez Metro, écart expliqué au recomptage de 5 produits | Un critère vérifiable |
 
 ## 12. Glossaire
 
@@ -397,3 +518,5 @@ Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai 
 - **Mouvement** : une ligne de l'historique (entrée, sortie ou inventaire).
 - **Seuil d'alerte** : le stock à partir duquel le produit passe dans À racheter.
 - **Stock idéal** : le stock visé après les courses.
+- **HLS** : format vidéo d'Apple, découpé en petits morceaux, que l'iPhone lit directement.
+- **Jour J** : le jour de la mise en service : remise à zéro, installation sur les iPhones et inventaire du premier jour.
