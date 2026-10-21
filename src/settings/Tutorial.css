@@ -1,0 +1,9 @@
+/* Tutoriel (§4.6, §9) : la vidéo verticale pleine largeur, sur le fond de la caméra, sans dépasser l'écran. */
+.tutorial video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 70vh;
+  border-radius: 18px;
+  background: var(--camera);
+}

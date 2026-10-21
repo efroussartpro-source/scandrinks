@@ -168,6 +168,9 @@ export const IconCamera = makeIcon(
   </>,
 )
 
+// Le triangle est plein, comme sur la maquette des Réglages (J-reglages).
+export const IconPlay = makeIcon('IconPlay', <polygon points="6 3 20 12 6 21 6 3" fill="currentColor" />)
+
 export const IconCircleCheck = makeIcon(
   'IconCircleCheck',
   <>

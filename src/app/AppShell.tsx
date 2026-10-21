@@ -22,6 +22,7 @@ import HistoryScreen from '../history/HistoryScreen'
 import ScannerScreen from '../scanner/ScannerScreen'
 import ChangePasswordScreen from '../settings/ChangePasswordScreen'
 import SettingsScreen from '../settings/SettingsScreen'
+import TutorialScreen from '../settings/TutorialScreen'
 import ShoppingScreen from '../shopping/ShoppingScreen'
 import StockScreen from '../stock/StockScreen'
 import { IconBarcode, IconSettings } from '../ui/icons'
@@ -29,7 +30,7 @@ import { nextSessionState, type SessionState } from './authState'
 import TabBar, { type Tab } from './TabBar'
 import { useCatalog } from './useCatalog'
 
-type Overlay = 'settings' | 'name' | 'password' | null
+type Overlay = 'settings' | 'name' | 'tutorial' | 'password' | null
 
 const SESSION_EXPIRED: LoginNotice = { text: apiErrorMessage('session'), tone: 'error' }
 const PASSWORD_CHANGED: LoginNotice = { text: 'Mot de passe changé. Connecte-toi avec le nouveau mot de passe.', tone: 'ok' }
@@ -148,6 +149,7 @@ export default function AppShell() {
         <SettingsScreen
           employee={employee}
           onChangeName={() => setOverlay('name')}
+          onTutorial={() => setOverlay('tutorial')}
           onChangePassword={() => setOverlay('password')}
           onSignOut={() => void signOut()}
           onBack={() => setOverlay(null)}
@@ -156,6 +158,7 @@ export default function AppShell() {
       {overlay === 'name' && (
         <NameScreen onChosen={chooseEmployee} onSessionExpired={onSessionExpired} onCancel={() => setOverlay('settings')} />
       )}
+      {overlay === 'tutorial' && <TutorialScreen onBack={() => setOverlay('settings')} />}
       {overlay === 'password' && (
         <ChangePasswordScreen
           onDone={() => setOverlay(null)}

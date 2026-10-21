@@ -7,6 +7,12 @@
   margin: -4px 16px 0;
 }
 
+/* Précision sous le nom d'une ligne (« Vidéo de 3 minutes »). */
+.settings-row-note {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
 .settings > .danger {
   margin-top: 10px;
   min-height: 50px;

@@ -183,6 +183,18 @@ const SHOTS = [
       await page.getByRole('heading', { name: 'Réglages' }).waitFor()
     },
   },
+  {
+    name: 'tutoriel',
+    fake: {},
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Réglages' }).click()
+      await page.getByRole('button', { name: /^Tutoriel/ }).click()
+      await page.getByRole('heading', { name: 'Tutoriel', exact: true }).waitFor()
+      // L'image d'attente est chargée avant la capture.
+      await page.waitForLoadState('networkidle')
+    },
+  },
 ]
 
 async function waitForServer(url, timeoutMs = 15_000) {

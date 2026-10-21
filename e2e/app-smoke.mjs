@@ -1143,6 +1143,86 @@ async function scenarioFinishing(browser) {
   console.log('Scénario O (finitions) : OK')
 }
 
+// Tutoriel (§4.6, §9 « Mise en service ») : la ligne des Réglages, l'écran sans rien charger avant le toucher,
+// la vidéo injoignable, puis la page /tutoriel/ qu'ouvre le QR code de la feuille.
+async function scenarioTutorial(browser) {
+  {
+    const { context, page, pageErrors } = await openApp(browser)
+    const videoRequests = []
+    page.on('request', (request) => {
+      if (/\.(m3u8|m4s)$/.test(new URL(request.url()).pathname)) videoRequests.push(request.url())
+    })
+    await signIn(page)
+    const settingsButton = page.getByRole('button', { name: 'Réglages' })
+    const settings = page.locator('main.settings')
+    const tutorial = page.locator('main.tutorial')
+    const tutorialRow = settings.getByRole('button', { name: /^Tutoriel/ })
+    await settingsButton.click()
+
+    // 1. La ligne « Tutoriel » suit l'Apparence ; l'écran a son lecteur, et rien n'est chargé avant le toucher.
+    await settings.getByRole('heading', { name: 'Réglages' }).waitFor()
+    const labels = (await settings.getByRole('button').allTextContents()).map((text) => text.trim())
+    const expected = ['Retour', 'Changer de prénom', 'Automatique', 'Clair', 'Sombre', 'Tutoriel', 'Changer le mot de passe du tabac', 'Se déconnecter']
+    assert.equal(labels.length, expected.length, `boutons des Réglages : ${JSON.stringify(labels)}`)
+    expected.forEach((label, index) => assert.ok(labels[index].startsWith(label), `bouton ${index + 1} : « ${labels[index]} », attendu « ${label} »`))
+    await tutorialRow.getByText('Vidéo de 3 minutes', { exact: true }).waitFor()
+    await tutorialRow.click()
+    await tutorial.getByRole('heading', { name: 'Tutoriel', exact: true }).waitFor()
+    await tutorial.getByText('Environ 3 minutes, sans le son : tout est écrit.', { exact: true }).waitFor()
+    const video = await tutorial.getByLabel('Vidéo tuto').evaluate((element) => ({
+      controls: element.controls,
+      playsInline: element.playsInline,
+      preload: element.preload,
+      src: element.src,
+      poster: element.poster,
+    }))
+    assert.equal(video.controls, true, 'commandes du lecteur')
+    assert.equal(video.playsInline, true, 'lecture dans la page (playsinline)')
+    assert.equal(video.preload, 'none', 'rien de chargé avant le toucher')
+    assert.ok(video.src.endsWith('/tutoriel/video/tutoriel.m3u8'), `src : ${video.src}`)
+    assert.ok(video.poster.endsWith('/tutoriel/video/poster.jpg'), `poster : ${video.poster}`)
+    assert.deepEqual(videoRequests, [], 'aucune requête de la vidéo avant le toucher')
+    await page.waitForFunction(() => document.querySelector('.app video').srcObject === null)
+
+    // 2. « Retour » ramène aux Réglages, puis à l'app.
+    await tutorial.getByRole('button', { name: 'Retour' }).click()
+    await settings.getByRole('heading', { name: 'Réglages' }).waitFor()
+    await settings.getByRole('button', { name: 'Retour' }).click()
+    await settingsButton.waitFor()
+
+    // 3. Vidéo injoignable : le message sous le lecteur, et le reste de l'app utilisable.
+    await page.route('**/tutoriel/video/**', (route) => route.abort('internetdisconnected'))
+    await settingsButton.click()
+    await tutorialRow.click()
+    await tutorial.getByLabel('Vidéo tuto').evaluate((element) => {
+      element.play().catch(() => {})
+    })
+    await tutorial
+      .getByRole('alert')
+      .filter({ hasText: exactly('La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.') })
+      .waitFor()
+    await tutorial.getByRole('button', { name: 'Retour' }).click()
+    await settings.getByRole('button', { name: 'Retour' }).click()
+    await settingsButton.waitFor()
+    assert.deepEqual(pageErrors, [], 'aucune erreur dans la page')
+    await context.close()
+  }
+  {
+    // 4. La page /tutoriel/ : son titre, le message des navigateurs qui ne lisent pas le HLS, et le lien vers l'app.
+    const { context, page } = await openApp(browser)
+    await page.goto(`${BASE}/tutoriel/`)
+    await page.getByRole('heading', { name: 'Tutoriel ScanDrinks' }).waitFor()
+    const link = page.getByRole('link', { name: 'Ouvrir ScanDrinks' })
+    assert.equal(await link.getAttribute('href'), '/')
+    const withoutHls = await page.evaluate(() => document.querySelector('video').canPlayType('application/vnd.apple.mpegurl') === '')
+    assert.equal(await page.getByText('Ouvre cette page sur un iPhone pour voir la vidéo.').isVisible(), withoutHls)
+    await link.click()
+    await page.getByRole('button', { name: 'Se connecter' }).waitFor()
+    await context.close()
+  }
+  console.log('Scénario P (tutoriel) : OK')
+}
+
 // Apparence (refonte, §4.6, §6.7) : jour par défaut, « Sombre » gardé par le téléphone, « Automatique » suit l'iPhone.
 async function scenarioAppearance(browser) {
   const { context, page } = await openApp(browser)
@@ -1451,6 +1531,7 @@ try {
     ['M', scenarioHistory],
     ['N', scenarioPassword],
     ['O', scenarioFinishing],
+    ['P', scenarioTutorial],
     ['R', scenarioAppearance],
     ['S', scenarioImages],
   ]

@@ -1,27 +1,30 @@
 /**
- * SettingsScreen.tsx — Réglages : changer de prénom, l'Apparence, changer le mot de passe du tabac, se déconnecter.
+ * SettingsScreen.tsx — Réglages : changer de prénom, l'Apparence, le Tutoriel, changer le mot de passe du tabac, se déconnecter.
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.6, §6.7)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.6, §6.7, §9 « Mise en service »)
  *
  * Listes groupées, comme les réglages de l'iPhone (maquette
  * docs/maquettes/J-reglages.dc.html). L'Apparence ne vaut que pour ce
- * téléphone et s'applique tout de suite. « Se déconnecter », action rare,
- * est à part, en rouge.
+ * téléphone et s'applique tout de suite. « Tutoriel » ouvre la vidéo tuto
+ * dans l'app (TutorialScreen). « Se déconnecter », action rare, est à part,
+ * en rouge.
  */
 import { useState } from 'react'
 import { APPEARANCE_CHOICES, chooseAppearance, loadAppearance, type Appearance } from '../theme/appearance'
-import { IconChevronLeft, IconChevronRight, IconLock, IconUser } from '../ui/icons'
+import { IconChevronLeft, IconChevronRight, IconLock, IconPlay, IconUser } from '../ui/icons'
+import { TUTORIAL_ROW_NOTE } from './tutorial'
 import './Settings.css'
 
 interface SettingsScreenProps {
   employee: string
   onChangeName: () => void
+  onTutorial: () => void
   onChangePassword: () => void
   onSignOut: () => void
   onBack: () => void
 }
 
-export default function SettingsScreen({ employee, onChangeName, onChangePassword, onSignOut, onBack }: SettingsScreenProps) {
+export default function SettingsScreen({ employee, onChangeName, onTutorial, onChangePassword, onSignOut, onBack }: SettingsScreenProps) {
   const [appearance, setAppearance] = useState<Appearance>(() => loadAppearance())
 
   function choose(value: Appearance) {
@@ -64,6 +67,18 @@ export default function SettingsScreen({ employee, onChangeName, onChangePasswor
       </div>
       <p className="note settings-note">« Automatique » suit le réglage de l'iPhone. Ce choix ne vaut que pour ce téléphone.</p>
       <div className="group">
+        <button type="button" className="row" onClick={onTutorial}>
+          <span className="tile tile-green">
+            <IconPlay size={16} />
+          </span>
+          <span className="row-text">
+            <span>Tutoriel</span>
+            <span className="settings-row-note">{TUTORIAL_ROW_NOTE}</span>
+          </span>
+          <span className="chevron">
+            <IconChevronRight size={18} />
+          </span>
+        </button>
         <button type="button" className="row" onClick={onChangePassword}>
           <span className="tile tile-gray">
             <IconLock size={18} />

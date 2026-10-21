@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
     "e2e": "tsc -p tsconfig.json && vite build --mode e2e --outDir dist-e2e && node e2e/app-smoke.mjs",
-    "screens": "vite build --mode e2e --outDir dist-e2e && node e2e/screens.mjs"
+    "screens": "vite build --mode e2e --outDir dist-e2e && node e2e/screens.mjs",
+    "tutorial:trial": "node scripts/tutorial/trial.mjs && node scripts/tutorial/check.mjs --trial"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
