@@ -13,3 +13,68 @@
   justify-content: center;
   color: var(--text-2);
 }
+
+/* Photo d'un code dans un formulaire (maquettes I-photo, I-off) : l'aperçu, ce qui sera gardé, puis les gestes. */
+.photo-picker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--field);
+}
+
+/* Sans image : un emplacement en pointillés. */
+.photo-picker[data-empty] {
+  border: 1px dashed var(--bar-border);
+}
+
+.photo-picker-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.photo-picker-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.photo-picker-help {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+
+.photo-picker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -8px;
+}
+
+.photo-picker-actions button,
+.photo-take {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+}
+
+.photo-take {
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border-radius: 12px;
+}
+
+/* Vignette touchable d'un code (fiche produit) : la toucher change sa photo. */
+.thumb-button {
+  flex: none;
+  min-height: 0;
+  padding: 0;
+  border-radius: 10px;
+  background: none;
+}

@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { saveErrorMessage } from '../data/apiErrors'
 import { parseCount } from '../domain/inventory'
 import CountFields from '../inventory/CountFields'
+import { PHOTO_NOT_SAVED_MESSAGE } from '../photos/photos'
 import type { ConfirmState } from './scanFlow'
 
 interface CountCardProps {
@@ -34,6 +35,7 @@ export default function CountCard({ state, onValidate, onClose }: CountCardProps
   return (
     <section className="card confirm" data-mode="inventory" aria-label="Fiche de confirmation">
       <h2 className="card-title">{target.product.name}</h2>
+      {target.photoWarning && <p className="message message-warning">{PHOTO_NOT_SAVED_MESSAGE}</p>}
       <CountFields
         packSize={target.product.packSize}
         knownStock={target.product.stock}

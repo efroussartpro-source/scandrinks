@@ -129,6 +129,8 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.longNames : chaque nom de produit reçoit la suite « — édition limitée, format familial » (rien ne doit déborder).
  * options.photos : images déjà au stockage, { chemin: octets } (la vidéo du jalon 4 s'en sert).
  * options.offImage : false retire l'image du Coca de la réponse d'Open Food Facts.
+ * options.failPhotoUpload : le premier envoi d'image est coupé (réseau perdu).
+ * options.hangPhotoUpload : le premier envoi d'image ne reçoit jamais de réponse (réseau bloqué).
  * options.cutReads : 'movements' ou 'barcodes' : les lectures de cette table sont coupées (réseau perdu) jusqu'à
  *   restoreReads(). Une seule coupure ne suffit pas : supabase-js relance seul une lecture jusqu'à trois fois.
  * Renvoie { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
@@ -140,11 +142,14 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  */
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
-    loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true } = options
+    loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true,
+    failPhotoUpload = false, hangPhotoUpload = false } = options
   const db = initialCatalogue(catalogue)
   const photos = new Map(Object.entries(givenPhotos))
   if (catalogue === 'images' && !photos.has(IMAGES_COCA_PHOTO)) photos.set(IMAGES_COCA_PHOTO, PHOTO_JPEG)
   const storageCalls = []
+  let uploadFailuresLeft = failPhotoUpload ? 1 : 0
+  let uploadHangsLeft = hangPhotoUpload ? 1 : 0
   addExtraMovements(db, extraMovements)
   if (longNames) for (const product of db.products.values()) product.name += ' — édition limitée, format familial'
   const calls = []
@@ -405,6 +410,15 @@ export async function installFakeSupabase(page, options = {}) {
       const path = decodeURIComponent(url.pathname.slice(uploadPrefix.length))
       const contentType = request.headers()['content-type']
       storageCalls.push({ kind: 'upload', paths: [path], contentType })
+      if (uploadFailuresLeft > 0) {
+        uploadFailuresLeft -= 1
+        return route.abort('internetdisconnected')
+      }
+      if (uploadHangsLeft > 0) {
+        // Réseau bloqué : la requête reste sans réponse, jusqu'à ce que l'app l'abandonne.
+        uploadHangsLeft -= 1
+        return
+      }
       if (!signedIn()) return reply(400, { statusCode: '403', error: 'Unauthorized', message: 'Invalid JWT' })
       if (contentType !== 'image/jpeg') return reply(400, { statusCode: '415', error: 'invalid_mime_type', message: `mime type ${contentType} is not supported` })
       if (!PHOTO_NAME.test(path)) return reply(400, { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' })

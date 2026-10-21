@@ -8,7 +8,8 @@
  * boutons nomment leur code pour un lecteur d'écran. Un produit archivé
  * montre ses codes sans les boutons. Une liste groupée (maquette J-fiche) :
  * le code, ce qu'il vaut dessous, les liens à droite ; « Ajouter un code »
- * en dernière ligne.
+ * en dernière ligne. Toucher l'image d'un code ouvre l'appareil photo de
+ * l'iPhone : la photo, réduite, remplace son image (maquette I-fiche).
  */
 import { useRef, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
@@ -16,7 +17,10 @@ import type { BarcodeEntry, Product } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { parseIntInRange } from '../domain/productDraft'
-import { photoSourceLabel } from '../photos/photos'
+import { appPhotoDeps } from '../photos/appPhotoDeps'
+import { blobToJpeg } from '../photos/jpeg'
+import { PHOTO_RETRY_MESSAGE, photoSourceLabel } from '../photos/photos'
+import { savePhoto } from '../photos/savePhoto'
 import Thumb from '../photos/Thumb'
 import { FIELD_HELP } from '../products/fieldHelp'
 import HelpField from '../products/HelpField'
@@ -28,6 +32,8 @@ interface CodeListProps {
   readOnly?: boolean
   onAdd?: () => void
   onChanged: () => void
+  // Une photo vient de remplacer l'image d'un code.
+  onPhotoChanged: () => void
   onSessionExpired: () => void
 }
 
@@ -37,13 +43,17 @@ const unitsLabel = (units: number) => `${units} ${units > 1 ? 'unités' : 'unit�
 const codeMeta = (barcode: BarcodeEntry) =>
   barcode.photoSource ? `${unitsLabel(barcode.units)} · ${photoSourceLabel(barcode.photoSource)}` : unitsLabel(barcode.units)
 
-export default function CodeList({ product, barcodes, readOnly = false, onAdd, onChanged, onSessionExpired }: CodeListProps) {
+export default function CodeList({ product, barcodes, readOnly = false, onAdd, onChanged, onPhotoChanged, onSessionExpired }: CodeListProps) {
   const [editing, setEditing] = useState<string | null>(null)
   const [units, setUnits] = useState('')
   const [unitsError, setUnitsError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
+  const [sendingPhoto, setSendingPhoto] = useState(false)
+  // Un seul champ « fichier » pour tous les codes : le code touché attend sa photo.
+  const fileInput = useRef<HTMLInputElement>(null)
+  const photoCode = useRef<string | null>(null)
 
   async function run(action: () => Promise<void>) {
     if (busyRef.current) return
@@ -84,6 +94,33 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
     })
   }
 
+  function choosePhoto(code: string) {
+    photoCode.current = code
+    setError(null)
+    fileInput.current?.click()
+  }
+
+  async function sendPhoto(file: File | undefined) {
+    const code = photoCode.current
+    if (file === undefined || code === null || busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
+    setSendingPhoto(true)
+    setError(null)
+    try {
+      const path = await savePhoto(code, { source: 'equipe', jpeg: await blobToJpeg(file) }, appPhotoDeps)
+      if (path === null) setError(PHOTO_RETRY_MESSAGE)
+      else onPhotoChanged()
+    } catch {
+      // Image illisible.
+      setError(PHOTO_RETRY_MESSAGE)
+    } finally {
+      busyRef.current = false
+      setBusy(false)
+      setSendingPhoto(false)
+    }
+  }
+
   function remove(code: string) {
     if (!window.confirm(`Retirer le code ${code} ? Les mouvements passés ne changent pas.`)) return
     void run(async () => {
@@ -102,7 +139,19 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
         )}
         {barcodes.map((barcode) => (
           <li key={barcode.code} className="code-row">
-            <Thumb path={barcode.photoPath} size={48} />
+            {readOnly ? (
+              <Thumb path={barcode.photoPath} size={48} />
+            ) : (
+              <button
+                type="button"
+                className="thumb-button"
+                aria-label={`Changer la photo du code ${barcode.code}`}
+                disabled={busy}
+                onClick={() => choosePhoto(barcode.code)}
+              >
+                <Thumb path={barcode.photoPath} size={48} />
+              </button>
+            )}
             <span className="row-text">
               <span className="code-value">{barcode.code}</span>
               <span className="code-meta">{codeMeta(barcode)}</span>
@@ -166,6 +215,24 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
           </li>
         )}
       </ul>
+      {!readOnly && (
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="visually-hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            // Vidé : la même photo peut être choisie de nouveau.
+            event.target.value = ''
+            void sendPhoto(file)
+          }}
+        />
+      )}
+      {sendingPhoto && <p className="muted">Envoi de la photo…</p>}
       {error && (
         <p role="alert" className="message message-error">
           {error}

@@ -18,9 +18,11 @@ interface ThumbProps {
   path?: string | null
   src?: string | null
   size: number
+  // Appelé quand l'image ne se charge pas.
+  onError?: () => void
 }
 
-export default function Thumb({ path = null, src = null, size }: ThumbProps) {
+export default function Thumb({ path = null, src = null, size, onError }: ThumbProps) {
   const signed = usePhotoUrl(src ? null : path)
   const url = src || signed
   // Adresse qui n'a pas pu se charger ; une autre adresse (lien renouvelé) est réessayée.
@@ -34,5 +36,19 @@ export default function Thumb({ path = null, src = null, size }: ThumbProps) {
       </span>
     )
   }
-  return <img className="thumb" src={url} alt="" width={size} height={size} loading="lazy" style={style} onError={() => setFailed(url)} />
+  return (
+    <img
+      className="thumb"
+      src={url}
+      alt=""
+      width={size}
+      height={size}
+      loading="lazy"
+      style={style}
+      onError={() => {
+        setFailed(url)
+        onError?.()
+      }}
+    />
+  )
 }

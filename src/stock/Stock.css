@@ -172,7 +172,8 @@
   padding: 6px 4px 6px 12px;
 }
 
-.code-row > .thumb {
+.code-row > .thumb,
+.code-row > .thumb-button {
   margin-right: 8px;
 }
 

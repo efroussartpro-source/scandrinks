@@ -232,6 +232,11 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
           readOnly={product.archived}
           onAdd={product.archived ? undefined : () => open('add_code')}
           onChanged={() => setCodesVersion((version) => version + 1)}
+          onPhotoChanged={() => {
+            // L'image du produit vient peut-être de ce code : le catalogue est relu aussi.
+            setCodesVersion((version) => version + 1)
+            onCatalogChanged()
+          }}
           onSessionExpired={onSessionExpired}
         />
       )}

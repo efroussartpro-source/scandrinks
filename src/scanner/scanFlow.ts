@@ -29,11 +29,13 @@ export const NOT_A_PRODUCT_MESSAGE = "Ce code n'identifie pas un produit (lot, d
 export const UNDO_FAILED_MESSAGE = "L'annulation n'a pas pu être faite. Pour corriger, scanne le produit dans l'autre mode."
 
 // code null : saisie manuelle. photoPath : l'image du code lu, ou celle du produit en saisie manuelle.
+// photoWarning : la photo choisie à la création du code n'a pas pu être enregistrée.
 export interface ConfirmTarget {
   product: Product
   units: number
   code: string | null
   photoPath: string | null
+  photoWarning?: true
 }
 
 // counted : le nombre compté, après un inventaire ; null après une entrée ou une sortie.

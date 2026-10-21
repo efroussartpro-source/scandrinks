@@ -17,8 +17,9 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 import { ean13Y4m } from './ean13.mjs'
-import { COCA_CODE, GOOD_PASSWORD, SUPABASE_URL, installFakeSupabase } from './fakeSupabase.mjs'
+import { COCA_CODE, GOOD_PASSWORD, OFF_COCA_IMAGE, SUPABASE_URL, installFakeSupabase } from './fakeSupabase.mjs'
 import { signIn } from './helpers.mjs'
+import { jpegSize, PHOTO_JPEG, withExifOrientation } from './jpeg.mjs'
 
 const PORT = 4173
 const BASE = `http://localhost:${PORT}`
@@ -1276,6 +1277,128 @@ async function scenarioImages(browser) {
     await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).locator('.thumb-empty').waitFor()
     // Une image en échec laisse place à l'icône dès son erreur ; une image cassée qui resterait affichée bloquerait l'attente.
     await page.waitForFunction(() => [...document.querySelectorAll('img.thumb')].every((image) => image.naturalWidth > 0))
+    await context.close()
+  }
+
+  const PHOTO_NOT_SAVED = 'Photo non enregistrée : réessaie depuis la fiche du produit.'
+  const uploads = (fake) => fake.storageCalls.filter((call) => call.kind === 'upload')
+  const photoLinks = (fake) => fake.calls.filter((call) => call.fn === 'set_barcode_photo').map((call) => call.body)
+  const creates = (fake) => fake.calls.filter((call) => call.fn === 'create_product')
+  // Code inconnu, puis « Nouveau produit » : le formulaire et son sélecteur de photo.
+  const openNewProduct = async (page) => {
+    await signIn(page)
+    await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor({ timeout: SCAN_TIMEOUT })
+    await page.getByRole('button', { name: 'Nouveau produit' }).click()
+    const form = page.getByRole('region', { name: 'Nouveau produit' })
+    return { form, picker: form.getByRole('group', { name: 'Photo du code' }) }
+  }
+  {
+    // 7. Copie depuis Open Food Facts : l'image trouvée est réduite à 480 px, envoyée en JPEG, puis gardée avec le code.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty' })
+    const { form, picker } = await openNewProduct(page)
+    await picker.getByText('Image trouvée').waitFor()
+    assert.equal(await picker.locator('img.thumb').getAttribute('src'), OFF_COCA_IMAGE)
+    await picker.getByRole('button', { name: 'Prendre ma photo à la place' }).waitFor()
+    await form.getByLabel('Ce code vaut (unités)').fill('24')
+    await form.getByRole('button', { name: 'Créer le produit' }).click()
+    const card = confirmCard(page)
+    await waitForConfirmLine(card, 'Pack de 24 → +24')
+    assert.equal(uploads(fake).length, 1, 'un seul envoi')
+    const [{ paths: [path], contentType }] = uploads(fake)
+    assert.match(path, /^codes\/5449000000996\/[0-9a-f-]{36}\.jpg$/)
+    assert.equal(contentType, 'image/jpeg')
+    assert.equal(fake.photos.get(path).subarray(0, 2).toString('hex'), 'ffd8')
+    assert.deepEqual(jpegSize(fake.photos.get(path)), { width: 480, height: 320 })
+    assert.deepEqual(photoLinks(fake), [{ p_code: COCA_CODE, p_path: path, p_source: 'off' }])
+    assert.match(await card.locator('img.thumb').getAttribute('src'), /^blob:/)
+    await context.close()
+  }
+  {
+    // 8. Photo de l'équipe, prise par la caméra du Scanner (1280 × 720) : réduite à 480 × 270.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', offImage: false })
+    const { form, picker } = await openNewProduct(page)
+    await picker.getByRole('button', { name: 'Prendre la photo' }).click()
+    await picker.getByText('Photo prise').waitFor()
+    await waitForImage(picker.locator('img.thumb'))
+    await form.getByLabel('Ce code vaut (unités)').fill('24')
+    await form.getByRole('button', { name: 'Créer le produit' }).click()
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24')
+    const [{ paths: [path] }] = uploads(fake)
+    assert.deepEqual(jpegSize(fake.photos.get(path)), { width: 480, height: 270 })
+    assert.deepEqual(photoLinks(fake), [{ p_code: COCA_CODE, p_path: path, p_source: 'equipe' }])
+    await context.close()
+  }
+  {
+    // 9. Envoi raté : la fiche est créée une seule fois, la fiche de confirmation le dit, et « Valider » marche.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', failPhotoUpload: true })
+    const { form, picker } = await openNewProduct(page)
+    await picker.getByText('Image trouvée').waitFor()
+    await form.getByLabel('Ce code vaut (unités)').fill('24')
+    await form.getByRole('button', { name: 'Créer le produit' }).click()
+    const card = confirmCard(page)
+    await card.getByText(PHOTO_NOT_SAVED).waitFor()
+    assert.equal(creates(fake).length, 1, 'une seule création')
+    assert.deepEqual(photoLinks(fake), [])
+    await card.getByRole('button', { name: 'Valider' }).click()
+    await waitForSaved(page, '+24 Coca-Cola 330 ml', 'Stock : 24 (1 pack)')
+    await context.close()
+  }
+  {
+    // 10. Envoi bloqué (réseau de la réserve) : la fiche de confirmation et le message arrivent en moins de 20 s.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', hangPhotoUpload: true })
+    const { form, picker } = await openNewProduct(page)
+    await picker.getByText('Image trouvée').waitFor()
+    await form.getByLabel('Ce code vaut (unités)').fill('24')
+    const started = Date.now()
+    await form.getByRole('button', { name: 'Créer le produit' }).click()
+    await confirmCard(page).getByText(PHOTO_NOT_SAVED).waitFor({ timeout: 20_000 })
+    assert.ok(Date.now() - started < 20_000, 'moins de 20 s')
+    assert.equal(creates(fake).length, 1, 'une seule création')
+    await context.close()
+  }
+  {
+    // 11. Code ajouté à un produit existant, depuis le Scanner : l'image d'Open Food Facts est gardée avec lui.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'coca_without_code' })
+    await signIn(page)
+    await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor({ timeout: SCAN_TIMEOUT })
+    await page.getByRole('button', { name: 'Ajouter à un produit existant' }).click()
+    const attach = page.getByRole('region', { name: 'Ajouter à un produit existant' })
+    await attach.getByRole('button', { name: 'Coca-Cola 33 cl' }).click()
+    await attach.getByRole('group', { name: 'Photo du code' }).getByText('Image trouvée').waitFor()
+    await attach.getByRole('button', { name: 'Ajouter le code' }).click()
+    await waitForConfirmLine(confirmCard(page), "À l'unité → +1")
+    assert.equal(uploads(fake).length, 1, 'un seul envoi')
+    assert.deepEqual(photoLinks(fake), [{ p_code: COCA_CODE, p_path: uploads(fake)[0].paths[0], p_source: 'off' }])
+    await context.close()
+  }
+  {
+    // 12. Depuis la fiche : la photo du téléphone, prise en portrait (orientation EXIF 6), est redressée et remplace
+    // l'image du code. L'ajout d'un code tapé n'a pas de sélecteur de photo.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'images' })
+    await signIn(page)
+    await page.getByRole('button', { name: 'Stock', exact: true }).click()
+    await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+    const sheet = page.getByRole('region', { name: 'Fiche produit' })
+    const chooser = page.waitForEvent('filechooser')
+    await sheet.getByRole('button', { name: `Changer la photo du code ${COCA_CODE}` }).click()
+    await (await chooser).setFiles({ name: 'photo.jpg', mimeType: 'image/jpeg', buffer: withExifOrientation(PHOTO_JPEG, 6) })
+    await page.waitForFunction(() => document.querySelector('.code-row img.thumb')?.getAttribute('src')?.startsWith('blob:'))
+    const [{ paths: [path] }] = uploads(fake)
+    assert.deepEqual(jpegSize(fake.photos.get(path)), { width: 320, height: 480 })
+    assert.deepEqual(photoLinks(fake), [{ p_code: COCA_CODE, p_path: path, p_source: 'equipe' }])
+    await sheet.getByRole('button', { name: 'Ajouter un code' }).click()
+    const addCode = page.getByRole('region', { name: 'Ajouter un code' })
+    await addCode.getByLabel('Code-barres').fill('4006381333931')
+    await addCode.getByRole('button', { name: 'Continuer' }).click()
+    const attach = page.getByRole('region', { name: 'Ajouter à un produit existant' })
+    await attach.getByLabel('Ce code vaut (unités)').waitFor()
+    assert.equal(await attach.getByRole('group', { name: 'Photo du code' }).count(), 0, 'pas de sélecteur de photo')
+    await attach.getByRole('button', { name: 'Annuler' }).click()
+
+    // 13. Retour au Scanner : la caméra repart.
+    await page.getByRole('button', { name: 'Scanner', exact: true }).click()
+    await page.waitForFunction(() => document.querySelector('video')?.srcObject instanceof MediaStream)
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     await context.close()
   }
   console.log('Scénario S (images) : OK')

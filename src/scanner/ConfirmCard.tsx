@@ -8,13 +8,15 @@
  * en très gros, et « Valider », dans la couleur du mode (maquette
  * docs/maquettes/Main.dc.html). Pendant l'envoi et après un
  * échec, la quantité ne change plus : ce qui est réessayé est exactement ce
- * qui était affiché.
+ * qui était affiché. Une photo choisie à la création du code mais non
+ * enregistrée est signalée sous l'en-tête ; « Valider » marche quand même.
  */
 import { useEffect, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
 import { saveErrorMessage } from '../data/apiErrors'
 import { parseIntInRange } from '../domain/productDraft'
 import { confirmParts, QUANTITY_MAX, QUANTITY_MIN, type MoveMode } from '../domain/stock'
+import { PHOTO_NOT_SAVED_MESSAGE } from '../photos/photos'
 import Thumb from '../photos/Thumb'
 import type { ConfirmState } from './scanFlow'
 
@@ -52,6 +54,7 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
         </div>
         <span className="confirm-delta">{delta}</span>
       </div>
+      {target.photoWarning && <p className="message message-warning">{PHOTO_NOT_SAVED_MESSAGE}</p>}
       <div className="quantity">
         <label htmlFor="confirm-quantity">Quantité</label>
         <div className="stepper">

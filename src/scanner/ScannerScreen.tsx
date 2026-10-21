@@ -21,6 +21,7 @@ import AttachForm from '../products/AttachForm'
 import ManualEntry from '../products/ManualEntry'
 import NewProductForm from '../products/NewProductForm'
 import '../products/Products.css'
+import { frameToJpeg } from '../photos/jpeg'
 import { scannerErrorMessage } from '../scan/scannerErrors'
 import { useBarcodeScanner } from '../scan/useBarcodeScanner'
 import { useScreenWakeLock } from '../scan/useScreenWakeLock'
@@ -75,6 +76,8 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
     else dispatch({ type: 'code_read', rawValue, format, at: Date.now() })
   }, [])
   const scanner = useBarcodeScanner({ videoRef, onDetect })
+  // Photo d'un code, prise avec la caméra du Scanner : l'image en cours de la vidéo.
+  const takeFrame = useCallback(() => frameToJpeg(videoRef.current), [])
   const startCamera = scanner.start
   const stopCamera = scanner.stop
 
@@ -195,6 +198,10 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
     const result = offResults[code]
     return result?.status === 'found' ? result.suggestedName : null
   }
+  const offImage = (code: string) => {
+    const result = offResults[code]
+    return result?.status === 'found' ? result.imageUrl : null
+  }
 
   function renderPanel() {
     switch (flow.step) {
@@ -262,6 +269,7 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
           <NewProductForm
             code={flow.code}
             off={offResults[flow.code]}
+            takeFrame={takeFrame}
             setCapture={setCapture}
             onReady={readyAfterChange}
             onAttachToExisting={(product) => dispatch({ type: 'choose_attach', product })}
@@ -275,6 +283,7 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
             code={flow.code}
             preselected={flow.product}
             offName={offName(flow.code)}
+            photo={{ offImageUrl: offImage(flow.code), takeFrame }}
             onReady={readyAfterChange}
             onCancel={close}
             onSessionExpired={onSessionExpired}

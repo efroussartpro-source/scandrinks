@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import type { Product } from '../data/api'
-import { flowReducer, initialFlow, UNDO_FAILED_MESSAGE, type FlowState } from './scanFlow'
+import { flowReducer, initialFlow, UNDO_FAILED_MESSAGE, type ConfirmTarget, type FlowState } from './scanFlow'
 
 const lipton: Product = { id: 'p1', name: 'Lipton Pêche 50 cl', packSize: 12, alertThreshold: 12, targetStock: 24, archived: false, stock: 0,
   photoPath: null }
@@ -21,6 +21,14 @@ test('code de lot → notice not_a_product ; clé de contrôle fausse → ignor�
 })
 test('code connu → fiche de confirmation, quantité 1', () => {
   expect(confirmed()).toEqual({ step: 'confirm', target: { product: lipton, units: 12, code: PACK, photoPath: null }, quantity: 1, movementId: 'm1', status: 'idle', errorKind: null, counted: null })
+})
+test("product_ready garde l'image du code et l'avertissement d'une photo non enregistrée", () => {
+  const saved: ConfirmTarget = { product: lipton, units: 12, code: PACK, photoPath: 'codes/3502110123091/photo.jpg' }
+  expect(flowReducer({ step: 'new_product', code: PACK }, { type: 'product_ready', target: saved, movementId: 'm3' }))
+    .toMatchObject({ step: 'confirm', target: { photoPath: 'codes/3502110123091/photo.jpg' } })
+  const notSaved: ConfirmTarget = { product: lipton, units: 12, code: PACK, photoPath: null, photoWarning: true }
+  expect(flowReducer({ step: 'attach', code: PACK, product: lipton }, { type: 'product_ready', target: notSaved, movementId: 'm4' }))
+    .toMatchObject({ step: 'confirm', target: { photoPath: null, photoWarning: true } })
 })
 test("la fiche montre l'image du code scanné, pas celle du produit", () => {
   const withPhotos = { ...lipton, photoPath: 'codes/3502110123091/pack.jpg' }

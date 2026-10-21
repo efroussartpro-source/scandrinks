@@ -6,6 +6,8 @@
  * Exemple : le code d'une canette seule, pour une fiche créée depuis le pack.
  * La liste s'ouvre filtrée sur le nom donné par Open Food Facts. Si le code
  * appartient déjà à un autre produit, on le laisse ou on le déplace ici.
+ * Depuis le Scanner (prop photo), une photo du code est proposée, comme pour
+ * un nouveau produit ; elle part une fois le code ajouté.
  */
 import { useRef, useState } from 'react'
 import { selectAllSoon } from '../app/selectAll'
@@ -13,6 +15,9 @@ import type { Product } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { parseIntInRange } from '../domain/productDraft'
+import { appPhotoDeps } from '../photos/appPhotoDeps'
+import CodePhotoPicker from '../photos/CodePhotoPicker'
+import { savePhoto, type PhotoChoice } from '../photos/savePhoto'
 import type { ConfirmTarget } from '../scanner/scanFlow'
 import { FIELD_HELP } from './fieldHelp'
 import HelpField from './HelpField'
@@ -23,12 +28,14 @@ interface AttachFormProps {
   code: string
   preselected: Product | null
   offName: string | null
+  // Depuis le Scanner : l'image d'Open Food Facts du code et la caméra, pour sa photo.
+  photo?: { offImageUrl: string | null; takeFrame: () => Promise<Blob | null> }
   onReady: (target: ConfirmTarget) => void
   onCancel: () => void
   onSessionExpired: () => void
 }
 
-export default function AttachForm({ code, preselected, offName, onReady, onCancel, onSessionExpired }: AttachFormProps) {
+export default function AttachForm({ code, preselected, offName, photo, onReady, onCancel, onSessionExpired }: AttachFormProps) {
   const [product, setProduct] = useState<Product | null>(preselected)
   // Un pack ajouté depuis sa canette : ses unités sont à saisir. Sinon, le plus souvent une canette : 1.
   const [units, setUnits] = useState(preselected ? '' : '1')
@@ -36,7 +43,19 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
   const [formError, setFormError] = useState<string | null>(null)
   const [conflict, setConflict] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [teamPhoto, setTeamPhoto] = useState<Blob | null>(null)
+  const [offImageFailed, setOffImageFailed] = useState(false)
+  const [sendingPhoto, setSendingPhoto] = useState(false)
   const submittingRef = useRef(false)
+
+  const offImageUrl = photo && !offImageFailed ? photo.offImageUrl : null
+  // La photo de l'équipe, sinon l'image d'Open Food Facts, sinon rien.
+  const photoChoice: PhotoChoice | null = teamPhoto
+    ? { source: 'equipe', jpeg: teamPhoto }
+    : offImageUrl
+      ? { source: 'off', url: offImageUrl }
+      : null
+  const addLabel = (label: string) => (sendingPhoto ? 'Envoi de la photo…' : label)
 
   async function attach(move: boolean) {
     if (product === null || submittingRef.current) return
@@ -50,8 +69,15 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
     setFormError(null)
     try {
       const result = await api.attachBarcode({ code, productId: product.id, units: value, move })
-      if (result.status === 'attached') onReady({ product, units: value, code, photoPath: null })
-      else setConflict(result.productName)
+      if (result.status !== 'attached') {
+        setConflict(result.productName)
+      } else if (photoChoice === null) {
+        onReady({ product, units: value, code, photoPath: null })
+      } else {
+        setSendingPhoto(true)
+        const photoPath = await savePhoto(code, photoChoice, appPhotoDeps)
+        onReady({ product, units: value, code, photoPath, ...(photoPath === null ? { photoWarning: true as const } : {}) })
+      }
     } catch (thrown) {
       const kind = classifyApiError(thrown).kind
       if (kind === 'session') onSessionExpired()
@@ -100,6 +126,16 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
               setUnitsError(null)
             }}
           />
+          {photo && (
+            <CodePhotoPicker
+              offImageUrl={offImageUrl}
+              teamPhoto={teamPhoto}
+              onTeamPhoto={setTeamPhoto}
+              takeFrame={photo.takeFrame}
+              disabled={submitting}
+              onOffImageError={() => setOffImageFailed(true)}
+            />
+          )}
           {formError && (
             <p role="alert" className="message message-error">
               {formError}
@@ -107,7 +143,7 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
           )}
           <div className="card-actions">
             <button type="button" className="primary" disabled={submitting} onClick={() => void attach(false)}>
-              Ajouter le code
+              {addLabel('Ajouter le code')}
             </button>
             <button type="button" disabled={submitting} onClick={onCancel}>
               Annuler
@@ -129,7 +165,7 @@ export default function AttachForm({ code, preselected, offName, onReady, onCanc
           )}
           <div className="card-actions">
             <button type="button" className="primary" disabled={submitting} onClick={() => void attach(true)}>
-              Le déplacer ici
+              {addLabel('Le déplacer ici')}
             </button>
             <button type="button" disabled={submitting} onClick={onCancel}>
               Le laisser

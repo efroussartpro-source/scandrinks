@@ -156,6 +156,25 @@ const SHOTS = [
     },
   },
   {
+    name: 'photo-off',
+    fake: { catalogue: 'empty' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Nouveau produit' }).click({ timeout: SCAN_TIMEOUT })
+      await page.getByRole('group', { name: 'Photo du code' }).locator('img.thumb').waitFor()
+    },
+  },
+  {
+    name: 'photo-prise',
+    fake: { catalogue: 'empty', offImage: false },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Nouveau produit' }).click({ timeout: SCAN_TIMEOUT })
+      await page.getByRole('button', { name: 'Prendre la photo' }).click()
+      await page.getByRole('group', { name: 'Photo du code' }).getByText('Photo prise').waitFor()
+    },
+  },
+  {
     name: 'reglages',
     fake: {},
     go: async (page) => {
