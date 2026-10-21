@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Scanner — Inventaire</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#1F6F3F}a:hover{color:#174F2E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F2F2F7; color: #1C1C1E; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+<header style="display: flex; align-items: center; gap: 10px; padding: 14px 12px 10px 16px">
+<div aria-hidden="true" style="width: 30px; height: 30px; border-radius: 8px; background: #1F6F3F; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"><path d="M6 6v12"></path><path d="M9.5 6v12"></path><path d="M13 6v12"></path><path d="M15.5 6v12"></path><path d="M18.5 6v12"></path></svg>
+</div>
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.2px">ScanDrinks</span>
+<span style="margin-left: auto; font-size: 15px; font-weight: 500; color: #3A3A3C; background: #E5E5EA; border-radius: 999px; padding: 5px 12px">Sam</span>
+<button type="button" aria-label="Réglages" style="width: 44px; height: 44px; border: none; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center; color: #3A3A3C">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+</header>
+<main style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px 12px 16px">
+<div role="group" aria-label="Mode" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #E3E3E8; border-radius: 13px">
+<button type="button" aria-pressed="false" style="height: 42px; border: none; border-radius: 10px; background: transparent; color: #1F6F3F; font-size: 16px; font-weight: 600">Entrée +</button>
+<button type="button" aria-pressed="false" style="height: 42px; border: none; border-radius: 10px; background: transparent; color: #A34A07; font-size: 16px; font-weight: 600">Sortie −</button>
+<button type="button" aria-pressed="true" style="height: 42px; border: none; border-radius: 10px; background: #1D4ED8; color: #FFFFFF; font-size: 16px; font-weight: 700; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18)">Inventaire =</button>
+</div>
+<div aria-label="Image de la caméra" role="img" style="position: relative; height: 170px; border-radius: 18px; overflow: hidden; background: #48484A">
+<div aria-hidden="true" style="position: absolute; left: 20px; top: 18px; width: 28px; height: 28px; border-left: 4px solid #FFFFFF; border-top: 4px solid #FFFFFF; border-top-left-radius: 10px"></div>
+<div aria-hidden="true" style="position: absolute; right: 20px; top: 18px; width: 28px; height: 28px; border-right: 4px solid #FFFFFF; border-top: 4px solid #FFFFFF; border-top-right-radius: 10px"></div>
+<div aria-hidden="true" style="position: absolute; left: 20px; bottom: 18px; width: 28px; height: 28px; border-left: 4px solid #FFFFFF; border-bottom: 4px solid #FFFFFF; border-bottom-left-radius: 10px"></div>
+<div aria-hidden="true" style="position: absolute; right: 20px; bottom: 18px; width: 28px; height: 28px; border-right: 4px solid #FFFFFF; border-bottom: 4px solid #FFFFFF; border-bottom-right-radius: 10px"></div>
+</div>
+<section aria-label="Fiche de confirmation" style="background: #FFFFFF; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05)">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.2px">Coca-Cola 33 cl</h2>
+<span style="font-size: 15px; color: #6C6C70">Stock connu : 24 (1 pack)</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 15px; font-weight: 600">Packs de 24</span>
+<input value="2" inputmode="numeric" style="height: 50px; box-sizing: border-box; border: 2px solid #1D4ED8; border-radius: 12px; background: #FFFFFF; padding: 0 14px; font-size: 22px; font-weight: 700; color: #1C1C1E; font-family: inherit">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 15px; font-weight: 600">Unités en plus</span>
+<input value="5" inputmode="numeric" style="height: 50px; box-sizing: border-box; border: 1px solid #D1D1D6; border-radius: 12px; background: #F2F2F7; padding: 0 14px; font-size: 22px; font-weight: 700; color: #1C1C1E; font-family: inherit">
+</label>
+</div>
+<p style="margin: -6px 0 0 0; font-size: 13px; color: #6C6C70">Packs entiers trouvés en réserve, puis les canettes ou bouteilles en plus.</p>
+<div style="display: flex; align-items: center; justify-content: space-between; background: #EEF2FD; border-radius: 12px; padding: 10px 14px">
+<span style="font-size: 17px"><span style="font-weight: 800; font-size: 22px; color: #1D4ED8">= 53</span> <span style="color: #3A3A3C">(2 packs + 5)</span></span>
+<span style="font-size: 15px; font-weight: 700; color: #1D4ED8">écart : +29</span>
+</div>
+<div style="display: flex; gap: 10px">
+<button type="button" style="flex: 1; height: 50px; border: none; border-radius: 14px; background: #1D4ED8; color: #FFFFFF; font-size: 17px; font-weight: 700">Valider</button>
+<button type="button" style="height: 50px; padding: 0 18px; border: none; border-radius: 14px; background: #EEF2FD; color: #1D4ED8; font-size: 17px; font-weight: 600">Annuler</button>
+</div>
+</section>
+</main>
+<nav aria-label="Onglets" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #F9F9F9; border-top: 1px solid #D1D1D6; padding: 6px 4px 24px 4px">
+<button type="button" aria-current="page" style="border: none; background: transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #1F6F3F; font-size: 12px; font-weight: 600">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg>
+<span>Scanner</span>
+</button>
+<button type="button" style="border: none; background: transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #6C6C70; font-size: 12px; font-weight: 500">
+<span style="position: relative; display: flex">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+<span style="position: absolute; top: -5px; right: -11px; min-width: 18px; height: 18px; border-radius: 9px; background: #D70015; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 5px; box-sizing: border-box">3</span>
+</span>
+<span>À racheter</span>
+</button>
+<button type="button" style="border: none; background: transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #6C6C70; font-size: 12px; font-weight: 500">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+<span>Stock</span>
+</button>
+<button type="button" style="border: none; background: transparent; min-height: 50px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #6C6C70; font-size: 12px; font-weight: 500">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+<span>Historique</span>
+</button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -10,6 +10,16 @@
 
 Validation (spec §9) : une semaine d'utilisation par l'équipe.
 
+> **Amendement du 21/10/2026 : la refonte visuelle et les images passent d'abord.**
+>
+> Le plan `docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md` s'exécute avant celui-ci, sur la même branche : la charte jour et nuit, l'Apparence et les images des codes. Ce plan reprend ensuite à sa Tâche 1. Ce qui change ici :
+> - **Tâche 1.** La ligne « Tutoriel » suit l'ordre de la spec (§4.6) et l'allure des Réglages refaits. L'écran et la page de la vidéo suivent la charte.
+> - **Tâche 3.** La remise à zéro laisse les fichiers des images dans le stockage : plus aucun code n'y renvoie.
+> - **Tâche 4.** L'essai sur iPhone porte aussi sur le nouveau look, le mode nuit et les photos.
+> - **Tâches 5 et 7.** Le tournage et la feuille montrent la photo du pack à la création. Les écrans attendus sont ceux de la refonte.
+> - **Tâche 8.** La documentation et les décisions couvrent les deux plans.
+> - **Migration.** Celle des images (plan de la refonte) est la seule du jalon 4.
+
 **Architecture :**
 - **Lecture.** La vidéo est servie avec l'app au format HLS, dans `public/tutoriel/video/` :
   - la liste `tutoriel.m3u8` ;
@@ -59,7 +69,7 @@ Les points s3, s7 et s8 sont décrits dans la section « Bilan » de `docs/super
   - le message dédié après un changement de mot de passe ;
   - la protection contre les mots de passe divulgués ;
   - les noms de l'historique des migrations.
-- **Pas de migration :** la base ne change pas de forme. La seule action sur ses données est la remise à zéro, lancée par le porteur du projet.
+- **Pas d'autre migration** que celle des images, du plan de la refonte. La seule action sur les données est la remise à zéro, lancée par le porteur du projet.
 
 **Relecture finale :** la relecture de toute la branche (executing-plans) a lieu après la Tâche 8, avant la mise en service (Tâche 9).
 
@@ -77,6 +87,7 @@ Les points s3, s7 et s8 sont décrits dans la section « Bilan » de `docs/super
 - **iPhone.**
   - iOS 16.4 au minimum : c'est la version que vise Vite 8 (`safari16.4`, `ios16.4`).
   - Champs de saisie en 16 px au moins. Rien ne dépasse en largeur à 320 px, ni ne passe sous la barre d'onglets.
+- **Charte.** Les nouveaux écrans (Tutoriel, filet de sécurité) suivent la charte de la refonte : couleurs de `src/theme/tokens.css` seulement, classes communes de `AppShell.css`.
 - **Dépendances.** Aucune nouvelle ; versions exactes inchangées.
   - Le QR code passe par `zxing-wasm/writer` et `zxing-wasm/reader`.
   - Les fichiers `.wasm` viennent de `node_modules`, jamais du CDN que zxing-wasm utilise par défaut.
@@ -86,12 +97,12 @@ Les points s3, s7 et s8 sont décrits dans la section « Bilan » de `docs/super
   - **Le MP4 n'est pas versionné :** `dist-tutorial/` est ignoré par Git.
 - **Supabase.**
   - Projet `scandrinks` (`ubddiqqjdwcntdbrsrzr`), organisation « ScanDrinks ». Ne jamais toucher à l'organisation ni au projet « Webia ».
-  - Aucune migration au jalon 4, et les migrations existantes ne sont jamais modifiées.
+  - Une seule migration au jalon 4, celle des images (plan de la refonte). Les migrations existantes ne sont jamais modifiées.
   - **La remise à zéro n'est jamais lancée par Claude**, ni par le connecteur, ni autrement. Sur le vrai projet, Claude ne fait que des lectures (`select`), après que le porteur du projet l'a lancée.
 - **Mots de passe.** Jamais demandés, affichés, écrits ni journalisés. Le guide du jour J dit de donner le mot de passe à voix haute.
 - **Adresses de test.**
   - La préversion `https://jalon-4.scandrinks.pages.dev` s'ouvre dans Safari, sans être installée.
-  - Elle utilise la vraie base : ses essais n'écrivent rien, car le Tutoriel ne fait que lire des fichiers.
+  - Elle utilise la vraie base. L'essai de la Tâche 4 y crée une fiche et des photos d'essai, effacées par la remise à zéro du jour J ; les fichiers des photos restent dans le stockage, sans être affichés.
   - L'icône de l'écran d'accueil vient toujours de `https://scandrinks.pages.dev`.
 - **Fusion** dans `main` : avec l'accord du porteur du projet.
 
@@ -133,21 +144,21 @@ Les points s3, s7 et s8 sont décrits dans la section « Bilan » de `docs/super
     - `TUTORIAL_LENGTH_NOTE = 'Environ 3 minutes, sans le son : tout est écrit.'` ;
     - `TUTORIAL_LOAD_ERROR = 'La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.'`.
   - **`TutorialScreen({ onBack }: { onBack: () => void })`**, avec ce contenu :
-    - `main.screen.tutorial`, `h1` « Tutoriel », puis un paragraphe `TUTORIAL_LENGTH_NOTE` ;
+    - `main.screen.tutorial` ; en haut, `button.link.back` « Retour », comme dans les Réglages ;
+    - `h1` « Tutoriel », puis un paragraphe `TUTORIAL_LENGTH_NOTE` ;
     - `<video controls playsInline preload="none" poster={TUTORIAL_POSTER} src={TUTORIAL_PLAYLIST} aria-label="Vidéo tuto">` ;
-    - sur l'événement `error` de la vidéo : `p[role=alert].message.message-error` avec `TUTORIAL_LOAD_ERROR` ;
-    - `button.primary` « Retour ».
-    - `Tutorial.css` : vidéo pleine largeur, `max-height: 70vh`, fond noir, coins arrondis.
-  - **`SettingsScreen`** :
+    - sur l'événement `error` de la vidéo : `p[role=alert].message.message-error` avec `TUTORIAL_LOAD_ERROR`.
+    - `Tutorial.css` : vidéo pleine largeur, `max-height: 70vh`, fond `--camera`, rayon 18 px.
+  - **`SettingsScreen`** (maquette `docs/maquettes/J-reglages.dc.html`) :
     - nouvelle prop `onTutorial: () => void` ;
-    - un bouton « Tutoriel », le premier, avant « Changer de prénom » ;
+    - une ligne « Tutoriel » dans le groupe du mot de passe, avant « Changer le mot de passe du tabac » : `.tile-green` avec `IconPlay` (Lucide `play`, ajoutée à `src/ui/icons.tsx`), « Tutoriel », et dessous, en 13 px `--text-2`, `TUTORIAL_ROW_NOTE = 'Vidéo de 3 minutes'` (dans `tutorial.ts`) ;
     - le commentaire d'en-tête est mis à jour.
   - **`AppShell`** :
     - `Overlay` reçoit `'tutorial'` ;
     - les Réglages ouvrent le Tutoriel, et « Retour » ramène aux Réglages (`setOverlay('settings')`).
   - **`public/tutoriel/index.html`**, page statique (Vite la copie telle quelle) :
-    - `lang="fr"`, viewport, `theme-color` `#1f6f3f`, titre « ScanDrinks — Tutoriel » ;
-    - CSS en ligne : police système, marges des zones sûres, vidéo comme dans l'app ;
+    - `lang="fr"`, viewport, `theme-color` `#F2F2F7`, `color-scheme` `light dark`, titre « ScanDrinks — Tutoriel » ;
+    - CSS en ligne : police système, marges des zones sûres, couleurs de la charte (fond `#F2F2F7`, texte `#1C1C1E`, lien `#1F6F3F` ; de nuit, selon `prefers-color-scheme`, `#000000`, `#FFFFFF` et `#4CD07D`), vidéo comme dans l'app. La page n'est pas sous `src/` : le test des couleurs écrites en dur ne la lit pas ;
     - `h1` « Tutoriel ScanDrinks », puis le texte de `TUTORIAL_LENGTH_NOTE` ;
     - la même vidéo, avec les mêmes chemins et attributs (`playsinline`) ;
     - `p#unsupported hidden` : « Ouvre cette page sur un iPhone pour voir la vidéo. » ;
@@ -185,7 +196,7 @@ Les points s3, s7 et s8 sont décrits dans la section « Bilan » de `docs/super
 
 Scénario e2e P (Tutoriel), nouvelle fonction `scenarioTutorial` ajoutée à la liste :
 1. **Ouverture.**
-   - Après la connexion, ⚙. L'ordre des boutons est : « Tutoriel », « Changer de prénom », « Changer le mot de passe du tabac », « Se déconnecter », « Retour ».
+   - Après la connexion, ⚙. L'ordre des boutons est : « Retour », « Changer de prénom », « Automatique », « Clair », « Sombre », « Tutoriel », « Changer le mot de passe du tabac », « Se déconnecter ». La ligne « Tutoriel » montre « Vidéo de 3 minutes ».
    - « Tutoriel » : le titre « Tutoriel » et `TUTORIAL_LENGTH_NOTE` s'affichent.
    - La vidéo porte `controls`, `playsInline`, `preload === 'none'`, un `src` qui finit par `/tutoriel/video/tutoriel.m3u8` et un `poster` qui finit par `/tutoriel/video/poster.jpg`.
    - Aucune requête `.m3u8` ni `.m4s` n'est encore partie.
@@ -297,7 +308,7 @@ Message : `fix(app): filet de sécurité, écran allumé redemandé (s7), « Ré
 **Interfaces:**
 - Produces :
   - **`supabase/remise-a-zero.sql`.**
-    - **En-tête en français :** ce que fait le script, quand le lancer (le matin du jour J), où (éditeur SQL, projet « scandrinks »), ce qu'il garde, et qu'il s'arrête de lui-même sur un autre projet.
+    - **En-tête en français :** ce que fait le script, quand le lancer (le matin du jour J), où (éditeur SQL, projet « scandrinks »), ce qu'il garde, et qu'il s'arrête de lui-même sur un autre projet. Il dit aussi que les fichiers des images restent dans le stockage : plus aucun code n'y renvoie, ils ne s'affichent plus. Supabase n'efface pas un fichier par une requête SQL.
     - **Déroulé**, en une seule transaction :
       1. `begin;` puis `create temporary table reset_report (products bigint, barcodes bigint, movements bigint, accounts bigint);`.
       2. Un bloc `do` :
@@ -342,7 +353,9 @@ Message : `feat(base): script de remise à zéro du jour J, testé en local`.
 
 ---
 
-### Task 4: Essai de lecture sur iPhone (point d'arrêt)
+### Task 4: Essai sur iPhone : la refonte, les photos et la lecture (point d'arrêt)
+
+La migration des images est déjà appliquée au vrai projet (Tâche 7 du plan de la refonte).
 
 **Files:** aucun, sauf `public/_headers` si l'étape 1 le demande.
 
@@ -352,23 +365,36 @@ Run: `git push -u origin jalon-4`. Puis, une fois la préversion construite (env
 - `/tutoriel/` : 200, `text/html` ;
 - `/tutoriel/video/tutoriel.m3u8`, `init.mp4`, `seg-000.m4s` et `poster.jpg` : 200, avec leur `content-type` noté dans le journal.
 
-Le paquet JavaScript de la préversion contient « Tutoriel ». Si la liste n'est pas servie avec un type HLS (`application/vnd.apple.mpegurl`, `application/x-mpegurl` ou `audio/mpegurl`), une règle `public/_headers` fixe son `Content-Type`, puis la branche est renvoyée. Cette décision est notée au journal.
+Le paquet JavaScript de la préversion contient « Tutoriel » et « Apparence ». Si la liste n'est pas servie avec un type HLS (`application/vnd.apple.mpegurl`, `application/x-mpegurl` ou `audio/mpegurl`), une règle `public/_headers` fixe son `Content-Type`, puis la branche est renvoyée. Cette décision est notée au journal.
 
-- [ ] **Step 2: Essai du porteur du projet**, environ 5 minutes, dans Safari, sans installer :
-1. Ouvrir https://jalon-4.scandrinks.pages.dev/tutoriel/, puis toucher la lecture : la vidéo verte et son compteur défilent pendant 10 s.
-2. Ouvrir https://jalon-4.scandrinks.pages.dev et se connecter. Puis Réglages › « Tutoriel » : la lecture marche aussi, et « Retour » ramène aux Réglages.
+Avant l'essai, Claude envoie au porteur du projet les captures de `npm run screens`, de jour et de nuit, pour un premier regard.
+
+- [ ] **Step 2: Essai du porteur du projet**, environ 15 minutes, dans Safari, sans installer, sur la vraie base. La fiche et les photos créées ici sont des essais, effacés le jour J.
+1. **La vidéo.** Ouvrir https://jalon-4.scandrinks.pages.dev/tutoriel/, puis toucher la lecture : la vidéo verte et son compteur défilent pendant 10 s.
+2. **Le look.** Ouvrir https://jalon-4.scandrinks.pages.dev et se connecter. Parcourir les quatre onglets et une fiche produit : tout se lit, rien ne déborde, la barre d'onglets ne cache rien.
+3. **Le mode nuit.**
+   - Réglages › Apparence › « Sombre », puis le tour des onglets ; puis « Clair ».
+   - Enfin « Automatique » : passer l'iPhone en mode sombre (Centre de contrôle), puis revenir dans Safari. L'app suit, et la barre du haut aussi.
+4. **Les photos.**
+   - Scanner un pack inconnu de l'app. « Nouveau produit », « Prendre la photo » avec la caméra du haut, les unités, puis « Créer le produit » : la photo s'affiche sur la fiche de confirmation.
+   - Puis Stock › ce produit : sa photo dans la liste et dans sa fiche.
+   - Dans la fiche, toucher l'image du code, puis prendre une photo avec l'appareil de l'iPhone, en le tenant droit : elle s'affiche droite.
+   - Revenir au Scanner : la caméra repart et lit un code.
+5. **Le Tutoriel.** Réglages › « Tutoriel » : la lecture marche aussi, et « Retour » ramène aux Réglages.
+6. Noter ce qui gêne ou semble faux, avec une capture si possible.
 
 - [ ] **Step 3: Décision**
 
 - **La vidéo se lit aux deux endroits :** on continue avec la Tâche 5.
 - **Elle ne se lit pas :** pas de tournage. Claude propose le repli prévu par la spec (§10) : héberger un MP4 sur Supabase Storage, qui sait répondre aux demandes partielles. C'est un changement de conception : il demande l'accord du porteur du projet et une mise à jour de la spec avant tout code.
+- **Un défaut de la refonte ou des photos :** il est corrigé en TDD sur `jalon-4` avant le tournage, puisque la vidéo montre l'app. Un changement d'allure demandé par le porteur du projet passe d'abord par une maquette.
 
 ---
 
 ### Task 5: Tournage de la vidéo
 
 **Files:**
-- Create: `scripts/tutorial/storyboard.mjs`, `scripts/tutorial/page-helpers.js`, `scripts/tutorial/record.mjs`
+- Create: `scripts/tutorial/storyboard.mjs`, `scripts/tutorial/page-helpers.js`, `scripts/tutorial/packs.mjs`, `scripts/tutorial/record.mjs`
 - Modify: `e2e/fakeSupabase.mjs`, `scripts/tutorial/check.mjs` (mode `--raw`), `package.json`
 
 **Interfaces:**
@@ -379,6 +405,7 @@ Le paquet JavaScript de la préversion contient « Tutoriel ». Si la liste n'es
     - export `TUTORIAL_CODES = { coca: COCA_CODE, lipton: '3502110123091', oasisPack: '3124480191182', oasisCan: '3124480191014', redbull: '9002490100070', evian: '3068320114491' }` : des EAN-13 à clé valide (vérifié le 21/10/2026) ;
     - Open Food Facts simulé : `oasisCan` → `{ product_name_fr: 'Oasis Tropical', quantity: '33 cl' }`. Le Coca ne change pas, les autres codes restent inconnus.
     - Un catalogue `'tutoriel'`. Heures de Paris : UTC+2 jusqu'au 25/10/2026, UTC+1 ensuite. « L'erreur » est la ligne que le chapitre 8 annule.
+    - Les codes du Coca, du Lipton, du Red Bull et de l'Évian ont une photo de l'équipe (`photo_source = 'equipe'`). Ce sont des illustrations de packs, dans le style des maquettes, une couleur par produit. `scripts/tutorial/packs.mjs` les dessine en SVG, puis Chromium les rend en JPEG de 480 × 360 au début du tournage. Elles passent au stockage simulé par l'option `photos` d'`installFakeSupabase` (plan de la refonte, Tâche 5).
 
       | id | Nom | Pack | Seuil | Stock idéal | Code (unités) | Mouvements | Stock |
       |---|---|---|---|---|---|---|---|
@@ -393,7 +420,8 @@ Le paquet JavaScript de la préversion contient « Tutoriel ». Si la liste n'es
     - `installCamera()` :
       - remplace `navigator.mediaDevices.getUserMedia` par le flux (`captureStream(30)`) d'un canvas de 1280 × 720, redessiné à chaque image : un fond gris uni ;
       - `window.__tutorialCamera.show(modules, digits)` dessine une étiquette blanche avec les barres EAN-13 (modules de 6 px, 40 % de la hauteur) et les chiffres dessous ;
-      - `window.__tutorialCamera.hide()` retire l'étiquette.
+      - `window.__tutorialCamera.showPack(color, modules, digits)` dessine un pack de six canettes de cette couleur, vu de face, avec la même étiquette en bas : c'est ce que prend « Prendre la photo » au chapitre 4 ;
+      - `window.__tutorialCamera.hide()` retire l'étiquette et le pack.
     - `installTouchMarker()` : à chaque `touchstart` ou `mousedown`, en phase de capture, un rond de 46 px (jaune translucide, bord orange) au point touché, qui s'efface en 600 ms (`pointer-events: none`).
     - `installConfirmDialog()` : `window.confirm` dessine pendant 1,8 s une alerte façon iOS (message, « Annuler », « OK » marqué d'un rond), puis renvoie `true`.
   - **`record.mjs`** :
@@ -424,6 +452,11 @@ Le paquet JavaScript de la préversion contient « Tutoriel ». Si la liste n'es
 
 **Le storyboard.** Chaque chapitre donne son titre, puis ses gestes et sous-titres dans l'ordre. Les textes des sous-titres sont exacts.
 
+Les écrans attendus sont ceux de la refonte :
+- là où le storyboard écrit « Pack de 24 → +24 », le tournage attend « Pack de 24 » et « +24 », comme `waitForConfirmLine` de l'e2e ;
+- le message du nouveau stock se lit dans `.notice-title` et `.notice-detail` ;
+- la ligne d'Historique se trouve par le nom de son bouton « Annuler : … ».
+
 1. **« Se connecter »**
    - Écran de connexion : « Ouvre ScanDrinks depuis son icône sur l'écran d'accueil. »
    - Le mot de passe factice est tapé, puis « Se connecter » : « Tape le mot de passe du tabac, puis « Se connecter ». »
@@ -442,6 +475,7 @@ Le paquet JavaScript de la préversion contient « Tutoriel ». Si la liste n'es
 4. **« Un produit inconnu : créer sa fiche »**
    - « Entrée + », le code du pack Oasis, puis « Code inconnu : 3124480191182 » : « Code inconnu ? L'app propose de créer sa fiche. »
    - « Nouveau produit » : « Touche « Nouveau produit ». »
+   - Le pack Oasis à la caméra (`showPack`), puis « Prendre la photo » et l'aperçu « Photo prise » : « Vise le pack, puis « Prendre la photo » : elle aide à reconnaître le produit. »
    - « Scanner une canette du pack », puis le code de la canette : « Pour le nom, touche « Scanner une canette du pack » et vise une canette. »
    - Le nom « Oasis Tropical 33 cl » rempli : « Le nom s'écrit tout seul. Sinon, tape-le. »
    - « 24 » tapé dans « Ce code vaut (unités) » : « Indique combien d'unités vaut le code du pack : ici 24. »
@@ -468,7 +502,7 @@ Le paquet JavaScript de la préversion contient « Tutoriel ». Si la liste n'es
    - Son « Annuler », puis l'alerte dessinée : « Touche « Annuler » sur la ligne, puis « OK ». »
    - La ligne barrée, « annulé par Sam » : « La ligne est barrée, le stock recalculé. Refais ensuite le bon geste. »
 9. **« Les Réglages et la suite »**
-   - ⚙, puis les Réglages avec « Tutoriel » : « La roue dentée ouvre les Réglages : revoir ce tuto, changer de prénom. »
+   - ⚙, puis les Réglages avec « Tutoriel » : « La roue dentée ouvre les Réglages : revoir ce tuto, changer de prénom, passer en mode sombre. »
 
 Les cartes :
 - `TITLE_CARD` : « ScanDrinks », « Le tuto en 3 minutes », « Sans le son : tout est écrit. » ;
@@ -486,7 +520,7 @@ Expected: FAIL, car `record.mjs` et le catalogue `'tutoriel'` n'existent pas.
 - [ ] **Step 4: Tourner et regarder**
 
 Run: `npm run tutorial:record`
-Expected: « Tournage OK : 9 chapitres, 35 sous-titres, … s ».
+Expected: « Tournage OK : 9 chapitres, 36 sous-titres, … s ».
 
 Puis extraire 4 images de `app.webm` (`ffmpeg -ss <t>`), aux heures des chapitres 2, 4, 6 et 8 de la timeline, et les regarder. On attend :
 - un texte net ;
@@ -585,7 +619,7 @@ Message : `feat(tutoriel): montage de la vidéo (MP4 et HLS)`. Commande : `git a
   - **`check.mjs`** vérifie :
     - `pdfinfo` : `Pages: 1` et une page A4 (595 × 842 pts, à 1 pt près) ;
     - `pdftoppm -r 150` : un seul QR code, relu par `zxing-wasm/reader`, dont le texte est exactement `https://scandrinks.pages.dev/tutoriel/` ;
-    - `pdftotext`, espaces ramenés à un seul : on y trouve « mémo de la réserve », « Entrée + », « Sortie − », « Inventaire = », « À racheter », « Historique », « Installer l'app sur un iPhone », « iOS 16.4 », « scandrinks.pages.dev » et « Un souci ? Préviens la personne qui gère ScanDrinks. ».
+    - `pdftotext`, espaces ramenés à un seul : on y trouve « mémo de la réserve », « Entrée + », « Sortie − », « Inventaire = », « À racheter », « Historique », « Photo non enregistrée », « Installer l'app sur un iPhone », « iOS 16.4 », « scandrinks.pages.dev » et « Un souci ? Préviens la personne qui gère ScanDrinks. ».
 
     Il affiche « Feuille OK ».
 
@@ -599,7 +633,7 @@ Message : `feat(tutoriel): montage de la vidéo (MP4 et HLS)`. Commande : `git a
   |---|---|
   | Une livraison Metro arrive | « Scanner » › « Entrée + », un scan par pack, puis « Valider ». |
   | Je sors un pack de la réserve | « Scanner » › « Sortie − », le scan, puis « Valider ». Éloigne ensuite le pack. |
-  | L'app ne connaît pas le code | « Nouveau produit » : « Scanner une canette du pack » pour le nom, les unités du pack, puis « Créer le produit ». |
+  | L'app ne connaît pas le code | « Nouveau produit » : la photo du pack (facultative), « Scanner une canette du pack » pour le nom, les unités du pack, puis « Créer le produit ». |
   | Je compte un produit | « Scanner » › « Inventaire = », le scan, les packs et les unités en plus, puis « Valider ». |
   | Un code est illisible | « Saisie manuelle », puis le produit dans la liste. |
   | Je pars chez Metro | Onglet « À racheter » : le nombre de packs à prendre. |
@@ -619,6 +653,7 @@ Message : `feat(tutoriel): montage de la vidéo (MP4 et HLS)`. Commande : `git a
   | « Base injoignable » | Réessaie dans un instant. Si ça dure, préviens la personne qui gère ScanDrinks. |
   | « L'accès à la caméra a été refusé » | Réglages › Apps › Safari › Caméra › Autoriser (avant iOS 18 : Réglages › Safari › Caméra), puis ferme et rouvre l'app. |
   | « stock à vérifier » | Recompte le produit en « Inventaire = ». |
+  | « Photo non enregistrée » | Le produit est bien créé. Reprends la photo depuis sa fiche : touche l'image du code. |
   | « L'app a rencontré un problème » | Touche « Recharger ». |
 
 - **En bas :** « Un souci ? Préviens la personne qui gère ScanDrinks. »
@@ -666,6 +701,7 @@ Message : `docs(feuille): feuille A4 de la réserve avec le QR code de la vidéo
        - sans mode avion, « Réessayer » : la fiche se charge.
     5. La feuille A4, imprimée : elle est lisible en noir et blanc.
     6. Facultatif : le mode Économie d'énergie pendant un scan. On note si l'écran reste allumé.
+    7. La refonte : Réglages › Apparence (« Sombre », « Clair », puis « Automatique » avec l'iPhone en mode sombre) ; une photo prise depuis la fiche d'un produit, qui s'affiche droite, puis le retour au Scanner, dont la caméra repart.
 
     Section « Après la fusion » : le QR code de la feuille imprimée ouvre la vidéo, et « Tutoriel » marche dans l'app installée.
   - **`docs/jalon-4-jour-j.md`** : le guide du porteur du projet, à cocher.
@@ -682,7 +718,7 @@ Message : `docs(feuille): feuille A4 de la réserve avec le QR code de la vidéo
       4. « Run », puis confirmer l'avertissement d'opération destructive ;
       5. la ligne attendue est « Remise à zéro faite : … Compte du tabac gardé (1). ». Prévenir Claude, qui vérifie la base en lecture seule.
     - **L'installation**, comme la feuille. Le mot de passe se dit à voix haute, sans être écrit. On supprime les anciennes icônes des préversions.
-    - **L'inventaire**, boutique fermée : les zones, et les deux règles du §9 de la spec.
+    - **L'inventaire**, boutique fermée : les zones, et les deux règles du §9 de la spec. La photo du pack est facultative, prise à la création de la fiche (une dizaine de secondes par code).
     - **Les contrôles de la recette :**
       - l'écran allumé dans l'app installée, avec la version d'iOS ;
       - la marge du bas : « Stock » › « Nouveau produit » › le champ « Stock idéal (unités) » reste visible au-dessus des onglets, puis « Annuler » ;
@@ -700,8 +736,9 @@ Message : `docs(feuille): feuille A4 de la réserve avec le QR code de la vidéo
     - une section « Jalon 4 — la mise en service » ;
     - les commandes `npm run tutorial:trial`, `npm run tutorial:record`, `npm run tutorial` et `npm run sheet`, avec leurs outils (ffmpeg avec libx264 et libass, poppler-utils, police Inter) ;
     - les fichiers `public/tutoriel/`, `scripts/tutorial/`, `scripts/sheet/` et `supabase/remise-a-zero.sql` ;
+    - ceux de la refonte : `src/theme/` (charte et Apparence), `src/ui/icons.tsx`, `src/photos/`, `docs/maquettes/`, la migration des images, et la commande `npm run screens` ;
     - `run-local.sh`, qui lance aussi le test de la remise à zéro.
-  - **Spec §11 :** les décisions de la section « Décisions prises dans ce plan », datées du jour.
+  - **Spec §11 :** les décisions des sections « Décisions prises dans ce plan » de ce plan et du plan de la refonte, datées du jour.
 
 - [ ] **Step 1: Écrire les documents**
 
@@ -769,7 +806,7 @@ Après l'inventaire, la même lecture donne un nombre de produits égal au nombr
   - H.264 High, 1080 × 1920, 30 images/s, CRF 22, une image clé toutes les 2 s, sans piste son ;
   - fichiers `tutoriel.m3u8`, `init.mp4`, `seg-NNN.m4s` et `poster.jpg`, dans `/tutoriel/video/`.
 - **Écran « Tutoriel » :**
-  - premier bouton des Réglages ;
+  - une ligne des Réglages, dans le groupe du mot de passe, après l'Apparence (spec §4.6) ;
   - « Retour » ramène aux Réglages ;
   - un message si la vidéo ne se charge pas ;
   - aucun lien de l'app vers la page `/tutoriel/`.
