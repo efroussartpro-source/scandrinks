@@ -137,7 +137,7 @@
 }
 
 /* Consigne posée en bas de la caméra, au-dessus des coins, pendant le scan (maquette J-message).
-   Trop longue pour une ligne : elle passe sur deux lignes égales. */
+   Trop longue pour une ligne, elle passe sur deux, dans une largeur qui les garde à peu près égales. */
 .aim-hint {
   position: absolute;
   left: 50%;
@@ -153,7 +153,6 @@
   font-size: 15px;
   font-weight: 600;
   text-align: center;
-  text-wrap: balance;
 }
 
 .camera-problem {
