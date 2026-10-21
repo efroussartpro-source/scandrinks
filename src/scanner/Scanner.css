@@ -13,11 +13,20 @@
 }
 
 .modes .mode {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 4px;
   border-radius: 10px;
   font-size: 16px;
   font-weight: 600;
+}
+
+/* Écran étroit (iPhone SE ou mini en affichage agrandi, 320 px) : « Inventaire = » tient dans son segment. */
+@media (max-width: 359px) {
+  .modes .mode {
+    padding: 0 2px;
+    font-size: 14px;
+    letter-spacing: -0.2px;
+  }
 }
 
 .modes .mode-in {

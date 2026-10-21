@@ -1,8 +1,9 @@
 /**
  * CountCard.tsx — Fiche de confirmation en mode Inventaire (RG-4).
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §7)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §4.7, §7)
  *
+ * L'image du code scanné ouvre la fiche, comme en Entrée et en Sortie.
  * On saisit ce qu'on compte en packs Metro + unités ; « Valider » envoie le
  * total. Pendant l'envoi et après un échec, les champs ne changent plus :
  * « Réessayer » renvoie exactement le nombre déjà envoyé, avec le même
@@ -13,6 +14,7 @@ import { saveErrorMessage } from '../data/apiErrors'
 import { parseCount } from '../domain/inventory'
 import CountFields from '../inventory/CountFields'
 import { PHOTO_NOT_SAVED_MESSAGE } from '../photos/photos'
+import Thumb from '../photos/Thumb'
 import type { ConfirmState } from './scanFlow'
 
 interface CountCardProps {
@@ -34,7 +36,12 @@ export default function CountCard({ state, onValidate, onClose }: CountCardProps
 
   return (
     <section className="card confirm" data-mode="inventory" aria-label="Fiche de confirmation">
-      <h2 className="card-title">{target.product.name}</h2>
+      <div className="confirm-head">
+        <Thumb path={target.photoPath} size={64} />
+        <div className="confirm-text">
+          <h2 className="card-title">{target.product.name}</h2>
+        </div>
+      </div>
       {target.photoWarning && <p className="message message-warning">{PHOTO_NOT_SAVED_MESSAGE}</p>}
       <CountFields
         packSize={target.product.packSize}

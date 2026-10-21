@@ -7,7 +7,9 @@
  * (déjà réduite). Elle part sous un nom neuf, codes/<code>/<uuid>.jpg, puis
  * devient l'image du code. Jamais bloquant : un échec, ou 15 s sans réponse
  * (réseau bloqué dans la réserve), donne null, et l'écran le dit ; la fiche
- * et le mouvement ne dépendent pas de la photo. Les dépendances sont passées
+ * et le mouvement ne dépendent pas de la photo. Un envoi qui aboutit après
+ * le délai n'est pas rattaché au code : ce que l'écran a dit reste vrai (le
+ * fichier envoyé reste au stockage, sans servir). Les dépendances sont passées
  * en paramètre (appPhotoDeps.ts pour l'app) : les tests les simulent.
  */
 import { photoPath, type PhotoSource } from './photos'
@@ -27,17 +29,23 @@ export interface PhotoDeps {
 
 // Le chemin enregistré, ou null.
 export async function savePhoto(code: string, choice: PhotoChoice, deps: PhotoDeps): Promise<string | null> {
+  let timedOut = false
   const work = (async () => {
     const jpeg = choice.source === 'off' ? await deps.toJpeg(await deps.fetchImage(choice.url)) : choice.jpeg
     const path = photoPath(code, deps.newId())
     await deps.upload(path, jpeg)
+    if (timedOut) return null
     await deps.link({ code, path, source: choice.source })
+    if (timedOut) return null
     deps.remember(path, jpeg)
     return path
   })().catch(() => null)
   let timer: ReturnType<typeof setTimeout> | undefined
   const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), deps.timeoutMs)
+    timer = setTimeout(() => {
+      timedOut = true
+      resolve(null)
+    }, deps.timeoutMs)
   })
   try {
     return await Promise.race([work, timeout])

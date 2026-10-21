@@ -565,16 +565,26 @@ async function scenarioStock(browser) {
     const { context, page } = await openApp(browser, { catalogue: 'pilotage', longNames: true })
     await page.setViewportSize({ width: 320, height: 640 })
     const tab = (name) => page.getByRole('button', { name, exact: true })
-    // Ce qui déborde : la page, plus large que l'écran, ou une ligne de liste, plus large qu'elle-même.
+    // Ce qui déborde : la page, plus large que l'écran, une ligne de liste ou un bouton de mode, plus larges qu'eux-mêmes ;
+    // et les boutons visibles de moins de 44 px de haut (zones tactiles, spec §6.7).
     const overflows = () =>
       page.evaluate(() => [
         ...(document.documentElement.scrollWidth > 320 ? [`page : ${document.documentElement.scrollWidth} px`] : []),
-        ...[...document.querySelectorAll('.row')].filter((row) => row.scrollWidth > row.clientWidth).map((row) => `ligne : ${row.textContent}`),
+        ...[...document.querySelectorAll('.row, .modes .mode')]
+          .filter((element) => element.scrollWidth > element.clientWidth)
+          .map((element) => `déborde : ${element.textContent}`),
+        ...[...document.querySelectorAll('button')]
+          .filter((button) => button.checkVisibility() && button.getBoundingClientRect().height < 44)
+          .map((button) => `moins de 44 px : ${button.textContent || button.getAttribute('aria-label')}`),
       ])
     await signIn(page)
     await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     await confirmCard(page).getByRole('heading', { name: 'Coca-Cola 33 cl — édition limitée, format familial' }).waitFor()
     assert.deepEqual(await overflows(), [], 'Scanner')
+    // Le mode choisi passe en gras : « Inventaire = » doit tenir aussi.
+    await page.getByRole('button', { name: 'Inventaire =' }).click()
+    assert.deepEqual(await overflows(), [], 'Scanner en Inventaire')
+    await page.getByRole('button', { name: 'Entrée +' }).click()
     await tab('À racheter (3)').click()
     await page.getByRole('list', { name: 'À racheter' }).waitFor()
     assert.deepEqual(await overflows(), [], 'À racheter')
@@ -1238,6 +1248,12 @@ async function scenarioImages(browser) {
     await waitForImage(card.locator('img.thumb'))
     assert.ok((await card.locator('img.thumb').getAttribute('src')).includes('/storage/v1/object/sign/photos/codes/5449000000996/11111111-'),
       "lien signé de l'image du Coca")
+    // En Inventaire aussi (spec §4.7).
+    await page.getByRole('button', { name: 'Inventaire =' }).click()
+    await card.getByText('Stock connu', { exact: false }).waitFor()
+    await waitForImage(card.locator('img.thumb'))
+    await page.getByRole('button', { name: 'Entrée +' }).click()
+    await waitForConfirmLine(card, 'Pack de 24 → +24')
 
     // 2. Le Stock : l'image de chaque produit ; l'icône grise sans image (Évian) ou sans fichier (Lipton).
     // Un seul appel de liens pour la liste : celui du Coca est gardé depuis l'étape 1.

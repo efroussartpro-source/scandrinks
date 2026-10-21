@@ -165,7 +165,7 @@ button.back {
 }
 
 .pill-button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   display: inline-flex;
   align-items: center;
@@ -330,7 +330,7 @@ button.back {
 }
 
 .segmented button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 6px;
   border-radius: 8px;
   background: transparent;

@@ -81,3 +81,14 @@ test('envoi sans réponse (réseau bloqué) : null au bout de timeoutMs, pas ava
   await vi.advanceTimersByTimeAsync(1)
   await expect(pending).resolves.toBeNull()
 })
+
+test("envoi qui répond après le délai : l'image n'est ni rattachée au code ni gardée, comme l'écran l'a dit", async () => {
+  vi.useFakeTimers()
+  const { deps } = fakeDeps({ upload: vi.fn(() => new Promise<void>((resolve) => setTimeout(resolve, 20_000))) })
+  const pending = savePhoto('5449000000996', { source: 'equipe', jpeg: taken }, deps)
+  await vi.advanceTimersByTimeAsync(15_000)
+  await expect(pending).resolves.toBeNull()
+  await vi.advanceTimersByTimeAsync(5_000)
+  expect(deps.link).not.toHaveBeenCalled()
+  expect(deps.remember).not.toHaveBeenCalled()
+})
