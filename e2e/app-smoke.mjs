@@ -1036,14 +1036,32 @@ async function scenarioPassword(browser) {
 // Faux verrou d'écran (Wake Lock), installé avant l'app : il note chaque demande et chaque rendu.
 function fakeWakeLock() {
   window.wakeLockLog = []
+  // Écouteurs « release » du dernier verrou ; chacun ne sert qu'une fois (once), comme dans le navigateur.
+  let releaseListeners = []
+  const fireRelease = () => {
+    const listeners = releaseListeners
+    releaseListeners = []
+    for (const listener of listeners) listener()
+  }
+  // Le système rend l'écran de lui-même, page visible (économie d'énergie, par exemple).
+  window.wakeLockSystemRelease = () => {
+    window.wakeLockLog.push('system-release')
+    fireRelease()
+  }
   Object.defineProperty(navigator, 'wakeLock', {
     configurable: true,
     value: {
       request: async (type) => {
         window.wakeLockLog.push(`request:${type}`)
+        releaseListeners = []
         return {
+          addEventListener: (event, listener) => {
+            if (event === 'release') releaseListeners.push(listener)
+          },
+          // Rendu par l'app : l'événement « release » part aussi.
           release: async () => {
             window.wakeLockLog.push('release')
+            fireRelease()
           },
         }
       },
@@ -1059,26 +1077,42 @@ async function scenarioFinishing(browser) {
   const waitForLog = (page, expected) =>
     page.waitForFunction((value) => JSON.stringify(window.wakeLockLog) === value, JSON.stringify(expected), { timeout: SCAN_TIMEOUT })
   {
-    // 1. Écran allumé : demandé quand la caméra tourne, rendu hors du Scanner, redemandé au retour.
+    // 1. Écran allumé : demandé quand la caméra tourne ; relâché par le système, redemandé une fois, sans boucle (s7) ;
+    // rendu hors du Scanner, redemandé au retour.
     const { context, page } = await openApp(browser, { catalogue: 'pilotage' }, { initScript: fakeWakeLock })
     await signIn(page)
     await waitForLog(page, ['request:screen'])
+    await page.evaluate(() => window.wakeLockSystemRelease())
+    await waitForLog(page, ['request:screen', 'system-release', 'request:screen'])
+    await page.evaluate(() => window.wakeLockSystemRelease())
+    // Laisse à une éventuelle nouvelle demande le temps de partir.
+    await page.waitForTimeout(500)
+    const afterSecondRelease = ['request:screen', 'system-release', 'request:screen', 'system-release']
+    assert.deepEqual(await wakeLockLog(page), afterSecondRelease, 'un second relâchement par le système ne redemande rien')
     await tab(page, 'Stock').click()
-    await waitForLog(page, ['request:screen', 'release'])
     await tab(page, 'Scanner').click()
-    await waitForLog(page, ['request:screen', 'release', 'request:screen'])
-    assert.deepEqual(await wakeLockLog(page), ['request:screen', 'release', 'request:screen'])
+    await waitForLog(page, [...afterSecondRelease, 'request:screen'])
+    await tab(page, 'Stock').click()
+    await waitForLog(page, [...afterSecondRelease, 'request:screen', 'release'])
+    await tab(page, 'Scanner').click()
+    await waitForLog(page, [...afterSecondRelease, 'request:screen', 'release', 'request:screen'])
+    assert.deepEqual(await wakeLockLog(page), [...afterSecondRelease, 'request:screen', 'release', 'request:screen'])
     await context.close()
   }
   {
-    // 2. Fiche produit (p2) : lecture coupée (le message vient après les relances de supabase-js),
-    // puis le réseau revient et « Réessayer » relit la fiche.
+    // 2. Fiche produit (p2) : lecture coupée (le message vient après les relances de supabase-js) ; le message et
+    // « Réessayer » restent après l'ouverture et la fermeture d'un panneau (s3) ; puis le réseau revient et
+    // « Réessayer » relit la fiche.
     const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', cutReads: 'movements' })
     await signIn(page)
     await tab(page, 'Stock').click()
     await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
     const sheet = page.getByRole('region', { name: 'Fiche produit' })
     await sheet.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor({ timeout: SCAN_TIMEOUT })
+    await sheet.getByRole('button', { name: 'Modifier' }).click()
+    await page.getByRole('button', { name: 'Annuler' }).click()
+    await sheet.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor()
+    await sheet.getByRole('button', { name: 'Réessayer' }).waitFor()
     fake.restoreReads()
     await sheet.getByRole('button', { name: 'Réessayer' }).click()
     await sheet.getByRole('list', { name: 'Derniers mouvements' }).waitFor()
@@ -1141,6 +1175,22 @@ async function scenarioFinishing(browser) {
     await context.close()
   }
   console.log('Scénario O (finitions) : OK')
+}
+
+// Filet de sécurité (§6.2, §7) : une erreur d'affichage imprévue (une réponse abîmée que l'Historique ne sait pas
+// afficher) donne un message et « Recharger », au lieu d'une page blanche ; « Recharger » relance l'app.
+async function scenarioRenderError(browser) {
+  const { context, page } = await openApp(browser, { corruptHistory: true })
+  await signIn(page)
+  await page.getByRole('button', { name: 'Historique', exact: true }).click()
+  await page
+    .getByRole('alert')
+    .filter({ hasText: exactly("L'app a rencontré un problème. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks.") })
+    .waitFor()
+  await page.getByRole('button', { name: 'Recharger' }).click()
+  await page.getByRole('button', { name: 'Entrée +' }).waitFor()
+  await context.close()
+  console.log('Scénario Q (filet de sécurité) : OK')
 }
 
 // Tutoriel (§4.6, §9 « Mise en service ») : la ligne des Réglages, l'écran sans rien charger avant le toucher,
@@ -1532,6 +1582,7 @@ try {
     ['N', scenarioPassword],
     ['O', scenarioFinishing],
     ['P', scenarioTutorial],
+    ['Q', scenarioRenderError],
     ['R', scenarioAppearance],
     ['S', scenarioImages],
   ]

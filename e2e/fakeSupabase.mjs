@@ -133,6 +133,8 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.hangPhotoUpload : le premier envoi d'image ne reçoit jamais de réponse (réseau bloqué).
  * options.cutReads : 'movements' ou 'barcodes' : les lectures de cette table sont coupées (réseau perdu) jusqu'à
  *   restoreReads(). Une seule coupure ne suffit pas : supabase-js relance seul une lecture jusqu'à trois fois.
+ * options.corruptHistory : la première page de list_history commence par un mouvement daté « pas une date », une
+ *   réponse abîmée que l'Historique ne sait pas afficher (le filet de sécurité doit la rattraper).
  * Renvoie { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
  * - calls : appels des fonctions SQL ; authCalls : 'token', 'user' et 'logout:<portée>', dans l'ordre ;
  * - storageCalls : { kind: 'upload' | 'sign' | 'get', paths, contentType? }, dans l'ordre ; photos : chemin → octets ;
@@ -143,7 +145,7 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
     loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true,
-    failPhotoUpload = false, hangPhotoUpload = false } = options
+    failPhotoUpload = false, hangPhotoUpload = false, corruptHistory = false } = options
   const db = initialCatalogue(catalogue)
   const photos = new Map(Object.entries(givenPhotos))
   if (catalogue === 'images' && !photos.has(IMAGES_COCA_PHOTO)) photos.set(IMAGES_COCA_PHOTO, PHOTO_JPEG)
@@ -283,13 +285,15 @@ export async function installFakeSupabase(page, options = {}) {
       const newestFirst = (a, b) => at(b) - at(a) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)
       const cursor = Date.parse(p_before_created_at)
       const beforeCursor = (row) => at(row) < cursor || (at(row) === cursor && row.id < p_before_id)
-      return [...db.movements.entries()]
+      const page = [...db.movements.entries()]
         .map(([id, m]) => ({ id, kind: m.kind, delta: m.delta, counted: m.counted, employee: m.employee, created_at: m.created_at,
           cancelled_at: m.cancelled_at, cancelled_by: m.cancelled_by, product_id: m.product_id,
           product_name: db.products.get(m.product_id).name }))
         .filter((row) => p_before_created_at === null || beforeCursor(row))
         .sort(newestFirst)
         .slice(0, p_limit)
+      if (!corruptHistory || p_before_created_at !== null || page.length === 0) return page
+      return [{ ...page[0], id: '00000000-0000-4000-8000-0000000000bd', created_at: 'pas une date' }, ...page.slice(0, p_limit - 1)]
     },
     list_employees: () => [],
   }

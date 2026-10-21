@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { isConfigurationMissing, startupErrorMessage } from './startup'
+import { isConfigurationMissing, RENDER_ERROR_MESSAGE, startupErrorMessage } from './startup'
 
 const MISSING_CONFIGURATION = new Error('Configuration manquante : VITE_SUPABASE_URL (voir .env.production).')
 const LOAD_FAILED = new TypeError('Failed to fetch dynamically imported module')
@@ -11,6 +11,12 @@ test("démarrage impossible : configuration manquante ou autre cause", () => {
   // Dans l'app installée, il n'y a ni barre ni geste pour recharger : l'écran porte le bouton « Recharger ».
   expect(startupErrorMessage(LOAD_FAILED)).toBe(
     "L'app ne peut pas démarrer. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks.",
+  )
+})
+
+test("erreur d'affichage imprévue : le message du filet de sécurité (§7)", () => {
+  expect(RENDER_ERROR_MESSAGE).toBe(
+    "L'app a rencontré un problème. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks.",
   )
 })
 

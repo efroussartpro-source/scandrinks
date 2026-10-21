@@ -8,8 +8,9 @@
  * change d'onglet ou qu'on ouvre les Réglages (affichés par-dessus l'app) : la
  * caméra s'arrête puis repart, mais une fiche en cours garde son identifiant
  * (m9). Une session perdue (jeton refusé, mot de passe changé) ramène à la
- * connexion avec une explication. Les déconnexions sont toujours locales :
- * jamais celle de toute l'équipe.
+ * connexion avec une explication. Se déconnecter ne ferme que la session de
+ * ce téléphone ; seul un changement de mot de passe ferme celles de toute
+ * l'équipe.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LoginScreen, { type LoginNotice } from '../auth/LoginScreen'

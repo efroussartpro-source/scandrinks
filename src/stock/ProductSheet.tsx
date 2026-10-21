@@ -11,7 +11,9 @@
  * actif, on le modifie, on gère ses codes et on corrige son stock : chaque
  * formulaire prend la place de la fiche, puis y revient. Ce qui vient d'être
  * enregistré s'affiche tout de suite, sans attendre la relecture du catalogue,
- * même si elle échoue. Une lecture impossible se relance avec « Réessayer ».
+ * même si elle échoue. Une lecture impossible garde son message et
+ * « Réessayer » jusqu'à une lecture réussie, même si un panneau s'ouvre puis
+ * se ferme entre-temps (s3).
  * On archive au lieu de supprimer : le produit disparaît
  * des listes, son historique reste, et il se réactive ici ou en scannant un
  * de ses codes. Un produit archivé se consulte sans se modifier.
@@ -47,8 +49,8 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
   const [busy, setBusy] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
   const [codesVersion, setCodesVersion] = useState(0)
-  // Lecture des codes et des mouvements impossible : « Réessayer » la relance.
-  const [loadFailed, setLoadFailed] = useState(false)
+  // Lecture des codes et des mouvements impossible : son message, gardé jusqu'à une lecture réussie ; « Réessayer » la relance.
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
   // Fiche renvoyée par le dernier enregistrement, valable tant que le catalogue n'a pas été relu.
   const [saved, setSaved] = useState<{ over: Product; product: Product } | null>(null)
@@ -73,23 +75,22 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
       (loaded) => {
         if (!active) return
         setDetail(loaded)
-        setError(null)
-        setLoadFailed(false)
+        setLoadError(null)
       },
       (thrown: unknown) => {
         if (!active) return
-        setLoadFailed(true)
-        fail(thrown)
+        const kind = classifyApiError(thrown).kind
+        if (kind === 'session') onSessionExpired()
+        else setLoadError(apiErrorMessage(kind))
       },
     )
     return () => {
       active = false
     }
-  }, [product.id, product.stock, codesVersion, loadAttempt, fail])
+  }, [product.id, product.stock, codesVersion, loadAttempt, onSessionExpired])
 
   function retryLoad() {
-    setLoadFailed(false)
-    setError(null)
+    setLoadError(null)
     setLoadAttempt((attempt) => attempt + 1)
   }
 
@@ -201,15 +202,20 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
           {notice}
         </p>
       )}
-      {error && (
+      {error && error !== loadError && (
         <p role="alert" className="message message-error">
           {error}
         </p>
       )}
-      {error && loadFailed && (
-        <button type="button" onClick={retryLoad}>
-          Réessayer
-        </button>
+      {loadError && (
+        <>
+          <p role="alert" className="message message-error">
+            {loadError}
+          </p>
+          <button type="button" onClick={retryLoad}>
+            Réessayer
+          </button>
+        </>
       )}
       {!product.archived && (
         <div className="sheet-actions">
