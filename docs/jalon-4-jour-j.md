@@ -1,7 +1,9 @@
 # Jalon 4 — Le jour J
 
 **Pour qui :** toi, le porteur du projet. Coche chaque case au fur et à mesure.
-**Le programme :** la remise à zéro de la base (5 minutes), l'installation de l'app sur les iPhones de l'équipe (15 minutes environ), puis l'inventaire du premier jour, boutique fermée ou avant l'ouverture (une quinzaine de minutes avec 4 à 6 personnes).
+**Le programme :** la remise à zéro de la base (5 minutes), l'installation de l'app sur les iPhones de l'équipe (15 minutes environ), puis l'inventaire de toute la boutique (réserve, frigos et rayons), le soir à la fermeture.
+
+> **Changement du 22/10/2026 (jalon 5, la fin de journée).** Le stock couvre maintenant toute la boutique : les livraisons s'ajoutent par scan, et chaque soir l'équipe saisit les ventes du jour dans l'onglet « Ventes ». L'inventaire du premier jour se fait donc le soir, à la fermeture, et compte aussi les frigos et les rayons. Rien n'est scanné entre la remise à zéro et cet inventaire.
 **Ce qu'il te faut :** ton ordinateur ou ton iPhone, pour le tableau de bord Supabase et GitHub ; le mot de passe du tabac ; la feuille A4 de la réserve.
 
 ## La veille
@@ -9,7 +11,7 @@
 - [ ] Chaque iPhone de l'équipe est en iOS 16.4 ou plus : Réglages › Général › Informations. Sinon, mets iOS à jour (Réglages › Général › Mise à jour logicielle), ou prévois un autre iPhone pour cette personne.
 - [ ] La feuille A4 est imprimée et affichée dans la réserve.
 - [ ] L'équipe est prévenue : chacun vient avec son iPhone chargé.
-- [ ] La réserve est partagée en zones, une par personne. Note qui prend quelle zone.
+- [ ] La boutique est partagée en zones, une par personne : la réserve, les frigos, les rayons. Note qui prend quelle zone.
 - [ ] Tu as ouvert l'app une fois (https://scandrinks.pages.dev) : elle s'affiche normalement. Si elle dit « Base injoignable », la base est en pause : voir « Si la base est en pause », en bas.
 
 ## Le matin : la remise à zéro (5 minutes)
@@ -41,13 +43,13 @@ Chacun suit la feuille, section « Installer l'app sur un iPhone ».
 
 ## L'inventaire
 
-Boutique fermée ou avant l'ouverture. Chacun dans sa zone, pour chaque produit :
+Le soir, boutique fermée. Chacun dans sa zone (réserve, frigos ou rayons), pour chaque produit :
 
 - [ ] « Scanner » › « Inventaire = », un scan du pack, puis le comptage : les packs, et les unités en plus. « Valider ».
 - [ ] Code inconnu : l'app affiche « Code inconnu ». Touche « Nouveau produit ». La photo du pack est facultative (une dizaine de secondes par code) ; « Scanner une canette du pack » donne le nom ; puis les unités du pack, et les seuils se remplissent seuls. « Créer le produit », puis le comptage.
 
 Deux règles :
-- [ ] **Un produit = une seule personne**, même s'il est rangé à deux endroits : un second comptage remplacerait le premier au lieu de s'y ajouter. Si un produit a été compté deux fois, recompte-le en entier.
+- [ ] **Un produit = une seule personne**, même s'il est rangé à deux endroits (en réserve et au frigo, par exemple) : cette personne additionne tout, car un second comptage remplacerait le premier au lieu de s'y ajouter. Si un produit a été compté deux fois, recompte-le en entier.
 - [ ] **Pas d'entrée ni de sortie pendant l'inventaire.**
 
 ## Les contrôles de la recette (10 minutes)
@@ -60,13 +62,17 @@ Sur ton iPhone, dans l'app installée :
 
 ## Après l'inventaire
 
-- [ ] Dans « Stock », ouvre les produits qui partent vite ou lentement : fiche › « Modifier », puis ajuste le seuil d'alerte et le stock idéal.
+- [ ] Relève les seuils : ils comptent maintenant les frigos et les rayons. Dans « Stock », fiche › « Modifier », puis ajuste le seuil d'alerte et le stock idéal, en commençant par les produits qui partent vite.
 - [ ] Relis « À racheter » : la liste correspond à ce qui manque vraiment.
 
 ## La semaine d'essai
 
-- [ ] Chaque jour, chaque livraison Metro est scannée en « Entrée + », et chaque pack sorti en « Sortie − ».
-- [ ] Avant chaque passage chez Metro, compare « À racheter » avec la réserve.
+Les règles depuis le 23/10/2026 :
+- [ ] Chaque livraison Metro est scannée en « Entrée + ».
+- [ ] Un pack porté au frigo ne se scanne plus : il reste dans la boutique.
+- [ ] « Sortie − » sert seulement à la casse, au périmé et aux boissons offertes.
+- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour.
+- [ ] Avant chaque passage chez Metro, compare « À racheter » avec ce que tu vois en boutique.
 - [ ] Tiens un carnet de bord : la date, l'iPhone, ce qui s'est passé, et une capture d'écran si possible.
 - [ ] En fin de semaine, recompte 5 produits en « Inventaire = » et note les écarts affichés.
 - [ ] Puis le bilan avec moi. Le jalon est validé si rien n'a bloqué et si « À racheter » était juste. Un écart au recomptage doit s'expliquer, par exemple par un scan oublié, retrouvé dans l'Historique.

@@ -376,7 +376,7 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 **Typographie.**
 - La police du système : San Francisco sur iPhone.
 - Grand titre en 32 px (800), titre de carte en 20 px (700).
-- Texte en 17 px, texte secondaire en 15 px, note en 13 px, libellé d'onglet en 12 px.
+- Texte en 17 px, texte secondaire en 15 px, note en 13 px, libellé d'onglet en 12 px (11 px sous 360 px de large, pour que les cinq onglets tiennent).
 - Grands nombres en 34 à 40 px (800). Champs de saisie en 17 px.
 
 **Formes.**
@@ -442,7 +442,7 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
   - la charte : les contrastes de ses couleurs, jour et nuit, par un test unitaire ; le choix de l'Apparence, gardé et appliqué, dans les tests de bout en bout ;
   - les images : la base (colonnes, fonction, droits du stockage) en tests SQL ; la copie depuis Open Food Facts, la photo, l'envoi, l'affichage et un envoi qui échoue, dans les tests de bout en bout, avec un stockage simulé.
 - **Jalon 5** :
-  - `record_sales`, en tests SQL : la baisse du stock, les bornes (quantité, jour), l'identifiant rejoué, une vente déjà active le même jour, l'annulation puis une nouvelle saisie, les droits ;
+  - `record_sales`, en tests SQL : la baisse du stock, les bornes (quantité, jour), l'identifiant rejoué, une vente déjà active le même jour, l'annulation puis une nouvelle saisie, les droits ; et deux téléphones au même instant (deux sessions PostgreSQL simultanées, en local) ;
   - les règles pures, par des tests unitaires : les jours proposés (heure de Paris), la lecture des cases, le total, le libellé des ventes dans l'Historique ;
   - l'onglet « Ventes », dans les tests de bout en bout : saisie, récapitulatif, enregistrement, « Déjà saisi », coupure réseau puis « Réessayer », une saisie faite ailleurs entre-temps.
 - **Recette en boutique** avec le porteur du projet, le jour J et pendant la semaine d'essai (§9, « Mise en service »), à partir d'une liste à cocher :
@@ -675,6 +675,7 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet.
 | 22/10/2026 | Le stock couvre toute la boutique ; un pack porté au frigo ne se scanne plus ; « Sortie − » sert à la casse, au périmé et aux boissons offertes | Les ventes de la caisse partent du frigo et des rayons : sinon, chaque boisson serait retirée deux fois |
 | 22/10/2026 | Une vente est une sortie qui porte le jour des ventes (`sale_day`), au plus une active par produit et par jour ; saisie possible sur les 7 derniers jours | Migration par simples ajouts, sans toucher aux contraintes existantes ; l'app du jalon 4 la montre comme une sortie ; un soir oublié se rattrape sans double compte |
 | 22/10/2026 | Bascule le 22/10/2026 au soir : inventaire de toute la boutique, boutique fermée | La caisse donne les ventes de toute la journée : compter en pleine journée retirerait deux fois les ventes du matin |
+| 22/10/2026 | Libellé d'onglet en 11 px sous 360 px de large | Les cinq noms tiennent sur une ligne à 320 px (iPhone en affichage agrandi), sans texte coupé ; 12 px partout ailleurs |
 
 ## 12. Glossaire
 

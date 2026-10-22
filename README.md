@@ -3,7 +3,7 @@
 Gestion du stock de boissons d'un bureau de tabac par scan de code-barres, depuis un iPhone (app web installable, sans App Store).
 
 - **Cahier des charges** : [docs/superpowers/specs/2026-10-19-scandrinks-design.md](docs/superpowers/specs/2026-10-19-scandrinks-design.md)
-- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, avant le jour J et la semaine d'essai. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md).
+- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, jour J le 22/10/2026 ; jalon 5 (la fin de journée) en préparation. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md), [jalon 5](docs/superpowers/plans/2026-10-22-jalon-5-fin-de-journee.md).
 - **Installation** : uniquement depuis https://scandrinks.pages.dev (Safari, Partager → « Sur l'écran d'accueil »). Les préversions des branches servent aux tests, dans Safari, sans les installer.
 
 ## Jalon 1 — le cœur
@@ -48,6 +48,17 @@ Ce jalon apporte :
 
 Le protocole de test sur iPhone est dans [docs/jalon-4-test.md](docs/jalon-4-test.md), le guide du jour J dans [docs/jalon-4-jour-j.md](docs/jalon-4-jour-j.md).
 
+## Jalon 5 — la fin de journée
+
+Le stock couvre maintenant toute la boutique : réserve, frigos et rayons. Les livraisons s'ajoutent par scan ; un pack porté au frigo ne se scanne plus, et « Sortie − » sert à la casse, au périmé et aux boissons offertes.
+
+Ce jalon apporte :
+- un cinquième onglet, « Ventes » (Scanner, À racheter, Stock, Ventes, Historique) : chaque soir, on y saisit les ventes du jour lues sur la caisse (« Lecture jour »), puis le récapitulatif, puis « Enregistrer ». Un soir oublié se rattrape dans les 7 jours ;
+- les lignes « Vente » dans l'Historique et la fiche produit, annulables comme les autres ;
+- la feuille A4 et la vidéo tuto mises à jour (« En fin de journée », chapitre 3).
+
+Le protocole de test sur iPhone est dans [docs/jalon-5-test.md](docs/jalon-5-test.md).
+
 ## Développement
 
 Il faut Node 22 (voir `.node-version`). Le fichier `.npmrc` active `legacy-peer-deps` pour contourner un plantage de npm 10.9 avec vitest 5.
@@ -60,7 +71,7 @@ Il faut Node 22 (voir `.node-version`). Le fichier `.npmrc` active `legacy-peer-
 | `npm run build` | vérification des types puis construction de production (`dist/`, avec `.env.production`) |
 | `npm run e2e` | construction avec `.env.e2e`, puis test de bout en bout : fausse caméra et base simulée |
 | `npm run screens` | captures des écrans, de jour et de nuit (`dist-screens/`), à comparer aux maquettes de `docs/maquettes/` |
-| `su postgres -c "bash supabase/tests/run-local.sh"` | tests de la base sur un PostgreSQL local, avec une imitation de Supabase, puis test de la remise à zéro (`reset.test.sh`) |
+| `su postgres -c "bash supabase/tests/run-local.sh"` | tests de la base sur un PostgreSQL local, avec une imitation de Supabase, puis test de la remise à zéro (`reset.test.sh`) et de deux fins de journée simultanées (`sales-race.test.sh`) |
 | `node scripts/render-icons.mjs` | refait les icônes PNG à partir de `public/icon.svg` |
 | `npm run tutorial:trial` | vidéo d'essai de 10 secondes, en HLS dans `public/tutoriel/video/`, puis son contrôle. **Elle remplace la vraie vidéo** : la remettre ensuite avec `git checkout -- public/tutoriel/video` (ou `npm run tutorial`). Sinon, `npm test` le signale (`tutorial.test.ts` attend 150 à 240 s) |
 | `npm run tutorial:record` | tournage de la vidéo tuto : la version e2e de l'app, filmée sur un iPhone simulé (`dist-tutorial/raw/`), puis son contrôle |
@@ -82,8 +93,9 @@ Ces fichiers ne contiennent que des valeurs publiques :
   - Jalon 2 (`20261020100000_pilotage.sql`) : `record_inventory`, `update_product`, `set_product_archived` et `detach_barcode` ; `create_product` reçoit l'identifiant de la fiche (`p_id`), pour qu'une création rejouée ne fasse pas de doublon. Les droits de modification sont donnés colonne par colonne.
   - Jalon 3 (`20261020180000_suivi.sql`) : `list_history` (historique par pages) ; `cancel_movement` renvoie aussi qui a annulé et quand ; `create_product` ne peut plus échouer sur un envoi en double. `private.is_allowed()` vérifie que la session du jeton est encore ouverte : après un changement de mot de passe, les autres téléphones sont refusés tout de suite (code `PT401`, rendu en 401).
   - Jalon 4 (`20261021120000_images.sql`, refonte) : une image par code (`photo_path`, `photo_source` : Open Food Facts ou l'équipe), enregistrée par `set_barcode_photo` ; compartiment privé « photos » (JPEG, 256 Kio au plus), en lecture et en ajout seulement, pour le compte du tabac ; `lookup_barcode` et la vue `product_stock` donnent aussi l'image.
+  - Jalon 5 (`20261022130000_fin_de_journee.sql`) : une vente est une sortie qui porte le jour des ventes (`sale_day`), au plus une active par produit et par jour (index unique) ; `record_sales` enregistre la fin de journée d'un jour en une transaction, rejouable sans doublon, et répond « déjà saisi » si un autre téléphone l'a fait ; `list_history` donne aussi `sale_day`.
 - `supabase/remise-a-zero.sql` : la remise à zéro du jour J, hors des migrations. Elle efface produits, codes et mouvements, et garde le compte du tabac ; elle vérifie d'abord qu'elle tourne sur le projet ScanDrinks. Le porteur du projet la lance dans l'éditeur SQL ; Claude ne la lance jamais.
-- `supabase/tests/database.test.sql` : tests de la base, dans une transaction annulée à la fin. On les lance sur le vrai projet avec l'outil `execute_sql`, ou en local avec `run-local.sh`. `reset.test.sh` essaie la remise à zéro en local, dont ses arrêts sur un autre projet.
+- `supabase/tests/database.test.sql` : tests de la base, dans une transaction annulée à la fin. On les lance sur le vrai projet avec l'outil `execute_sql`, ou en local avec `run-local.sh`. `reset.test.sh` essaie la remise à zéro en local, dont ses arrêts sur un autre projet ; `sales-race.test.sh`, deux fins de journée envoyées au même instant par deux sessions.
 - Le compte du tabac est créé dans le tableau de bord Supabase, inscriptions désactivées. Il est ensuite inscrit dans `allowed_users`.
 
 ### Organisation du code
@@ -97,8 +109,9 @@ Ces fichiers ne contiennent que des valeurs publiques :
 - `src/products/` : code inconnu (nouveau produit, ajout d'un code), saisie manuelle, recherche.
 - `src/settings/` : réglages, Apparence, écran « Tutoriel » et changement du mot de passe du tabac.
 - `src/history/` : onglet Historique.
+- `src/sales/` : onglet « Ventes », la fin de journée.
 - `src/data/` : client Supabase, appels typés, classement des erreurs.
-- `src/domain/` : règles de gestion (stock, fiche produit, À racheter, inventaire, mouvements, tri des noms).
+- `src/domain/` : règles de gestion (stock, fiche produit, À racheter, inventaire, mouvements, ventes de fin de journée, tri des noms).
 - `src/codes/` : normalisation des codes lus (RG-13).
 - `src/scan/` : lecture des codes-barres (caméra, moteur natif ou ZXing, anti-doublon) et écran allumé pendant le scan.
 - `src/off/` : client Open Food Facts.
