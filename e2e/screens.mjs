@@ -175,6 +175,30 @@ const SHOTS = [
     },
   },
   {
+    name: 'ventes',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Ventes', exact: true }).click()
+      await page.getByRole('list', { name: 'À saisir' }).waitFor()
+      await page.getByLabel('Vendus : Coca-Cola 33 cl', { exact: true }).fill('3')
+      await page.getByLabel('Vendus : Évian 1,5 L', { exact: true }).fill('2')
+      await page.getByLabel('Vendus : Évian 1,5 L', { exact: true }).blur()
+    },
+  },
+  {
+    name: 'ventes-recap',
+    fake: { catalogue: 'pilotage' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Ventes', exact: true }).click()
+      await page.getByLabel('Vendus : Coca-Cola 33 cl', { exact: true }).fill('3')
+      await page.getByLabel('Vendus : Évian 1,5 L', { exact: true }).fill('2')
+      await page.getByRole('button', { name: 'Valider', exact: true }).click()
+      await page.getByRole('list', { name: 'Récapitulatif' }).waitFor()
+    },
+  },
+  {
     name: 'reglages',
     fake: {},
     go: async (page) => {

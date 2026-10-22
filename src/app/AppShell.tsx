@@ -20,6 +20,7 @@ import { apiErrorMessage } from '../data/apiErrors'
 import { supabase } from '../data/supabaseClient'
 import { shoppingList } from '../domain/restock'
 import HistoryScreen from '../history/HistoryScreen'
+import SalesScreen from '../sales/SalesScreen'
 import ScannerScreen from '../scanner/ScannerScreen'
 import ChangePasswordScreen from '../settings/ChangePasswordScreen'
 import SettingsScreen from '../settings/SettingsScreen'
@@ -140,6 +141,9 @@ export default function AppShell() {
         )}
         {tab === 'stock' && (
           <StockScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
+        )}
+        {tab === 'sales' && (
+          <SalesScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
         )}
         {tab === 'history' && (
           <HistoryScreen employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />

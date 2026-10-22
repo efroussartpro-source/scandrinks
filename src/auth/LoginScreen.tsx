@@ -48,7 +48,7 @@ export default function LoginScreen({ notice }: { notice: LoginNotice | null }) 
           <IconBarcode size={40} strokeWidth={2.2} />
         </span>
         <h1>ScanDrinks</h1>
-        <p className="subtitle">Le stock de la réserve, sur ton iPhone.</p>
+        <p className="subtitle">Le stock de la boutique, sur ton iPhone.</p>
       </div>
       {notice?.tone === 'ok' && (
         <p role="status" className="message message-ok">

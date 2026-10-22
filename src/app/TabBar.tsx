@@ -3,15 +3,15 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4)
  *
- * Scanner, À racheter (avec le nombre de produits à racheter), Stock et
- * Historique, chacun avec son icône. Les quatre tiennent sur une ligne dès
- * 320 px de large ; le nombre se pose sur le coin de l'icône, sans prendre
- * la place du nom.
+ * Scanner, À racheter (avec le nombre de produits à racheter), Stock, Ventes
+ * (la fin de journée) et Historique, chacun avec son icône. Les cinq tiennent
+ * sur une ligne dès 320 px de large (nom en 11 px sous 360 px) ; le nombre se
+ * pose sur le coin de l'icône, sans prendre la place du nom.
  */
 import type { ComponentType } from 'react'
-import { IconHistory, IconPackage, IconScanBarcode, IconShoppingCart, type IconProps } from '../ui/icons'
+import { IconHistory, IconPackage, IconReceiptText, IconScanBarcode, IconShoppingCart, type IconProps } from '../ui/icons'
 
-export type Tab = 'scanner' | 'shopping' | 'stock' | 'history'
+export type Tab = 'scanner' | 'shopping' | 'stock' | 'sales' | 'history'
 
 interface TabBarProps {
   tab: Tab
@@ -23,6 +23,7 @@ const TABS: Array<{ id: Tab; label: string; Icon: ComponentType<IconProps> }> = 
   { id: 'scanner', label: 'Scanner', Icon: IconScanBarcode },
   { id: 'shopping', label: 'À racheter', Icon: IconShoppingCart },
   { id: 'stock', label: 'Stock', Icon: IconPackage },
+  { id: 'sales', label: 'Ventes', Icon: IconReceiptText },
   { id: 'history', label: 'Historique', Icon: IconHistory },
 ]
 

@@ -1,0 +1,115 @@
+/* Fin de journée (§4.8) : le jour, « Déjà saisi », « À saisir » avec une case par produit, le total, puis « Valider ». */
+.sales {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Le choix du jour, en carte sur le fond de l'écran ; 16 px au moins : en dessous, iOS zoome sur le champ touché. */
+.sales-day select {
+  min-height: 50px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 17px;
+  color: var(--text);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.sales-day select:focus {
+  border-color: var(--accent);
+}
+
+.sales-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sales-error p {
+  margin: 0;
+}
+
+/* Une ligne par produit : l'image, le nom, puis la case « vendus » ou la quantité déjà saisie. */
+.sales-row {
+  min-height: 60px;
+  padding: 8px 10px 8px 12px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Deux lignes au plus, puis « … ». */
+.sales-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.sales-input {
+  width: 76px;
+  height: 44px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 17px;
+  text-align: center;
+  color: var(--text);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--field);
+  outline: none;
+}
+
+.sales-input::placeholder {
+  color: var(--text-2);
+}
+
+.sales-input:focus {
+  border-color: var(--accent);
+}
+
+.sales-input[aria-invalid='true'] {
+  border-color: var(--red-text);
+}
+
+.sales-meta {
+  font-size: 15px;
+  color: var(--text-2);
+}
+
+.sales-amount {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.sales-note {
+  margin-left: 16px;
+}
+
+.sales-total {
+  margin: 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* Récapitulatif : une ligne par produit, la quantité dans la couleur des sorties. */
+.sales-recap-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.sales-recap li {
+  padding: 12px 14px;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.sales-recap-amount {
+  font-weight: 700;
+}

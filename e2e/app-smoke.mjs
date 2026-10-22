@@ -41,13 +41,21 @@ async function waitForServer(url, timeoutMs = 15_000) {
 }
 
 // initScript : fonction lancée dans la page avant l'app (par exemple un faux navigator.wakeLock).
-async function openApp(browser, fakeOptions, { initScript = null } = {}) {
+async function openApp(browser, fakeOptions, { initScript = null, clockAt = null } = {}) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   if (initScript) await page.addInitScript(initScript)
-  const fake = await installFakeSupabase(page, fakeOptions)
+  let options = fakeOptions
+  if (clockAt) {
+    // L'horloge de la page et celle de la base simulée partent du même instant (comme pour la vidéo tuto).
+    await page.clock.install({ time: clockAt })
+    await page.clock.resume()
+    const start = Date.now()
+    options = { ...fakeOptions, now: () => new Date(clockAt.getTime() + (Date.now() - start)) }
+  }
+  const fake = await installFakeSupabase(page, options)
   await page.goto(`${BASE}/`)
   return { context, page, fake, pageErrors }
 }
@@ -878,13 +886,13 @@ async function scenarioHistory(browser) {
   assert.equal(await first.locator('.history-amount').evaluate((element) => getComputedStyle(element).color), 'rgb(163, 74, 7)')
   assert.match(await first.locator('.history-meta').textContent(), /^Sortie · \S+ \d{2}:\d{2} · Sam$/)
 
-  // 2. À 320 px : les quatre onglets tiennent sur une ligne sans texte coupé, et « Voir plus »,
+  // 2. À 320 px : les cinq onglets tiennent sur une ligne sans texte coupé, et « Voir plus »,
   // en bas de page, reste au-dessus de la barre d'onglets.
   await page.setViewportSize({ width: 320, height: 640 })
   assert.ok(
     await page.evaluate(() => {
       const buttons = [...document.querySelectorAll('.tab-bar button')]
-      return buttons.length === 4 && buttons.every((button) => {
+      return buttons.length === 5 && buttons.every((button) => {
         const label = button.querySelector('.tab-label')
         return label.scrollWidth <= label.clientWidth && button.offsetTop === buttons[0].offsetTop
       })
@@ -1604,6 +1612,238 @@ async function scenarioImages(browser) {
   console.log('Scénario S (images) : OK')
 }
 
+// Fin de journée (jalon 5, §4.8, RG-14) : l'onglet « Ventes », un jeudi à 19:30 (heure de Paris).
+async function scenarioSales(browser) {
+  const EVENING = new Date('2026-10-22T17:30:00Z')
+  // Un bouton, onglets compris, par son nom exact.
+  const button = (page, name) => page.getByRole('button', { name, exact: true })
+  const sold = (page, name) => page.getByLabel(`Vendus : ${name}`, { exact: true })
+  const daySelect = (page) => page.getByLabel('Jour des ventes')
+  const doneList = (page) => page.getByRole('list', { name: 'Déjà saisi' })
+  const toEnter = (page) => page.getByRole('list', { name: 'À saisir' })
+  const waitForTotal = (page, text) => page.locator('.sales-total').filter({ hasText: exactly(text) }).waitFor()
+  // Noms affichés dans une liste de l'écran, dès qu'ils valent ceux attendus.
+  const waitForList = (page, label, names) =>
+    page.waitForFunction(([listLabel, want]) => {
+      const list = document.querySelector(`ul[aria-label="${listLabel}"]`)
+      const found = list ? [...list.querySelectorAll('.product-name')].map((element) => element.textContent) : []
+      return JSON.stringify(found) === JSON.stringify(want)
+    }, [label, names])
+  // Stock affiché dans la liste du Stock, dans l'ordre alphabétique, dès qu'il vaut celui attendu.
+  const waitForStock = async (page, values) => {
+    await button(page, 'Stock').click()
+    await page.waitForFunction((want) =>
+      JSON.stringify([...document.querySelectorAll('.stock-list .product-stock')].map((element) => element.textContent)) ===
+        JSON.stringify(want), values)
+  }
+  {
+    const { context, page, fake, pageErrors } = await openApp(browser, { catalogue: 'pilotage', loseFirst: ['record_sales'] },
+      { clockAt: EVENING })
+    const dialogs = []
+    let declineNext = false
+    page.on('dialog', (dialog) => {
+      dialogs.push(dialog.message())
+      if (declineNext) void dialog.dismiss()
+      else void dialog.accept()
+      declineNext = false
+    })
+    const salesCalls = () => fake.calls.filter((call) => call.fn === 'record_sales')
+    await signIn(page)
+    await button(page, 'À racheter (3)').waitFor()
+
+    // 1. Ouverture : le cinquième onglet, le jour, les produits actifs à saisir.
+    assert.deepEqual(await page.locator('.tab-bar button').evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent)),
+    ['Scanner', 'À racheter (3)', 'Stock', 'Ventes', 'Historique'])
+    await button(page, 'Ventes').click()
+    await page.getByRole('heading', { name: 'Fin de journée' }).waitFor()
+    assert.ok(await page.evaluate(() => document.querySelector('video').srcObject === null), 'caméra arrêtée hors du Scanner')
+    assert.deepEqual(await daySelect(page).locator('option').allTextContents(), ["Aujourd'hui, jeu. 22/10", 'Hier, mer. 21/10',
+      'mar. 20/10', 'lun. 19/10', 'dim. 18/10', 'sam. 17/10', 'ven. 16/10'])
+    assert.equal(await daySelect(page).inputValue(), '2026-10-22')
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    assert.equal(await doneList(page).count(), 0, 'rien de déjà saisi')
+    await waitForTotal(page, 'Total du jour : 0 boisson')
+
+    // 2. Saisies refusées : rien, puis une case hors limites.
+    await button(page, 'Valider').click()
+    await page.getByRole('alert').filter({ hasText: exactly('Tape le nombre de boissons vendues.') }).waitFor()
+    await sold(page, 'Coca-Cola 33 cl').fill('1000')
+    assert.equal(await sold(page, 'Coca-Cola 33 cl').getAttribute('aria-invalid'), 'true')
+    await button(page, 'Valider').click()
+    await page.getByRole('alert').filter({ hasText: exactly('Vendus : un nombre de 1 à 999.') }).waitFor()
+    assert.equal(await page.getByRole('heading', { name: /^Ventes du / }).count(), 0, 'pas de récapitulatif')
+
+    // 3. Saisie, avec la recherche : ce qui est tapé reste, même caché par la recherche.
+    await sold(page, 'Coca-Cola 33 cl').fill('3')
+    await sold(page, 'Évian 1,5 L').fill('2')
+    await sold(page, 'Red Bull 25 cl').fill('0')
+    await page.getByLabel('Rechercher un produit').fill('lip')
+    await waitForList(page, 'À saisir', ['Lipton Pêche 50 cl'])
+    await sold(page, 'Lipton Pêche 50 cl').fill('4')
+    await page.getByLabel('Rechercher un produit').fill('')
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    assert.equal(await sold(page, 'Coca-Cola 33 cl').inputValue(), '3')
+    await waitForTotal(page, 'Total du jour : 9 boissons')
+
+    // 4. Récapitulatif, puis « Revenir » : la saisie est intacte.
+    await button(page, 'Valider').click()
+    await page.getByRole('heading', { name: 'Ventes du jeu. 22/10' }).waitFor()
+    assert.deepEqual(await page.getByRole('list', { name: 'Récapitulatif' }).getByRole('listitem').allTextContents(),
+      ['Coca-Cola 33 cl : −3', 'Évian 1,5 L : −2', 'Lipton Pêche 50 cl : −4'])
+    await waitForTotal(page, 'Total : 9 boissons')
+    await button(page, 'Revenir').click()
+    assert.equal(await sold(page, 'Coca-Cola 33 cl').inputValue(), '3')
+    await button(page, 'Valider').click()
+    await page.getByRole('heading', { name: 'Ventes du jeu. 22/10' }).waitFor()
+
+    // 5. Réponse perdue : « Réessayer » renvoie les mêmes lignes ; chaque vente ne compte qu'une fois.
+    await button(page, 'Enregistrer').click()
+    await page.getByRole('alert').filter({ hasText: exactly('Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».') }).waitFor()
+    await button(page, 'Réessayer').click()
+    await page.getByRole('status').filter({ hasText: exactly('Fin de journée enregistrée : 9 boissons.') }).waitFor()
+    const [first, retry] = salesCalls()
+    assert.equal(salesCalls().length, 2, 'deux envois')
+    assert.deepEqual(retry.body, first.body, 'le nouvel essai renvoie les mêmes lignes')
+    assert.equal(first.body.p_day, '2026-10-22')
+    assert.ok(first.body.p_lines.every((line) => UUID.test(line.id)), 'un identifiant tiré par le téléphone pour chaque ligne')
+    await waitForList(page, 'Déjà saisi', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl'])
+    assert.deepEqual(await doneList(page).locator('.sales-amount').allTextContents(), ['−3', '−2', '−4'])
+    for (const meta of await doneList(page).locator('.sales-meta').allTextContents()) assert.match(meta, /^Sam · 19:3\d$/)
+    assert.match(await doneList(page).locator('.sales-line').first().textContent(), /^Coca-Cola 33 cl : 3 boissons, Sam, 19:3\d$/)
+    await waitForList(page, 'À saisir', ['Red Bull 25 cl'])
+    assert.equal(await sold(page, 'Red Bull 25 cl').inputValue(), '')
+    await waitForTotal(page, 'Total du jour : 9 boissons')
+    await waitForStock(page, ['7', '2', '32', '−3'])
+
+    // 6. Saisi entre-temps sur un autre téléphone : rien n'est enregistré, la liste est relue.
+    await button(page, 'Ventes').click()
+    await waitForList(page, 'À saisir', ['Red Bull 25 cl'])
+    fake.addMovement({ productId: 'p-redbull', kind: 'out', delta: -1, employee: 'Léa', saleDay: '2026-10-22' })
+    await sold(page, 'Red Bull 25 cl').fill('2')
+    await button(page, 'Valider').click()
+    await button(page, 'Enregistrer').click()
+    await page.getByRole('alert').filter({ hasText: exactly('Déjà saisi pour ce jour : Red Bull 25 cl. La liste est relue.') }).waitFor()
+    await waitForList(page, 'Déjà saisi', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    assert.deepEqual(await doneList(page).locator('.sales-amount').allTextContents(), ['−3', '−2', '−4', '−1'])
+    assert.match(await doneList(page).locator('.sales-meta').last().textContent(), /^Léa · 19:3\d$/)
+    await page.getByText('Tout est saisi pour ce jour.', { exact: true }).waitFor()
+    assert.equal(await button(page, 'Valider').count(), 0, 'plus rien à valider')
+    await waitForTotal(page, 'Total du jour : 10 boissons')
+    await waitForStock(page, ['7', '2', '32', '−4'])
+
+    // 7. Une vente dans l'Historique : orange, annulable ; annulée, le produit se saisit de nouveau.
+    await button(page, 'Historique').click()
+    const history = page.getByRole('list', { name: 'Historique' })
+    // La ligne active finit par son bouton « Annuler » : la phrase lue par VoiceOver est cherchée sans ancre de fin.
+    const saleRow = history.getByRole('listitem').filter({ hasText: /— Sam — Vente −3 \(ventes du 22\/10\) — Coca-Cola 33 cl/ })
+    await saleRow.waitFor()
+    assert.match(await saleRow.locator('.history-meta').textContent(), /^Vente \(ventes du 22\/10\) · jeu\. 19:3\d · Sam$/)
+    assert.equal(await saleRow.locator('.history-amount').textContent(), '−3')
+    assert.equal(await saleRow.locator('.history-amount').evaluate((element) => getComputedStyle(element).color), 'rgb(163, 74, 7)')
+    await saleRow.getByRole('button', { name: /^Annuler : / }).click()
+    await history.getByRole('listitem').filter({ hasText: /— Vente −3 \(ventes du 22\/10\) — Coca-Cola 33 cl — annulé par Sam$/ }).waitFor()
+    await button(page, 'Ventes').click()
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl'])
+    await waitForTotal(page, 'Total du jour : 7 boissons')
+    await sold(page, 'Coca-Cola 33 cl').fill('5')
+    await button(page, 'Valider').click()
+    await button(page, 'Enregistrer').click()
+    await page.getByRole('status').filter({ hasText: exactly('Fin de journée enregistrée : 5 boissons.') }).waitFor()
+    await waitForTotal(page, 'Total du jour : 12 boissons')
+
+    // 8. La veille, avec une réponse lente pour aujourd'hui : elle arrive trop tard pour changer l'écran.
+    await daySelect(page).selectOption('2026-10-21')
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    assert.equal(await doneList(page).count(), 0, 'rien de déjà saisi la veille')
+    const slowToday = (url) => url.pathname === '/rest/v1/movements' && url.searchParams.get('sale_day') === 'eq.2026-10-22'
+    await page.route(slowToday, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await route.fallback()
+    })
+    const lateToday = page.waitForResponse((response) => slowToday(new URL(response.url())))
+    await daySelect(page).selectOption('2026-10-22')
+    await daySelect(page).selectOption('2026-10-21')
+    await lateToday
+    await page.waitForTimeout(300)
+    assert.equal(await doneList(page).count(), 0, 'la réponse en retard pour aujourd\'hui est ignorée')
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    await page.unroute(slowToday)
+    await sold(page, 'Évian 1,5 L').fill('1')
+    declineNext = true
+    await daySelect(page).selectOption('2026-10-22')
+    assert.equal(dialogs.at(-1), 'Changer de jour ? La saisie en cours sera effacée.')
+    assert.equal(await daySelect(page).inputValue(), '2026-10-21')
+    assert.equal(await sold(page, 'Évian 1,5 L').inputValue(), '1')
+    await button(page, 'Valider').click()
+    await page.getByRole('heading', { name: 'Ventes du mer. 21/10' }).waitFor()
+    await button(page, 'Enregistrer').click()
+    await page.getByRole('status').filter({ hasText: exactly('Fin de journée enregistrée : 1 boisson.') }).waitFor()
+    assert.equal(salesCalls().at(-1).body.p_day, '2026-10-21')
+    await sold(page, 'Lipton Pêche 50 cl').fill('2')
+    await daySelect(page).selectOption('2026-10-22')
+    assert.equal(dialogs.at(-1), 'Changer de jour ? La saisie en cours sera effacée.')
+    await waitForTotal(page, 'Total du jour : 12 boissons')
+    await daySelect(page).selectOption('2026-10-21')
+    await waitForList(page, 'Déjà saisi', ['Évian 1,5 L'])
+    assert.equal(await sold(page, 'Lipton Pêche 50 cl').inputValue(), '')
+
+    // 9. La fiche produit montre la vente.
+    await button(page, 'Stock').click()
+    await page.getByRole('list', { name: 'Produits' }).getByRole('button', { name: /^Évian 1,5 L/ }).click()
+    const sheet = page.getByRole('region', { name: 'Fiche produit' })
+    await sheet.getByRole('list', { name: 'Derniers mouvements' }).locator('.movement-title').first()
+      .filter({ hasText: exactly('Vente −1 (ventes du 21/10)') }).waitFor()
+    assert.deepEqual(pageErrors, [])
+    await context.close()
+  }
+  {
+    // 10. Ventes du jour illisibles (réseau coupé) : le message et « Réessayer », sans liste à saisir.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', cutReads: 'movements' }, { clockAt: EVENING })
+    await signIn(page)
+    await button(page, 'Ventes').click()
+    await page.getByRole('alert').filter({ hasText: exactly('Pas de connexion. Réessaie quand le réseau revient.') }).waitFor()
+    assert.equal(await toEnter(page).count(), 0, 'pas de liste à saisir sans les ventes du jour')
+    fake.restoreReads()
+    await button(page, 'Réessayer').click()
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    await context.close()
+  }
+  {
+    // 11. À 320 px, avec des noms longs : rien ne déborde, « Valider » reste au-dessus des onglets.
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage', longNames: true }, { clockAt: EVENING })
+    await signIn(page)
+    await page.setViewportSize({ width: 320, height: 640 })
+    await button(page, 'Ventes').click()
+    const coca = 'Coca-Cola 33 cl — édition limitée, format familial'
+    await sold(page, coca).fill('3')
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= 320), 'saisie sans débordement à 320 px')
+    assert.ok(
+      await page.evaluate(() => {
+        const validate = [...document.querySelectorAll('button')].find((button) => button.textContent === 'Valider')
+        return validate.getBoundingClientRect().bottom <= document.querySelector('.tab-bar').getBoundingClientRect().top
+      }),
+      '« Valider » au-dessus des onglets',
+    )
+    await button(page, 'Valider').click()
+    await page.getByRole('heading', { name: /^Ventes du / }).waitFor()
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= 320), 'récapitulatif sans débordement à 320 px')
+    assert.ok(
+      await page.evaluate(() => {
+        const buttons = [...document.querySelectorAll('.tab-bar button')]
+        return buttons.length === 5 && buttons.every((button) => {
+          const label = button.querySelector('.tab-label')
+          return label.scrollWidth <= label.clientWidth && button.offsetTop === buttons[0].offsetTop
+        })
+      }),
+      'onglets à 320 px',
+    )
+    await context.close()
+  }
+  console.log('Scénario T (ventes) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -1639,6 +1879,7 @@ try {
     ['Q', scenarioRenderError],
     ['R', scenarioAppearance],
     ['S', scenarioImages],
+    ['T', scenarioSales],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

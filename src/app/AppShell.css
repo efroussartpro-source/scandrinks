@@ -555,7 +555,7 @@ button.back {
   bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 2px;
   max-width: 560px;
   margin: 0 auto;
@@ -588,6 +588,13 @@ button.back {
 .tab-bar .tab-icon {
   position: relative;
   display: flex;
+}
+
+/* Cinq onglets sous 360 px de large (iPhone en affichage agrandi) : le nom passe à 11 px pour tenir. */
+@media (max-width: 359px) {
+  .tab-bar button {
+    font-size: 11px;
+  }
 }
 
 /* Un nom trop long pour la police du téléphone finit par « … » au lieu de déborder. */
