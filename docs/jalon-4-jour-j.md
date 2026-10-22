@@ -23,9 +23,10 @@
 5. [ ] Le résultat, sous la requête, tient en une ligne : « Remise à zéro faite : … produit(s), … code(s) et … mouvement(s) effacés. Compte du tabac gardé (1). ».
 6. [ ] Préviens-moi : je vérifie la base, en lecture seule.
 
-Si le résultat commence par « Arrêt : », rien n'a été effacé :
-- « Arrêt : ce projet n'est pas ScanDrinks. … » : tu n'es pas dans le bon projet. Choisis « scandrinks », puis relance.
-- tout autre « Arrêt : » : ne relance pas, et préviens-moi.
+Si Supabase affiche une erreur à la place de cette ligne (en rouge, par exemple « ERROR: P0001: Arrêt : … ») :
+- elle contient « Arrêt : ce projet n'est pas ScanDrinks. » : rien n'a été effacé. Tu n'es pas dans le bon projet : choisis « scandrinks », puis relance ;
+- elle contient un autre « Arrêt : » : rien n'a été effacé. Ne relance pas, et préviens-moi ;
+- toute autre erreur : ne relance pas, et préviens-moi. Je regarde la base, en lecture seule.
 
 Relancer le script une seconde fois ne change rien : il n'y a plus rien à effacer.
 

@@ -30,6 +30,14 @@ test("la liste HLS est une vidéo complète, avec son segment d'initialisation",
   expect(playlist).toContain('#EXT-X-ENDLIST')
 })
 
+// La vidéo servie est la vraie, d'environ 3 minutes (mêmes bornes que scripts/tutorial/check.mjs) : npm run
+// tutorial:trial la remplace par l'essai de 10 s, et rien d'autre ne le verrait.
+test("la liste HLS est la vraie vidéo, de 150 à 240 s, et non la vidéo d'essai", () => {
+  const seconds = [...playlist.matchAll(/^#EXTINF:([\d.]+),/gm)].reduce((total, match) => total + Number(match[1]), 0)
+  expect(seconds).toBeGreaterThanOrEqual(150)
+  expect(seconds).toBeLessThanOrEqual(240)
+})
+
 test('la liste HLS cite exactement les segments présents', () => {
   const listed = playlist
     .split('\n')

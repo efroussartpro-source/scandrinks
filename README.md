@@ -62,7 +62,7 @@ Il faut Node 22 (voir `.node-version`). Le fichier `.npmrc` active `legacy-peer-
 | `npm run screens` | captures des écrans, de jour et de nuit (`dist-screens/`), à comparer aux maquettes de `docs/maquettes/` |
 | `su postgres -c "bash supabase/tests/run-local.sh"` | tests de la base sur un PostgreSQL local, avec une imitation de Supabase, puis test de la remise à zéro (`reset.test.sh`) |
 | `node scripts/render-icons.mjs` | refait les icônes PNG à partir de `public/icon.svg` |
-| `npm run tutorial:trial` | vidéo d'essai de 10 secondes, en HLS dans `public/tutoriel/video/`, puis son contrôle |
+| `npm run tutorial:trial` | vidéo d'essai de 10 secondes, en HLS dans `public/tutoriel/video/`, puis son contrôle. **Elle remplace la vraie vidéo** : la remettre ensuite avec `git checkout -- public/tutoriel/video` (ou `npm run tutorial`). Sinon, `npm test` le signale (`tutorial.test.ts` attend 150 à 240 s) |
 | `npm run tutorial:record` | tournage de la vidéo tuto : la version e2e de l'app, filmée sur un iPhone simulé (`dist-tutorial/raw/`), puis son contrôle |
 | `npm run tutorial` | tournage, montage (titres, sous-titres, cartes), MP4 (`dist-tutorial/ScanDrinks-tuto.mp4`) et HLS servi avec l'app, puis contrôle |
 | `npm run sheet` | impression de la feuille A4 de la réserve (`docs/feuille-reserve.pdf`), puis son contrôle (une page, QR code relu, textes) |

@@ -89,8 +89,11 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
     }
   }, [product.id, product.stock, codesVersion, loadAttempt, onSessionExpired])
 
+  // Un nouvel essai efface aussi l'erreur d'une action : masquée tant qu'elle répétait celle de la lecture, elle
+  // reparaîtrait seule sur la fiche relue.
   function retryLoad() {
     setLoadError(null)
+    setError(null)
     setLoadAttempt((attempt) => attempt + 1)
   }
 

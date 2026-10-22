@@ -1127,9 +1127,20 @@ async function scenarioFinishing(browser) {
     await page.getByRole('button', { name: 'Annuler' }).click()
     await sheet.getByText('Pas de connexion. Réessaie quand le réseau revient.').waitFor()
     await sheet.getByRole('button', { name: 'Réessayer' }).waitFor()
+    // Un archivage tenté hors ligne échoue avec le même message, qui ne s'affiche pas deux fois ; après « Réessayer »,
+    // la fiche relue ne le ressort pas.
+    await page.route('**/rest/v1/rpc/set_product_archived', (route) => route.abort('internetdisconnected'))
+    page.once('dialog', (dialog) => dialog.accept())
+    const archiveFailed = page.waitForEvent('requestfailed', (request) => request.url().endsWith('/rest/v1/rpc/set_product_archived'))
+    await sheet.getByRole('button', { name: 'Archiver le produit' }).click()
+    await archiveFailed
+    await sheet.getByRole('button', { name: 'Archiver le produit' }).and(page.locator(':enabled')).waitFor()
+    assert.equal(await sheet.getByText('Pas de connexion. Réessaie quand le réseau revient.').count(), 1, 'le même message, une seule fois')
+    await page.unroute('**/rest/v1/rpc/set_product_archived')
     fake.restoreReads()
     await sheet.getByRole('button', { name: 'Réessayer' }).click()
     await sheet.getByRole('list', { name: 'Derniers mouvements' }).waitFor()
+    assert.equal(await sheet.getByText('Pas de connexion. Réessaie quand le réseau revient.').count(), 0, 'plus de message une fois la fiche relue')
 
     // 3. « Code-barres » (p6) : toucher le champ sélectionne tout son contenu.
     await sheet.getByRole('button', { name: 'Ajouter un code' }).click()
