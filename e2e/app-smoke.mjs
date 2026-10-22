@@ -57,6 +57,20 @@ const confirmCard = (page) => page.getByRole('region', { name: 'Fiche de confirm
 // Texte exact, pour un filtre hasText.
 const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
 
+// Attend que chaque élément soit entièrement dans la fenêtre, sans que l'on fasse défiler : waitFor() le dit
+// visible même quand il est sous le bas de l'écran.
+async function waitInViewport(page, locators, what) {
+  const elements = await Promise.all(locators.map((locator) => locator.elementHandle({ timeout: 5000 })))
+  const inViewport = (nodes) =>
+    nodes.every((node) => {
+      const box = node.getBoundingClientRect()
+      return box.top >= 0 && box.bottom <= window.innerHeight
+    })
+  await page.waitForFunction(inViewport, elements, { timeout: 5000 }).catch(() => {
+    throw new Error(`hors de l'écran : ${what}`)
+  })
+}
+
 // Ligne de la fiche de confirmation, écrite comme avant la refonte (« Pack de 24 → +24 ») :
 // « Pack de 24 » sous le nom, « +24 » en grand.
 async function waitForConfirmLine(card, line, options = {}) {
@@ -1240,17 +1254,23 @@ async function scenarioTutorial(browser) {
     await settings.getByRole('button', { name: 'Retour' }).click()
     await settingsButton.waitFor()
 
-    // 3. Vidéo injoignable : le message sous le lecteur, et le reste de l'app utilisable.
+    // 3. Vidéo injoignable, sur l'écran d'un iPhone SE (375 × 667) : le message sous le lecteur et « Réessayer »,
+    // amenés à l'écran ; « Réessayer » relance le chargement quand le réseau revient. Le reste de l'app reste utilisable.
+    await page.setViewportSize({ width: 375, height: 667 })
     await page.route('**/tutoriel/video/**', (route) => route.abort('internetdisconnected'))
     await settingsButton.click()
     await tutorialRow.click()
     await tutorial.getByLabel('Vidéo tuto').evaluate((element) => {
       element.play().catch(() => {})
     })
-    await tutorial
-      .getByRole('alert')
-      .filter({ hasText: exactly('La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.') })
-      .waitFor()
+    const loadError = tutorial.getByRole('alert').filter({ hasText: exactly('La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.') })
+    const retry = tutorial.getByRole('button', { name: 'Réessayer', exact: true })
+    await loadError.waitFor()
+    await waitInViewport(page, [loadError, retry], 'le message de la vidéo et « Réessayer »')
+    await page.unroute('**/tutoriel/video/**')
+    const playlistAgain = page.waitForResponse((response) => new URL(response.url()).pathname === '/tutoriel/video/tutoriel.m3u8' && response.ok())
+    await retry.click()
+    await playlistAgain
     await tutorial.getByRole('button', { name: 'Retour' }).click()
     await settings.getByRole('button', { name: 'Retour' }).click()
     await settingsButton.waitFor()
@@ -1268,6 +1288,29 @@ async function scenarioTutorial(browser) {
     assert.equal(await page.getByText('Ouvre cette page sur un iPhone pour voir la vidéo.').isVisible(), withoutHls)
     await link.click()
     await page.getByRole('button', { name: 'Se connecter' }).waitFor()
+    await context.close()
+  }
+  {
+    // 5. La page /tutoriel/, vidéo injoignable, sur l'écran d'un iPhone SE : le message et « Réessayer » amenés à
+    // l'écran ; « Réessayer » relance le chargement quand le réseau revient.
+    const context = await browser.newContext({ viewport: { width: 375, height: 667 } })
+    const page = await context.newPage()
+    const pageErrors = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await page.route('**/tutoriel/video/**', (route) => route.abort('internetdisconnected'))
+    await page.goto(`${BASE}/tutoriel/`)
+    await page.getByLabel('Vidéo tuto').evaluate((element) => {
+      element.play().catch(() => {})
+    })
+    const loadError = page.getByRole('alert').filter({ hasText: exactly('La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.') })
+    const retry = page.getByRole('button', { name: 'Réessayer', exact: true })
+    await loadError.waitFor()
+    await waitInViewport(page, [loadError, retry], 'le message de la page /tutoriel/ et « Réessayer »')
+    await page.unroute('**/tutoriel/video/**')
+    const playlistAgain = page.waitForResponse((response) => new URL(response.url()).pathname === '/tutoriel/video/tutoriel.m3u8' && response.ok())
+    await retry.click()
+    await playlistAgain
+    assert.deepEqual(pageErrors, [], 'aucune erreur dans la page /tutoriel/')
     await context.close()
   }
   console.log('Scénario P (tutoriel) : OK')

@@ -394,7 +394,7 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 | Base injoignable (panne ou projet en pause) | Message « Base injoignable » avec un renvoi vers la procédure du guide. |
 | Nouvelle version publiée | Installation automatique à l'ouverture suivante. |
 | Erreur d'affichage imprévue | « L'app a rencontré un problème. Touche « Recharger » ; si ça continue, préviens la personne qui gère ScanDrinks. », avec le bouton « Recharger ». |
-| Vidéo tuto injoignable | « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. », sous le lecteur. |
+| Vidéo tuto injoignable | « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. », sous le lecteur, avec « Réessayer » ; l'écran défile pour les montrer. |
 | Image impossible à enregistrer (réseau) | La fiche ou le code est enregistré quand même, avec « Photo non enregistrée : réessaie depuis la fiche du produit. ». |
 | Image d'Open Food Facts introuvable ou trop lente | Rien de bloquant : le cadre propose « Prendre la photo ». |
 | Image impossible à afficher | Une icône grise la remplace. |
@@ -482,7 +482,7 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 **L'écran « Tutoriel »** (Réglages)
 
 - Le lecteur vidéo, avec une image d'attente, la mention « Environ 3 minutes, sans le son : tout est écrit. » et le bouton « Retour ». Comme pour tous les Réglages, la caméra du Scanner est arrêtée pendant ce temps.
-- Rien n'est chargé avant le toucher de lecture. Sans réseau : « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. » (§7).
+- Rien n'est chargé avant le toucher de lecture. Sans réseau : « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. » et un bouton « Réessayer » (§7).
 
 **La page de la vidéo** (`/tutoriel/`) : le même lecteur, et un lien « Ouvrir ScanDrinks ». Un navigateur qui ne lit pas le format HLS affiche « Ouvre cette page sur un iPhone pour voir la vidéo. ».
 
@@ -628,6 +628,7 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 | 22/10/2026 | Tournage : base simulée (catalogue « tutoriel »), lundi 26/10/2026 à 09:30, Sam et Léa ; l'erreur annulée est une ligne de Léa déjà présente ; fausse caméra, rond des touchers et alerte dessinée dans le tournage seulement | Données fictives ; l'app ne contient aucun trucage |
 | 22/10/2026 | Filet de sécurité : le texte du §7, et « Recharger » relance la page ; l'écran allumé est redemandé une seule fois par activation ou par retour au premier plan (s7) | Pas de boucle de demandes si le système refuse |
 | 22/10/2026 | « Base injoignable » reste tel quel dans l'app : la feuille et le guide du jour J disent quoi faire | C'est le renvoi vers la procédure du guide (§7) |
+| 22/10/2026 | Vidéo injoignable : « Réessayer » sous le message, et l'écran défile jusqu'à eux, dans l'app comme sur la page `/tutoriel/` | Un lecteur en échec ne recharge plus rien de lui-même ; sous un grand lecteur, le message tombait hors de l'écran (relecture finale) |
 | 22/10/2026 | Remise à zéro : deux gardes (les tables et les trois fonctions de ScanDrinks, puis au moins un compte autorisé), une seule transaction, une ligne de résultat ; le script se copie depuis GitHub | Ne jamais effacer un autre projet ; un résultat lisible d'un coup d'œil |
 
 ## 12. Glossaire

@@ -27,18 +27,18 @@
 2. **La page de la vidéo.** Dans un nouvel onglet de Safari, ouvre https://jalon-4.scandrinks.pages.dev/tutoriel/ : même chose, avec le lien « Ouvrir ScanDrinks » sous la vidéo. Le QR code de la feuille mène à l'adresse définitive, qui n'existe qu'après la fusion : on l'essaie à ce moment-là (voir plus bas).
 3. **La vidéo sans réseau.**
    - Active le mode avion, et vérifie que le Wi-Fi est coupé lui aussi : l'iPhone peut le garder allumé en mode avion.
-   - Réglages › « Tutoriel », puis touche la lecture : « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. ».
-   - Coupe le mode avion.
+   - Réglages › « Tutoriel », puis touche la lecture : « La vidéo ne se charge pas. Vérifie la connexion, puis réessaie. », avec un bouton « Réessayer » dessous. L'écran défile tout seul pour les montrer.
+   - Coupe le mode avion, puis touche « Réessayer » : la vidéo se lit.
 4. **La fiche produit sans réseau (s3).**
    - Ouvre « Stock » : la liste s'affiche.
-   - Active le mode avion (Wi-Fi coupé), puis touche un produit : la fiche affiche un message « Pas de connexion… » avec un bouton « Réessayer ».
+   - Active le mode avion (Wi-Fi coupé), puis touche un produit : au bout de quelques secondes (l'app réessaie d'elle-même), la fiche affiche un message « Pas de connexion… » avec un bouton « Réessayer ».
    - Touche « Modifier », puis « Annuler » : le message et « Réessayer » sont toujours là.
    - Coupe le mode avion, puis touche « Réessayer » : la fiche se charge, avec ses codes et ses derniers mouvements.
 5. **La feuille A4.** Sur la feuille imprimée en noir et blanc, tout se lit et rien n'est coupé. Son QR code s'essaie après la fusion.
 6. **Facultatif : l'économie d'énergie (s7).** Active le mode Économie d'énergie (Réglages › Batterie). Ouvre le Scanner, caméra en marche, et pose l'iPhone sans le toucher, plus longtemps que son verrouillage automatique. Note si l'écran reste allumé : dans ce mode, iOS peut l'éteindre quand même. Coupe ensuite le mode Économie d'énergie.
 7. **La refonte.**
    - Réglages › « Apparence » : touche « Sombre », puis « Clair » : l'app change tout de suite. Puis « Automatique », et mets l'iPhone en mode sombre (Réglages › Luminosité et affichage) : l'app passe en sombre. Remets ensuite ton réglage habituel.
-   - Dans « Stock », ouvre la fiche du produit choisi. Touche l'image de son code, ou l'icône grise s'il n'en a pas : l'appareil photo de l'iPhone s'ouvre. Prends le pack en photo, puis « Utiliser la photo ». Elle s'affiche droite, dans la fiche et dans la liste du stock.
+   - Dans « Stock », ouvre la fiche du produit choisi. Touche l'image du code de son pack (celui qui vaut le pack, par exemple « 24 unités »), ou l'icône grise s'il n'en a pas : l'appareil photo de l'iPhone s'ouvre. Prends le pack en photo, puis « Utiliser la photo ». Elle s'affiche droite, dans la fiche et dans la liste du stock.
    - Reviens au Scanner : la caméra repart.
 
 ## Après la fusion

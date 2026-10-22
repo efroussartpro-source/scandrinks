@@ -5,7 +5,8 @@
   Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§6.2, §7, §9 « Mise en service »)
 
   Page statique, copiée telle quelle par Vite. Le lecteur natif de l'iPhone
-  lit la liste HLS ; rien n'est chargé avant le toucher de lecture. Les
+  lit la liste HLS ; rien n'est chargé avant le toucher de lecture. Si la
+  vidéo ne se charge pas, un message et « Réessayer » s'affichent. Les
   adresses et les textes sont ceux de src/settings/tutorial.ts
   (tutorial.test.ts vérifie qu'ils restent d'accord) ; les couleurs, celles
   de la charte (§6.7), jour et nuit.
@@ -26,6 +27,7 @@
         --link: #1f6f3f;
         --red-text: #c0392b;
         --red-pale: #fdecea;
+        --green-pale: #e7f1eb;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -36,6 +38,7 @@
           --link: #4cd07d;
           --red-text: #ff6961;
           --red-pale: #3a1d1b;
+          --green-pale: #1e3326;
         }
       }
 
@@ -91,6 +94,24 @@
         font-size: 15px;
       }
 
+      /* Vidéo injoignable : le message, puis « Réessayer » (un display ici effacerait l'attribut hidden). */
+      #failed:not([hidden]) {
+        display: grid;
+        gap: 12px;
+        scroll-margin-bottom: 16px;
+      }
+
+      button {
+        min-height: 48px;
+        padding: 0 16px;
+        border: none;
+        border-radius: 14px;
+        background: var(--green-pale);
+        color: var(--link);
+        font: inherit;
+        font-weight: 600;
+      }
+
       a {
         align-self: flex-start;
         min-height: 44px;
@@ -115,15 +136,29 @@
         aria-label="Vidéo tuto"
       ></video>
       <p id="unsupported" class="message" hidden>Ouvre cette page sur un iPhone pour voir la vidéo.</p>
-      <p id="failed" class="message" hidden role="alert">La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.</p>
+      <div id="failed" hidden>
+        <p class="message" role="alert">La vidéo ne se charge pas. Vérifie la connexion, puis réessaie.</p>
+        <button type="button">Réessayer</button>
+      </div>
       <a href="/">Ouvrir ScanDrinks</a>
     </main>
     <script>
-      // Un navigateur qui ne lit pas le HLS le dit tout de suite ; une vidéo injoignable, à l'essai de lecture.
+      // Un navigateur qui ne lit pas le HLS le dit tout de suite ; une vidéo injoignable, à l'essai de lecture. Le
+      // message vient sous un grand lecteur : on l'amène à l'écran, avec « Réessayer ».
       const video = document.querySelector('video')
+      const failed = document.getElementById('failed')
       if (video.canPlayType('application/vnd.apple.mpegurl') === '') document.getElementById('unsupported').hidden = false
       video.addEventListener('error', () => {
-        document.getElementById('failed').hidden = false
+        failed.hidden = false
+        failed.scrollIntoView({ block: 'nearest' })
+      })
+      // Un lecteur en échec refuse toute nouvelle lecture sans rien recharger : load() le remet à zéro, et play()
+      // relance le chargement dans le même toucher. Un nouvel échec rouvre le message.
+      failed.querySelector('button').addEventListener('click', () => {
+        failed.hidden = true
+        video.load()
+        const playing = video.play()
+        if (playing) playing.catch(() => {})
       })
     </script>
   </body>

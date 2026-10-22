@@ -7,3 +7,9 @@
   border-radius: 18px;
   background: var(--camera);
 }
+
+/* Vidéo injoignable : le message, puis « Réessayer », espacés comme le reste de l'écran. */
+.tutorial-failure {
+  display: grid;
+  gap: 12px;
+}
