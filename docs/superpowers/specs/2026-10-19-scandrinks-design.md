@@ -615,6 +615,20 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 | 21/10/2026 | Une image par code, facultative : celle d'Open Food Facts, recopiée chez nous, ou une photo de l'équipe | Choix du porteur du projet ; les packs sont inconnus d'Open Food Facts |
 | 21/10/2026 | La photo d'une création vient de la caméra du Scanner ; depuis la fiche, de l'appareil photo de l'iPhone | Ne pas couper la caméra du Scanner pendant une création |
 | 21/10/2026 | Images dans un stockage privé, affichées par des liens signés d'une heure | Seul le compte du tabac voit les images |
+| 22/10/2026 | Couleurs ajoutées à la charte (pastilles, boutons teintés des modes, barre d'onglets, vignette vide, tuiles des Réglages, viseur, ombres), contrastes vérifiés ; une ligne annulée en texte secondaire (`#6C6C70` de jour) | Le gris des maquettes (`#8E8E93`) n'atteint que 3,3:1 |
+| 22/10/2026 | Apparence : « Automatique » suit l'iPhone par le CSS, « Clair » et « Sombre » sont posés sur la page ; la barre d'état suit le fond ; le choix reste sur le téléphone | Le mode automatique suit l'iPhone sans attendre l'app |
+| 22/10/2026 | Scanner : modes au-dessus de la caméra ; caméra réduite pour une fiche longue ; consigne posée sur la caméra ; toute la fiche de confirmation prend la couleur du mode | Le mode reste en vue ; la fiche tient dans l'écran |
+| 22/10/2026 | Textes nouveaux de la refonte (connexion, Apparence, À racheter, Stock, comptage, photos) ; les aides des champs restent celles de l'app ; VoiceOver lit toujours la phrase entière d'une ligne | Les aides validées au jalon 1 sont gardées ; la refonte n'enlève rien à VoiceOver |
+| 22/10/2026 | Images : JPEG de 256 Kio au plus, nom contrôlé, jamais modifiées ni supprimées ; l'image d'un produit est celle du code du pack, sinon la plus ancienne ; liens signés demandés par lots, gardés 50 minutes ; la fiche est enregistrée avant l'envoi de la photo (15 s au plus) | Une photo ratée ne bloque jamais une création ; peu de demandes au stockage |
+| 22/10/2026 | Seules les images de `images.openfoodfacts.org` sont recopiées ; la canette scannée pour le nom ne donne pas d'image à la création | N'aller chercher qu'à l'adresse attendue ; l'image de la canette n'est pas celle du pack, qui s'ajoute depuis la fiche |
+| 22/10/2026 | Maquettes copiées dans le dépôt (`docs/maquettes/`) ; captures des écrans de jour et de nuit (`npm run screens`) | Le plan ne dépend pas du canevas en ligne ; chaque écran se compare aux maquettes |
+| 22/10/2026 | QR code de la feuille écrit et relu par zxing-wasm | Déjà installé : aucune nouvelle dépendance |
+| 22/10/2026 | Vidéo en HLS (segments fMP4 de 6 s), H.264 en 1080 × 1920 à 30 images/s, sans son, dans `/tutoriel/video/` ; le MP4 n'est pas versionné, il est remis au porteur du projet | Ce que l'iPhone lit sans demandes partielles ; un dépôt léger |
+| 22/10/2026 | « Tutoriel » : une ligne des Réglages après l'Apparence, « Retour » vers les Réglages, un message si la vidéo ne se charge pas ; aucun lien de l'app vers la page `/tutoriel/` | Un seul chemin dans l'app ; la page sert au QR code |
+| 22/10/2026 | Tournage : base simulée (catalogue « tutoriel »), lundi 26/10/2026 à 09:30, Sam et Léa ; l'erreur annulée est une ligne de Léa déjà présente ; fausse caméra, rond des touchers et alerte dessinée dans le tournage seulement | Données fictives ; l'app ne contient aucun trucage |
+| 22/10/2026 | Filet de sécurité : le texte du §7, et « Recharger » relance la page ; l'écran allumé est redemandé une seule fois par activation ou par retour au premier plan (s7) | Pas de boucle de demandes si le système refuse |
+| 22/10/2026 | « Base injoignable » reste tel quel dans l'app : la feuille et le guide du jour J disent quoi faire | C'est le renvoi vers la procédure du guide (§7) |
+| 22/10/2026 | Remise à zéro : deux gardes (les tables et les trois fonctions de ScanDrinks, puis au moins un compte autorisé), une seule transaction, une ligne de résultat ; le script se copie depuis GitHub | Ne jamais effacer un autre projet ; un résultat lisible d'un coup d'œil |
 
 ## 12. Glossaire
 
