@@ -50,7 +50,7 @@ interface SalesScreenProps {
   onSessionExpired: () => void
 }
 
-// Premier jour de ventes (.env.production : la bascule du 22/10 au soir), ou aucun.
+// Premier jour de ventes (.env.production : le lendemain de l'inventaire de la bascule, spec §9), ou aucun.
 const FIRST_SALES_DAY = import.meta.env.VITE_FIRST_SALES_DAY || null
 const SALES_REFUSED = 'Enregistrement refusé : vérifie le jour et les quantités.'
 const CHANGE_DAY = 'Changer de jour ? La saisie en cours sera effacée.'

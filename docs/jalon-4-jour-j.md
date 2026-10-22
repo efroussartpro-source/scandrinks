@@ -3,7 +3,10 @@
 **Pour qui :** toi, le porteur du projet. Coche chaque case au fur et à mesure.
 **Le programme :** la remise à zéro de la base (5 minutes), l'installation de l'app sur les iPhones de l'équipe (15 minutes environ), puis l'inventaire de toute la boutique (réserve, frigos et rayons), le soir à la fermeture.
 
-> **Changement du 22/10/2026 (jalon 5, la fin de journée).** Le stock couvre maintenant toute la boutique : les livraisons s'ajoutent par scan, et chaque soir l'équipe saisit les ventes du jour dans l'onglet « Ventes ». L'inventaire du premier jour se fait donc le soir, à la fermeture, et compte aussi les frigos et les rayons. Rien n'est scanné entre la remise à zéro et cet inventaire.
+> **Changement du 22/10/2026 (jalon 5, la fin de journée).** Le stock couvre maintenant toute la boutique : les livraisons s'ajoutent par scan, et chaque soir l'équipe saisit les ventes du jour dans l'onglet « Ventes ». L'inventaire du premier jour se fait donc le soir, à la fermeture, et compte aussi les frigos et les rayons.
+>
+> **Reporté au 23/10/2026 au soir :** à la fermeture, la remise à zéro, puis tout de suite l'inventaire. Les nouvelles règles et la fin de journée commencent le 24/10.
+
 **Ce qu'il te faut :** ton ordinateur ou ton iPhone, pour le tableau de bord Supabase et GitHub ; le mot de passe du tabac ; la feuille A4 de la réserve.
 
 ## La veille
@@ -14,7 +17,7 @@
 - [ ] La boutique est partagée en zones, une par personne : la réserve, les frigos, les rayons. Note qui prend quelle zone.
 - [ ] Tu as ouvert l'app une fois (https://scandrinks.pages.dev) : elle s'affiche normalement. Si elle dit « Base injoignable », la base est en pause : voir « Si la base est en pause », en bas.
 
-## Le matin : la remise à zéro (5 minutes)
+## La remise à zéro (5 minutes), juste avant l'inventaire
 
 > Elle efface les produits, les codes et les mouvements : les essais des tests disparaissent, et l'Historique commence propre. Le compte du tabac reste, avec son mot de passe. C'est toi qui la lances : je ne la lance jamais moi-même.
 
@@ -67,11 +70,11 @@ Sur ton iPhone, dans l'app installée :
 
 ## La semaine d'essai
 
-Les règles depuis le 23/10/2026 :
+Les règles depuis le 24/10/2026 :
 - [ ] Chaque livraison Metro est scannée en « Entrée + ».
 - [ ] Un pack porté au frigo ne se scanne plus : il reste dans la boutique.
 - [ ] « Sortie − » sert seulement à la casse, au périmé et aux boissons offertes.
-- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour. Jamais les ventes du 22/10 ni d'avant : l'inventaire du 22/10 au soir les compte déjà, et l'app ne propose pas ces jours.
+- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour. Jamais les ventes du 23/10 ni d'avant : l'inventaire du 23/10 au soir les compte déjà, et l'app ne propose pas ces jours.
 - [ ] Un comptage (« Inventaire = », « Corriger le stock ») se fait boutique fermée : le soir après la fin de journée, ou le matin avant l'ouverture. En journée, il retirerait deux fois les ventes du matin.
 - [ ] Avant chaque passage chez Metro, regarde « À racheter » le matin avant l'ouverture, ou le soir après la fin de journée : en journée, l'app compte encore les boissons vendues depuis le matin.
 - [ ] Tiens un carnet de bord : la date, l'iPhone, ce qui s'est passé, et une capture d'écran si possible.
