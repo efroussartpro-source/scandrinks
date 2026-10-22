@@ -128,7 +128,8 @@ function initialCatalogue(name) {
     movements.set('m-i3', movementRow('p-evian', 'in', 30, 'Sam', '2026-10-19T08:10:00Z'))
   }
   // La vidéo tuto, filmée le lundi 26/10/2026 : une semaine déjà commencée, en heures de Paris (UTC+2 jusqu'au 25/10).
-  // L'erreur que le chapitre 8 annule : l'entrée de Red Bull de samedi 18:30, qui était une sortie.
+  // Les sorties de samedi sont des ventes de fin de journée (jalon 5). L'erreur que le chapitre 8 annule : l'entrée de
+  // Red Bull de samedi 18:30, qui était une casse.
   if (name === 'tutoriel') {
     const teamPhoto = (product) => ({ photo_path: TUTORIAL_PHOTOS[product], photo_source: 'equipe' })
     products.set('p-coca', productRow('p-coca', 'Coca-Cola 33 cl', 24))
@@ -140,13 +141,13 @@ function initialCatalogue(name) {
     barcodes.set(TUTORIAL_CODES.redbull, barcodeRow('p-redbull', 24, undefined, teamPhoto('redbull')))
     barcodes.set(TUTORIAL_CODES.evian, barcodeRow('p-evian', 24, undefined, teamPhoto('evian')))
     movements.set('m-t1', movementRow('p-coca', 'in', 48, 'Léa', '2026-10-23T07:05:00Z'))
-    movements.set('m-t2', movementRow('p-coca', 'out', -24, 'Sam', '2026-10-24T15:40:00Z'))
+    movements.set('m-t2', movementRow('p-coca', 'out', -24, 'Sam', '2026-10-24T15:40:00Z', null, '2026-10-24'))
     movements.set('m-t3', movementRow('p-lipton', 'in', 24, 'Léa', '2026-10-23T07:10:00Z'))
-    movements.set('m-t4', movementRow('p-lipton', 'out', -14, 'Léa', '2026-10-24T16:05:00Z'))
+    movements.set('m-t4', movementRow('p-lipton', 'out', -14, 'Léa', '2026-10-24T16:05:00Z', null, '2026-10-24'))
     movements.set('m-t5', movementRow('p-redbull', 'in', 48, 'Léa', '2026-10-23T07:15:00Z'))
     movements.set('m-t6', movementRow('p-redbull', 'in', 24, 'Léa', '2026-10-24T16:30:00Z'))
     movements.set('m-t7', movementRow('p-evian', 'in', 24, 'Léa', '2026-10-23T07:20:00Z'))
-    movements.set('m-t8', movementRow('p-evian', 'out', -18, 'Sam', '2026-10-24T14:00:00Z'))
+    movements.set('m-t8', movementRow('p-evian', 'out', -18, 'Sam', '2026-10-24T14:00:00Z', null, '2026-10-24'))
   }
   return { products, barcodes, movements }
 }

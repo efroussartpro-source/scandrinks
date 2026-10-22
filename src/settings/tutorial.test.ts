@@ -54,3 +54,14 @@ test("la vidéo tuto dit quand une ligne d'« À racheter » disparaît, comme l
   expect(storyboard).toContain("disparait: 'Une ligne disparaît quand une entrée fait passer le stock au-dessus du seuil.',")
   expect(storyboard).not.toContain("dès que l'entrée du produit est scannée")
 })
+
+test('le chapitre 3 de la vidéo montre la fin de journée et le nouveau rôle de « Sortie − » (jalon 5)', () => {
+  const entree = storyboard.indexOf("key: 'entree'")
+  const ventes = storyboard.indexOf("key: 'ventes',\n    title: 'Le soir : la fin de journée',")
+  const nouveau = storyboard.indexOf("key: 'nouveau'")
+  expect(entree).toBeGreaterThan(-1)
+  expect(ventes).toBeGreaterThan(entree)
+  expect(nouveau).toBeGreaterThan(ventes)
+  expect(storyboard).toContain("sortie: 'Un pack porté au frigo ne se scanne plus. « Sortie − » : casse, périmé ou boisson offerte.',")
+  expect(storyboard).not.toContain('sors un pack de la réserve')
+})

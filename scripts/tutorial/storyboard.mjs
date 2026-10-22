@@ -36,16 +36,19 @@ export const CHAPTERS = [
       scan: "Vise le code-barres du pack : sa fiche s'affiche, avec +24.",
       quantite: 'Plusieurs packs identiques ? Règle la quantité avec + et −.',
       valider: 'Touche « Valider » : le message donne le nouveau stock.',
+      annuler: 'Une erreur juste après ? « Annuler » dans le message, pendant 5 secondes.',
       eloigner: 'Éloigne le pack : sinon, sa fiche revient 2 secondes plus tard.',
     },
   },
   {
-    key: 'sortie',
-    title: 'Un pack vers le frigo : Sortie −',
+    key: 'ventes',
+    title: 'Le soir : la fin de journée',
     captions: {
-      mode: 'Tu sors un pack de la réserve : touche « Sortie − », en orange.',
-      scan: 'Scanne le pack, vérifie −24, puis « Valider ».',
-      annuler: 'Une erreur juste après ? « Annuler » dans le message, pendant 5 secondes.',
+      ouvrir: 'Le soir, à la fermeture, ouvre « Ventes ».',
+      caisse: 'Sur la caisse, « Lecture jour » donne les boissons vendues : tape chaque nombre, sans les cafés.',
+      total: 'Le total du jour doit être celui de la caisse. Puis « Valider ».',
+      enregistrer: 'Vérifie le récapitulatif, puis « Enregistrer » : le stock baisse.',
+      sortie: 'Un pack porté au frigo ne se scanne plus. « Sortie − » : casse, périmé ou boisson offerte.',
     },
   },
   {
@@ -96,7 +99,7 @@ export const CHAPTERS = [
     title: 'Corriger une erreur : Historique',
     captions: {
       liste: '« Historique » : tous les gestes, du plus récent au plus ancien.',
-      erreur: 'Ici, une sortie de Red Bull scannée par erreur en « Entrée + ».',
+      erreur: 'Ici, un pack de Red Bull cassé, scanné par erreur en « Entrée + ».',
       annuler: 'Touche « Annuler » sur la ligne, puis « OK ».',
       barree: 'La ligne est barrée, le stock recalculé. Refais ensuite le bon geste.',
     },

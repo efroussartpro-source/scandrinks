@@ -47,8 +47,8 @@ const BASE = `http://localhost:${PORT}`
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const VITE_BIN = fileURLToPath(new URL('../../node_modules/vite/bin/vite.js', import.meta.url))
 const RAW_DIR = join(ROOT, 'dist-tutorial', 'raw')
-// Lundi 26/10/2026 à 09:30, heure de Paris (UTC+1 depuis le 25/10).
-const FILMED_AT = new Date('2026-10-26T08:30:00Z')
+// Lundi 26/10/2026 à 19:00, heure de Paris (UTC+1 depuis le 25/10) : le soir, pour la fin de journée du chapitre 3.
+const FILMED_AT = new Date('2026-10-26T18:00:00Z')
 // Le pack d'Oasis Tropical, inconnu de l'app, montré à la caméra au chapitre 4.
 const OASIS_COLOR = '#F07D1A'
 const SCREEN_TIMEOUT = 20_000
@@ -219,19 +219,31 @@ async function film(page, take) {
   await take.hideCode()
   await waitForSaved('+48 Coca-Cola 33 cl', 'Stock : 72 (3 packs)')
   await take.caption('entree', 'valider')
+  await take.caption('entree', 'annuler')
   await take.caption('entree', 'eloigner')
 
-  // 3. Un pack vers le frigo : Sortie −.
-  await take.chapter('sortie')
-  await take.tap(button('Sortie −'))
-  await take.caption('sortie', 'mode')
-  await take.showCode(TUTORIAL_CODES.coca)
-  await waitForConfirmLine('Pack de 24 → −24')
-  await take.caption('sortie', 'scan')
-  await take.tap(card.getByRole('button', { name: 'Valider' }))
-  await take.hideCode()
-  await waitForSaved('−24 Coca-Cola 33 cl', 'Stock : 48 (2 packs)')
-  await take.caption('sortie', 'annuler')
+  // 3. Le soir : la fin de journée. Lipton n'est pas vendu : le chapitre 5 le compte à 10.
+  await take.chapter('ventes')
+  await take.caption('ventes', 'ouvrir')
+  await take.tap(button('Ventes'))
+  await page.getByRole('heading', { name: 'Fin de journée' }).waitFor(wait)
+  await page.getByRole('list', { name: 'À saisir' }).waitFor(wait)
+  await take.caption('ventes', 'caisse')
+  for (const [name, sold] of [['Coca-Cola 33 cl', '12'], ['Évian 50 cl', '2'], ['Red Bull 25 cl', '4']]) {
+    const box = page.getByLabel(`Vendus : ${name}`, { exact: true })
+    await take.tap(box)
+    await take.typeSlowly(box, sold)
+  }
+  await page.locator('.sales-total').filter({ hasText: exactly('Total du jour : 18 boissons') }).waitFor(wait)
+  await take.caption('ventes', 'total')
+  await take.tap(button('Valider'))
+  await page.getByRole('heading', { name: 'Ventes du lun. 26/10' }).waitFor(wait)
+  await take.caption('ventes', 'enregistrer')
+  await take.tap(button('Enregistrer'))
+  await page.getByRole('status').filter({ hasText: exactly('Fin de journée enregistrée : 18 boissons.') }).waitFor(wait)
+  await take.caption('ventes', 'sortie')
+  await take.tap(button('Scanner'))
+  await waitForScanner()
 
   // 4. Un produit inconnu : créer sa fiche, avec la photo du pack.
   await take.chapter('nouveau')
