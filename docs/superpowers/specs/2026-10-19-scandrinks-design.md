@@ -16,6 +16,8 @@ Le bureau de tabac vend des boissons (canettes, bouteilles) achetées en packs c
 
 Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** fait gagner ce temps : on scanne le code-barres d'un pack, l'app reconnaît le produit et ajoute la bonne quantité, et une liste indique ce qu'il faut racheter et combien.
 
+Depuis le jalon 5, le stock couvre toute la boutique (réserve, frigos et rayons) : les livraisons s'ajoutent par scan, et chaque soir l'équipe saisit dans l'onglet « Ventes » les ventes du jour, lues sur la caisse (§4.8).
+
 ### Critères de réussite
 
 1. Pour un pack déjà connu, l'entrée se valide en **un geste après le scan**, deux s'il faut régler la quantité.
@@ -31,7 +33,7 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 - **Bon réseau** (wifi ou 4G) en boutique comme en réserve.
 - **Pas de compte Apple développeur** : ScanDrinks est une app web installable, ouverte dans Safari puis ajoutée à l'écran d'accueil.
 - **Tout le monde peut tout faire.** Le prénom enregistré sur chaque mouvement permet de savoir qui a fait quoi.
-- Le stock suivi est **celui de la réserve**. Ce qui est au frigo ou en rayon est considéré comme sorti.
+- Le stock suivi est **celui de toute la boutique** : réserve, frigos et rayons. Il monte avec les livraisons scannées et baisse avec les ventes saisies chaque soir (§4.8). Jusqu'au jalon 5, c'était celui de la réserve seule : un pack porté au frigo était scanné en sortie.
 
 ## 3. Périmètre
 
@@ -41,6 +43,7 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 - Fiche produit créée au premier scan, nom pré-rempli par Open Food Facts quand c'est possible.
 - Plusieurs codes-barres par produit (canette = 1 unité, pack = N unités).
 - Liste À racheter exprimée en packs Metro.
+- Fin de journée : les ventes du jour, lues sur la caisse, saisies dans l'onglet « Ventes » (jalon 5).
 - Liste du stock, fiche produit modifiable, archivage.
 - Inventaire (comptage) et correction du stock.
 - Historique de tous les mouvements, avec annulation.
@@ -51,11 +54,11 @@ Aujourd'hui, savoir quoi racheter demande de compter à la main. **ScanDrinks** 
 
 ### Hors version 1 (possible plus tard)
 
-Notifications, lien avec la caisse, prix et budget Metro, import des factures Metro, partage de la liste par WhatsApp, mode hors ligne, plusieurs boutiques, suivi des dates limites (la DLUO figure dans le code long de certaines étiquettes de packs).
+Notifications, lien automatique avec la caisse (lecture d'une capture d'écran ou accès direct à Bimedia), prix et budget Metro, import des factures Metro, partage de la liste par WhatsApp, mode hors ligne, plusieurs boutiques, suivi des dates limites (la DLUO figure dans le code long de certaines étiquettes de packs).
 
 ## 4. Parcours et écrans
 
-L'app a quatre onglets en bas, chacun avec son icône : **Scanner**, **À racheter**, **Stock**, **Historique**. Une roue dentée, en haut de l'écran, ouvre les **Réglages**. L'aspect de chaque écran suit la charte visuelle (§6.7).
+L'app a cinq onglets en bas, chacun avec son icône : **Scanner**, **À racheter**, **Stock**, **Ventes** (la fin de journée, §4.8) et **Historique**. Une roue dentée, en haut de l'écran, ouvre les **Réglages**. L'aspect de chaque écran suit la charte visuelle (§6.7).
 
 ### 4.1 Première ouverture (une fois par téléphone)
 
@@ -80,13 +83,13 @@ Le téléphone reste ensuite connecté.
 | Quantité         [−]  1  [+]   |
 | [      VALIDER      ] Annuler  |
 +--------------------------------+
-| Scanner  À racheter  Stock  Historique |
+| Scanner  À racheter  Stock  Ventes  Historique |
 ```
 
 **Modes.** Trois modes, chacun avec sa couleur :
 
 - **Entrée +** (vert) : retour de Metro ;
-- **Sortie −** (orange) : passage de la réserve au frigo ou au rayon ;
+- **Sortie −** (orange) : casse, périmé ou boisson offerte, c'est-à-dire ce qui quitte la boutique sans passer par la caisse. Un pack porté au frigo reste dans la boutique : depuis le jalon 5, on ne le scanne plus ;
 - **Inventaire =** (bleu) : comptage de ce qui reste.
 
 Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappelle toujours le mode, en couleur et avec le signe (+24 ou −24).
@@ -146,8 +149,9 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 - L'historique montre tous les mouvements, du plus récent au plus ancien, par pages de 50 (« Voir plus »).
 - Chaque ligne donne la date et l'heure (heure de Paris), le prénom, le type, le produit et la quantité. Exemples :
   - « lun. 14:32 — Sam — Entrée +24 — Coca-Cola 33 cl » ;
-  - « Inventaire : 53 comptés (−3) ».
-- À l'écran, chaque ligne tient sur deux lignes : le produit et la quantité en couleur (orange pour une sortie, vert pour une entrée, bleu pour un inventaire), puis le type, la date et le prénom.
+  - « Inventaire : 53 comptés (−3) » ;
+  - « jeu. 19:42 — Sam — Vente −2 (ventes du 22/10) — Coca-Cola 50 cl », pour une fin de journée (§4.8).
+- À l'écran, chaque ligne tient sur deux lignes : le produit et la quantité en couleur (orange pour une sortie ou une vente, vert pour une entrée, bleu pour un inventaire), puis le type, la date et le prénom.
 - Toute ligne active peut être annulée, après confirmation, par le lien « Annuler » de la ligne. Une ligne annulée reste visible, barrée, avec la mention « annulé par [prénom] ».
 
 ### 4.6 Réglages
@@ -171,13 +175,27 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 - L'image du produit est celle du code dont les unités valent le pack Metro, sinon la première image disponible. Sans image, une icône grise la remplace.
 - Les images montrent les produits, jamais les personnes.
 
+### 4.8 Fin de journée (onglet « Ventes », jalon 5)
+
+Chaque soir, à la fermeture, une personne de l'équipe reporte dans l'app les ventes du jour, lues sur la caisse (Bimedia : écran « Lecture jour », famille des boissons). Le stock baisse d'autant.
+
+- **L'onglet** s'appelle « Ventes » ; l'écran a pour titre « Fin de journée ».
+- **Le jour** : aujourd'hui par défaut (heure de Paris). On peut choisir l'un des 6 jours d'avant, pour rattraper un soir oublié ; jamais un jour à venir.
+- **Déjà saisi** : en haut, les produits déjà saisis pour ce jour, avec la quantité, le prénom et l'heure. Ils ne se saisissent pas une seconde fois. Pour corriger, on annule la vente dans l'Historique, puis on la saisit de nouveau.
+- **À saisir** : tous les autres produits actifs, par ordre alphabétique, avec leur image et une case « vendus » vide, et un champ de recherche en haut. On tape le nombre d'unités vendues (canettes ou bouteilles), de 1 à 999 ; une case vide ou à 0 ne compte pas. Ce que l'app ne suit pas (café, café crème) n'y figure pas.
+- **Le total du jour** s'affiche en bas (« 9 boissons ») : les unités déjà enregistrées pour ce jour plus celles en cours de saisie, à comparer avec la caisse, cafés retirés.
+- **« Valider »** ouvre le récapitulatif (« Coca-Cola 50 cl : −1 », …). « Enregistrer » retire les ventes du stock ; « Revenir » ramène à la saisie, intacte.
+- **Après l'enregistrement** : « Fin de journée enregistrée : 9 boissons. » Les produits passent dans « Déjà saisi ». Chaque produit vendu donne une ligne « Vente » dans l'Historique (§4.5) et dans sa fiche, annulable comme les autres.
+- **Une boisson vendue absente de l'app** : on crée sa fiche (« Stock » › « Nouveau produit »), puis on la saisit.
+- **Tout le monde** peut faire la fin de journée.
+
 ## 5. Règles de gestion
 
 | Réf. | Règle |
 |---|---|
 | RG-1 | Le stock se compte **en unités** (canettes, bouteilles). Il s'affiche aussi en packs Metro : « 53 (2 packs + 5) ». Si le pack Metro vaut 1, ou si le stock est négatif, seules les unités sont affichées. |
 | RG-2 | Chaque code-barres appartient à **un seul produit** et vaut de 1 à 999 unités. Un produit peut avoir plusieurs codes. |
-| RG-3 | **Entrée** : stock + unités du code × quantité. **Sortie** : stock − unités du code × quantité. La quantité va de 1 à 99. |
+| RG-3 | **Entrée** : stock + unités du code × quantité. **Sortie** : stock − unités du code × quantité. La quantité va de 1 à 99. Depuis le jalon 5, une sortie ne sert plus qu'à la casse, au périmé et aux boissons offertes (§4.2). |
 | RG-4 | **Inventaire** : le stock prend la valeur comptée (de 0 à 9 999). L'écart (compté − stock connu) est enregistré comme un mouvement de type inventaire. |
 | RG-5 | Un produit apparaît dans **À racheter** quand son stock est inférieur ou égal au seuil. |
 | RG-6 | Quantité à racheter = stock idéal − max(stock, 0), **arrondie au pack Metro supérieur**. Exemple : seuil 24, stock idéal 48, stock 10 → il manque 38 → 2 packs de 24. Un stock négatif compte pour 0, et la ligne porte la mention « stock à vérifier ». Si le pack Metro vaut 1, la quantité est donnée en unités. |
@@ -188,6 +206,7 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 | RG-11 | Un produit archivé disparaît des listes (Stock, À racheter, choix d'un produit) mais reste visible avec le filtre « Archivés ». Ses mouvements restent dans l'historique. Scanner un de ses codes propose de le réactiver. |
 | RG-12 | Déplacer un code vers un autre produit ne change pas les mouvements passés. |
 | RG-13 | **Chaque code lu est normalisé avant toute recherche.** Un UPC-A (12 chiffres) devient son EAN-13, avec un 0 devant. Un GTIN à 14 chiffres qui commence par 0 (carton ITF-14 ou code long) est ramené à 13 chiffres. Un code long GS1 (Code 128) qui contient un identifiant produit (01) est ramené à ce GTIN : le code court et le code long d'une même étiquette désignent donc le même produit. Un code long sans identifiant produit (lot ou date seuls) est ignoré, avec le message « Ce code n'identifie pas un produit ». Un code EAN, UPC ou ITF dont la clé de contrôle est fausse est ignoré, car c'est une lecture parasite. |
+| RG-14 | **Vente** (fin de journée) : stock − quantité vendue, en unités, de 1 à 999 par produit et par jour. Le jour est l'un des 7 derniers (aujourd'hui compris, heure de Paris), jamais à venir. Un produit a **au plus une vente active par jour** : une seconde saisie est refusée tant que la première n'est pas annulée. |
 
 ## 6. Architecture technique
 
@@ -259,7 +278,7 @@ déploiement automatique depuis GitHub
 |---|---|---|
 | `id` | uuid | clé, générée par le téléphone pour rendre chaque action unique (voir 7) |
 | `product_id` | uuid | renvoie à `products` |
-| `kind` | text | `in`, `out` ou `inventory` |
+| `kind` | text | `in`, `out` ou `inventory` ; une vente est une sortie (`out`) qui porte un `sale_day` |
 | `delta` | int | variation du stock en unités, positive ou négative |
 | `barcode` | text | code scanné, s'il y a eu un scan |
 | `counted` | int | quantité comptée, pour un inventaire |
@@ -267,6 +286,7 @@ déploiement automatique depuis GitHub
 | `created_at` | timestamptz | |
 | `cancelled_at` | timestamptz | vide tant que le mouvement est actif |
 | `cancelled_by` | text | prénom de la personne qui annule |
+| `sale_day` | date | jour des ventes, pour une vente (jalon 5) ; vide sinon. Un index unique interdit deux ventes actives d'un même produit le même jour. |
 
 **Vue `product_stock`** : pour chaque produit, le stock est la somme des `delta` des mouvements non annulés. Elle donne aussi `photo_path`, l'image du produit (§4.7).
 
@@ -277,7 +297,8 @@ déploiement automatique depuis GitHub
 - `record_movement(id, code ou product_id, kind, quantity, employee)` : calcule delta = ± unités du code × quantité.
 - `record_inventory(id, product_id, counted, employee)` : calcule l'écart par rapport au stock du moment.
 - `cancel_movement(movement_id, employee)` : renvoie le stock, puis qui a annulé et quand. Une seconde annulation ne change rien et garde le premier auteur.
-- `list_history(before_created_at, before_id, limit)` : l'historique, du plus récent au plus ancien, par pages (50 dans l'app), produits archivés compris. La page suivante part de la date et de l'identifiant du dernier mouvement affiché : un mouvement arrivé entre-temps ne décale rien.
+- `list_history(before_created_at, before_id, limit)` : l'historique, du plus récent au plus ancien, par pages (50 dans l'app), produits archivés compris. La page suivante part de la date et de l'identifiant du dernier mouvement affiché : un mouvement arrivé entre-temps ne décale rien. Depuis le jalon 5, chaque ligne donne aussi son `sale_day`.
+- `record_sales(day, lines, employee)` (jalon 5) : enregistre la fin de journée d'un jour en une seule transaction, une vente par ligne (identifiant tiré par le téléphone, produit, quantité). Rejouée avec les mêmes identifiants, elle renvoie ce qui a déjà été enregistré ; si un produit a déjà une vente active ce jour-là sous un autre identifiant, rien n'est enregistré et elle nomme les produits concernés.
 - `create_product(name, pack_size, alert_threshold, target_stock, barcodes, id)` : crée la fiche et son ou ses codes en une seule fois. `barcodes` est une liste de paires (code, unités), vide pour un produit créé sans scan. `id` est tiré par le téléphone : rejouée, ou envoyée deux fois en même temps, la création renvoie la fiche déjà créée.
 - `update_product(id, name, pack_size, alert_threshold, target_stock)` : modifie la fiche, avec les mêmes règles qu'à la création.
 - `set_product_archived(product_id, archived)` : archive ou réactive un produit.
@@ -398,6 +419,8 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 | Image impossible à enregistrer (réseau) | La fiche ou le code est enregistré quand même, avec « Photo non enregistrée : réessaie depuis la fiche du produit. ». |
 | Image d'Open Food Facts introuvable ou trop lente | Rien de bloquant : le cadre propose « Prendre la photo ». |
 | Image impossible à afficher | Une icône grise la remplace. |
+| Coupure réseau en enregistrant une fin de journée | Le même message et le même « Réessayer » qu'après un scan : chaque ligne a son identifiant, rien n'est compté deux fois. |
+| Fin de journée déjà saisie ailleurs pour un produit (deux téléphones) | « Déjà saisi pour ce jour : [produits]. La liste est relue. » Rien n'est enregistré, et la liste se met à jour. |
 
 ## 8. Stratégie de test
 
@@ -418,6 +441,10 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
   - le bouton « Tutoriel » et le filet de sécurité, dans les tests de bout en bout ;
   - la charte : les contrastes de ses couleurs, jour et nuit, par un test unitaire ; le choix de l'Apparence, gardé et appliqué, dans les tests de bout en bout ;
   - les images : la base (colonnes, fonction, droits du stockage) en tests SQL ; la copie depuis Open Food Facts, la photo, l'envoi, l'affichage et un envoi qui échoue, dans les tests de bout en bout, avec un stockage simulé.
+- **Jalon 5** :
+  - `record_sales`, en tests SQL : la baisse du stock, les bornes (quantité, jour), l'identifiant rejoué, une vente déjà active le même jour, l'annulation puis une nouvelle saisie, les droits ;
+  - les règles pures, par des tests unitaires : les jours proposés (heure de Paris), la lecture des cases, le total, le libellé des ventes dans l'Historique ;
+  - l'onglet « Ventes », dans les tests de bout en bout : saisie, récapitulatif, enregistrement, « Déjà saisi », coupure réseau puis « Réessayer », une saisie faite ailleurs entre-temps.
 - **Recette en boutique** avec le porteur du projet, le jour J et pendant la semaine d'essai (§9, « Mise en service »), à partir d'une liste à cocher :
   - scans de vrais packs Metro et création de 3 fiches ;
   - une sortie et un inventaire ;
@@ -450,6 +477,7 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 | 2. Le pilotage | Stock, fiche produit, À racheter, Inventaire. | Une liste d'achat cohérente après quelques scans. |
 | 3. Le suivi | Historique, annulation, changement de mot de passe, finitions. | Annuler une erreur, changer le mot de passe. |
 | 4. La mise en service | Refonte visuelle (style iPhone, jour et nuit) et images des codes ; vidéo tuto (bouton « Tutoriel » et QR code), feuille A4 de la réserve, quatre corrections ; puis le jour J : remise à zéro, installation sur les iPhones de l'équipe, inventaire du premier jour. | Une semaine d'utilisation par l'équipe (détail ci-dessous). |
+| 5. La fin de journée | Onglet « Ventes » : les ventes du jour, lues sur la caisse, saisies chaque soir ; le stock couvre toute la boutique ; feuille A4 et vidéo mises à jour. | Une semaine de fins de journée, puis le recomptage de 5 produits : les écarts s'expliquent. |
 
 Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai dépend surtout des moments disponibles pour tester en boutique.
 
@@ -547,6 +575,16 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 4. Le jour J, à la date choisie par le porteur du projet.
 5. La semaine d'essai, puis le bilan.
 
+### Bascule vers la fin de journée (jalon 5)
+
+Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet.
+
+- **Le 22/10/2026 au soir, boutique fermée** : inventaire de toute la boutique (réserve, frigos et rayons), avec les deux règles de l'inventaire. La remise à zéro a lieu à midi ; rien n'est scanné entre les deux.
+- **À partir du 23/10** : on scanne les livraisons (« Entrée + ») ; un pack porté au frigo ne se scanne plus ; « Sortie − » sert à la casse, au périmé et aux boissons offertes.
+- **Chaque soir** : la fin de journée (§4.8). Tant que l'onglet n'est pas en service, on note les jours ; on les rattrape ensuite (7 jours au plus), avec l'historique jour par jour de la caisse.
+- **Après l'inventaire** : relever les seuils et les stocks idéaux, qui comptent maintenant le frigo et les rayons.
+- **La feuille A4 et la vidéo tuto** suivent : « Je sors un pack de la réserve » devient « En fin de journée », et le chapitre 3 de la vidéo montre la fin de journée.
+
 ## 10. Risques et parades
 
 | Risque | Probabilité | Impact | Parade |
@@ -564,6 +602,9 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 | L'équipe ne prend pas les photos | Moyenne | Faible | Elles sont facultatives : une icône grise les remplace, et on peut les ajouter plus tard depuis la fiche. |
 | L'appareil photo de l'iPhone coupe la caméra du Scanner | Moyenne | Faible | À la création, la photo vient de la caméra du Scanner, sans ouvrir l'appareil photo ; depuis la fiche, la caméra du Scanner est déjà arrêtée. |
 | La remise à zéro lancée sur le mauvais projet | Faible | Fort | Le script vérifie d'abord les tables et les fonctions de ScanDrinks, et s'arrête sinon ; le guide dit de choisir le projet « scandrinks ». |
+| Une fin de journée oubliée | Moyenne | Moyen | Rattrapage sur 7 jours avec l'historique de la caisse. En attendant, le stock est trop haut et « À racheter » peut manquer un produit : on rattrape avant d'aller chez Metro. |
+| Une quantité mal recopiée de la caisse | Moyenne | Faible | Récapitulatif avant d'enregistrer, total à comparer avec la caisse ; annulation dans l'Historique, puis nouvelle saisie. |
+| Une boisson quitte la boutique sans passer en caisse (offerte, cassée) | Moyenne | Faible | « Sortie − » ; le recomptage montre l'écart. |
 
 ## 11. Journal des décisions
 
@@ -630,6 +671,10 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 | 22/10/2026 | « Base injoignable » reste tel quel dans l'app : la feuille et le guide du jour J disent quoi faire | C'est le renvoi vers la procédure du guide (§7) |
 | 22/10/2026 | Vidéo injoignable : « Réessayer » sous le message, et l'écran défile jusqu'à eux, dans l'app comme sur la page `/tutoriel/` | Un lecteur en échec ne recharge plus rien de lui-même ; sous un grand lecteur, le message tombait hors de l'écran (relecture finale) |
 | 22/10/2026 | Remise à zéro : deux gardes (les tables et les trois fonctions de ScanDrinks, puis au moins un compte autorisé), une seule transaction, une ligne de résultat ; le script se copie depuis GitHub | Ne jamais effacer un autre projet ; un résultat lisible d'un coup d'œil |
+| 22/10/2026 | Les ventes du jour se saisissent à la main chaque soir, dans un onglet « Ventes » (fin de journée), d'après l'écran « Lecture jour » de la caisse Bimedia | Choix du porteur du projet : simple, gratuit, sans IA ; Bimedia n'a pas d'accès public (son serveur est sur le réseau de la boutique) et son écran ne se copie pas |
+| 22/10/2026 | Le stock couvre toute la boutique ; un pack porté au frigo ne se scanne plus ; « Sortie − » sert à la casse, au périmé et aux boissons offertes | Les ventes de la caisse partent du frigo et des rayons : sinon, chaque boisson serait retirée deux fois |
+| 22/10/2026 | Une vente est une sortie qui porte le jour des ventes (`sale_day`), au plus une active par produit et par jour ; saisie possible sur les 7 derniers jours | Migration par simples ajouts, sans toucher aux contraintes existantes ; l'app du jalon 4 la montre comme une sortie ; un soir oublié se rattrape sans double compte |
+| 22/10/2026 | Bascule le 22/10/2026 au soir : inventaire de toute la boutique, boutique fermée | La caisse donne les ventes de toute la journée : compter en pleine journée retirerait deux fois les ventes du matin |
 
 ## 12. Glossaire
 
@@ -643,3 +688,5 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 - **Jour J** : le jour de la mise en service : remise à zéro, installation sur les iPhones et inventaire du premier jour.
 - **Image d'un code** : la photo du pack ou de la canette qui porte ce code-barres.
 - **Apparence** : le thème de l'app, jour (clair) ou nuit (sombre).
+- **Fin de journée** : la saisie, chaque soir, des ventes du jour lues sur la caisse (onglet « Ventes »).
+- **Vente** : le mouvement d'une fin de journée, une sortie datée du jour des ventes.
