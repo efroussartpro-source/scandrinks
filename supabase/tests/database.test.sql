@@ -1,6 +1,6 @@
--- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3, puis les images des codes).
+-- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3, les images des codes, puis la fin de journée).
 --
--- Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.7, §5, §6.3, §6.4, §8)
+-- Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.7, §4.8, §5, §6.3, §6.4, §8)
 --
 -- À lancer sur une base où les migrations sont appliquées : le vrai projet
 -- (outil execute_sql) ou le PostgreSQL local (supabase/tests/run-local.sh).
@@ -492,7 +492,7 @@ begin
   if jsonb_path_query_array(page1, '$[*].id')
        <> '["00000000-0000-4000-8000-000000001001", "00000000-0000-4000-8000-000000001002"]'::jsonb
      or (select array_agg(k order by k) from jsonb_object_keys(page1 -> 0) k) <> array['cancelled_at', 'cancelled_by', 'counted',
-       'created_at', 'delta', 'employee', 'id', 'kind', 'product_id', 'product_name']
+       'created_at', 'delta', 'employee', 'id', 'kind', 'product_id', 'product_name', 'sale_day']
      or page1 -> 0 ->> 'product_name' <> 'Coca-Cola 33 cl' or page1 -> 0 ->> 'employee' <> 'Testeur'
      or page1 -> 0 ->> 'kind' <> 'in' or (page1 -> 0 ->> 'delta')::int <> 1 or page1 -> 0 ->> 'cancelled_at' is not null
      or page1 -> 1 ->> 'product_name' <> 'Oasis Tropical 33 cl' then
@@ -704,6 +704,185 @@ begin
   end if;
   if (select ps.photo_path from public.product_stock ps where ps.id = '00000000-0000-4000-8000-00000000c0ca') is not null then
     raise exception 'ÉCHEC : le Coca n''a pas d''image';
+  end if;
+end
+$$;
+
+-- 30 à 33. Fin de journée (§4.8, RG-14) : les ventes d'un jour, enregistrées par record_sales. Mise en place, en
+-- tant que postgres : trois produits avec une entrée de 12 chacun, le jour de Paris (celui que la base prend pour
+-- « aujourd'hui ») et deux aides, une ligne de fin de journée (la quantité en JSON, pour essayer aussi 1.5 ou null)
+-- et ce jour.
+reset role;
+insert into public.products (id, name, pack_size, alert_threshold, target_stock) values
+  ('00000000-0000-4000-8000-00000000f0a1', 'Test ventes A', 6, 6, 12),
+  ('00000000-0000-4000-8000-00000000f0b1', 'Test ventes B', 6, 6, 12),
+  ('00000000-0000-4000-8000-00000000f0c1', 'Test ventes C', 6, 6, 12);
+insert into public.movements (id, product_id, kind, delta, employee) values
+  ('00000000-0000-4000-8000-00000000e0a1', '00000000-0000-4000-8000-00000000f0a1', 'in', 12, 'Testeur'),
+  ('00000000-0000-4000-8000-00000000e0b1', '00000000-0000-4000-8000-00000000f0b1', 'in', 12, 'Testeur'),
+  ('00000000-0000-4000-8000-00000000e0c1', '00000000-0000-4000-8000-00000000f0c1', 'in', 12, 'Testeur');
+select set_config('scandrinks_test.today', ((now() at time zone 'Europe/Paris')::date)::text, true);
+
+create function pg_temp.line(p_id uuid, p_product uuid, p_quantity jsonb) returns jsonb
+language sql
+as $$
+  select jsonb_build_object('id', p_id, 'product_id', p_product, 'quantity', p_quantity)
+$$;
+
+create function pg_temp.today() returns date
+language sql
+as $$
+  select current_setting('scandrinks_test.today')::date
+$$;
+
+-- 30. Saisie (le stock baisse), rejeu, conflit, annulation puis nouvelle saisie.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+do $$
+declare
+  today date := pg_temp.today();
+  a uuid := '00000000-0000-4000-8000-00000000f0a1';
+  b uuid := '00000000-0000-4000-8000-00000000f0b1';
+  c uuid := '00000000-0000-4000-8000-00000000f0c1';
+  s1 uuid := '00000000-0000-4000-8000-0000000050a1';
+  s2 uuid := '00000000-0000-4000-8000-0000000050b2';
+  s3 uuid := '00000000-0000-4000-8000-0000000050a3';
+  s4 uuid := '00000000-0000-4000-8000-0000000050c4';
+  s5 uuid := '00000000-0000-4000-8000-0000000050a5';
+  first_save jsonb := jsonb_build_array(pg_temp.line(s1, a, '3'), pg_temp.line(s2, b, '2'));
+  result jsonb;
+  sale public.movements%rowtype;
+  stock_of jsonb;
+begin
+  result := public.record_sales(today, first_save, ' Testeur ');
+  if result is distinct from '{"status": "recorded", "units": 5, "duplicate": false}'::jsonb then
+    raise exception 'ÉCHEC : fin de journée (%)', result;
+  end if;
+  select jsonb_object_agg(ps.name, ps.stock) into stock_of from public.product_stock ps where ps.id in (a, b, c);
+  if stock_of is distinct from '{"Test ventes A": 9, "Test ventes B": 10, "Test ventes C": 12}'::jsonb then
+    raise exception 'ÉCHEC : stocks après la fin de journée (%)', stock_of;
+  end if;
+  select * into sale from public.movements where id = s1;
+  if not found or sale.kind <> 'out' or sale.delta <> -3 or sale.sale_day is distinct from today or sale.barcode is not null
+     or sale.employee <> 'Testeur' or sale.counted is not null or sale.cancelled_at is not null then
+    raise exception 'ÉCHEC : ligne de vente (%)', to_jsonb(sale);
+  end if;
+
+  -- Rejouée (réponse perdue, « Réessayer ») : la même réponse, rien n'est compté deux fois.
+  result := public.record_sales(today, first_save, 'Testeur');
+  if result is distinct from '{"status": "recorded", "units": 5, "duplicate": true}'::jsonb then
+    raise exception 'ÉCHEC : fin de journée rejouée (%)', result;
+  end if;
+  -- Rejouée avec une autre quantité : c'est ce qui avait été enregistré qui compte.
+  result := public.record_sales(today, jsonb_build_array(pg_temp.line(s1, a, '4')), 'Testeur');
+  if result is distinct from '{"status": "recorded", "units": 3, "duplicate": true}'::jsonb then
+    raise exception 'ÉCHEC : fin de journée rejouée, quantité changée (%)', result;
+  end if;
+
+  -- A a déjà sa vente du jour : rien n'est enregistré, pas même la ligne de C.
+  result := public.record_sales(today, jsonb_build_array(pg_temp.line(s3, a, '1'), pg_temp.line(s4, c, '2')), 'Testeur');
+  if result is distinct from '{"status": "already_recorded", "products": ["Test ventes A"]}'::jsonb then
+    raise exception 'ÉCHEC : vente déjà saisie (%)', result;
+  end if;
+  if exists (select 1 from public.movements where id in (s3, s4)) then
+    raise exception 'ÉCHEC : une ligne a été enregistrée malgré le conflit';
+  end if;
+  select jsonb_object_agg(ps.name, ps.stock) into stock_of from public.product_stock ps where ps.id in (a, b, c);
+  if stock_of is distinct from '{"Test ventes A": 9, "Test ventes B": 10, "Test ventes C": 12}'::jsonb then
+    raise exception 'ÉCHEC : stocks après le conflit (%)', stock_of;
+  end if;
+
+  -- Annulée dans l'Historique, la vente de A se saisit de nouveau.
+  perform public.cancel_movement(s1, 'Testeur');
+  result := public.record_sales(today, jsonb_build_array(pg_temp.line(s5, a, '1')), 'Testeur');
+  if result is distinct from '{"status": "recorded", "units": 1, "duplicate": false}'::jsonb then
+    raise exception 'ÉCHEC : nouvelle saisie après annulation (%)', result;
+  end if;
+  if (select ps.stock from public.product_stock ps where ps.id = a) is distinct from 11 then
+    raise exception 'ÉCHEC : stock de A après annulation puis nouvelle saisie (%)',
+      (select ps.stock from public.product_stock ps where ps.id = a);
+  end if;
+end
+$$;
+
+-- 31. Bornes (RG-14) : les 7 derniers jours de Paris, de 1 à 999 par produit, une ligne par produit.
+do $$
+declare
+  result jsonb := public.record_sales(pg_temp.today() - 6,
+    jsonb_build_array(pg_temp.line('00000000-0000-4000-8000-0000000050c6', '00000000-0000-4000-8000-00000000f0c1', '1')), 'Testeur');
+begin
+  if result ->> 'status' is distinct from 'recorded' then
+    raise exception 'ÉCHEC : le 7e jour (aujourd''hui − 6) est refusé (%)', result;
+  end if;
+end
+$$;
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today() - 7,
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1')), 'Testeur')$q$, 'invalid_input:day');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today() + 1,
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1')), 'Testeur')$q$, 'invalid_input:day');
+select pg_temp.expect_error($q$select public.record_sales(null,
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1')), 'Testeur')$q$, 'invalid_input:day');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '0')), 'Testeur')$q$, 'invalid_input:quantity');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1000')), 'Testeur')$q$, 'invalid_input:quantity');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1.5')), 'Testeur')$q$, '22P02');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(), '[]', 'Testeur')$q$, 'invalid_input:lines');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(), '{}', 'Testeur')$q$, 'invalid_input:lines');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(), jsonb_build_array(
+  pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1'),
+  pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '2')), 'Testeur')$q$, 'invalid_input:lines');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(), jsonb_build_array(
+  pg_temp.line('00000000-0000-4000-8000-0000000050d7', '00000000-0000-4000-8000-00000000f0c1', '1'),
+  pg_temp.line('00000000-0000-4000-8000-0000000050d7', '00000000-0000-4000-8000-00000000c0ca', '1')), 'Testeur')$q$,
+  'invalid_input:lines');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), gen_random_uuid(), '1')), 'Testeur')$q$, 'invalid_input:product');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(null, '00000000-0000-4000-8000-00000000f0c1', '1')), 'Testeur')$q$, 'invalid_input:id');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line('00000000-0000-4000-8000-0000000050b2', '00000000-0000-4000-8000-00000000f0a1', '2')), 'Testeur')$q$,
+  'invalid_input:id');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today() - 1,
+  jsonb_build_array(pg_temp.line('00000000-0000-4000-8000-0000000050b2', '00000000-0000-4000-8000-00000000f0b1', '2')), 'Testeur')$q$,
+  'invalid_input:id');
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1')), '  ')$q$, 'invalid_input:employee');
+
+-- 32. Droits et contraintes : sans connexion ou sans accès (B), rien ; écrites directement, une entrée ne porte pas de
+-- jour de ventes, et un produit n'a qu'une vente active par jour ; le jour d'une vente ne se modifie pas.
+set local role anon;
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1')), 'Intrus')$q$, '42501');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
+select pg_temp.expect_error($q$select public.record_sales(pg_temp.today(),
+  jsonb_build_array(pg_temp.line(gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', '1')), 'Intrus')$q$, '42501');
+reset role;
+select pg_temp.expect_error($q$insert into public.movements (id, product_id, kind, delta, employee, sale_day)
+  values (gen_random_uuid(), '00000000-0000-4000-8000-00000000f0c1', 'in', 1, 'Testeur', pg_temp.today())$q$, '23514');
+select pg_temp.expect_error($q$insert into public.movements (id, product_id, kind, delta, employee, sale_day)
+  values (gen_random_uuid(), '00000000-0000-4000-8000-00000000f0b1', 'out', -1, 'Testeur', pg_temp.today())$q$, '23505');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+select pg_temp.expect_error($q$update public.movements set sale_day = pg_temp.today() - 1
+  where id = '00000000-0000-4000-8000-0000000050b2'$q$, '42501');
+
+-- 33. Historique (§4.5) : chaque ligne donne son jour de ventes, vide pour un autre mouvement.
+do $$
+declare
+  history jsonb := public.list_history(null, null, 100);
+  sale jsonb;
+  entry jsonb;
+begin
+  select h into sale from jsonb_array_elements(history) h where h ->> 'id' = '00000000-0000-4000-8000-0000000050b2';
+  select h into entry from jsonb_array_elements(history) h where h ->> 'id' = '00000000-0000-4000-8000-00000000e0b1';
+  if sale ->> 'sale_day' is distinct from pg_temp.today()::text then
+    raise exception 'ÉCHEC : jour de ventes absent de l''historique (%)', sale;
+  end if;
+  if entry is null or not entry ? 'sale_day' or entry -> 'sale_day' is distinct from 'null'::jsonb then
+    raise exception 'ÉCHEC : une entrée de l''historique sans jour de ventes vide (%)', entry;
   end if;
 end
 $$;

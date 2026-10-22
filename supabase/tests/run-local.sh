@@ -3,7 +3,8 @@
 #
 # Recrée une base jetable, y charge l'imitation de Supabase puis la migration,
 # et exécute database.test.sql (tout y est annulé à la fin). Lance ensuite le
-# test de la remise à zéro (reset.test.sh), sur ses propres bases jetables.
+# test de la remise à zéro (reset.test.sh), puis celui de deux fins de journée
+# simultanées (sales-race.test.sh), chacun sur ses propres bases jetables.
 # Ne touche jamais au vrai projet Supabase. À lancer avec un compte qui peut
 # créer des bases :
 #   su postgres -c "bash supabase/tests/run-local.sh"
@@ -21,3 +22,4 @@ for migration in "$ROOT"/supabase/migrations/*.sql; do
 done
 psql -X -v ON_ERROR_STOP=1 -At -d "$DB" -f "$ROOT/supabase/tests/database.test.sql"
 bash "$ROOT/supabase/tests/reset.test.sh"
+bash "$ROOT/supabase/tests/sales-race.test.sh"
