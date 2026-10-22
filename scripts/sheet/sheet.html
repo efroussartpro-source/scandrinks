@@ -1,0 +1,180 @@
+<!doctype html>
+<!--
+  sheet.html — La feuille A4 de la réserve : le mémo de ScanDrinks, avec le QR code de la vidéo tuto.
+
+  Référence : docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md (Tâche 7)
+
+  print.mjs met le dessin du QR code dans le bloc .qr (un carré de 40 mm), à
+  la place de son emplacement, pose les espaces insécables de la typographie
+  française, puis imprime la page en PDF : docs/feuille-reserve.pdf. Noir sur
+  blanc, pour une imprimante ordinaire.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ScanDrinks — mémo de la réserve</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, -apple-system, system-ui, sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.25;
+        color: #000000;
+        background: #ffffff;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      /* En haut : le titre et la phrase de la vidéo, le QR code à droite. */
+      header {
+        display: grid;
+        grid-template-columns: 1fr 40mm;
+        column-gap: 10mm;
+        align-items: center;
+      }
+
+      h1 {
+        margin: 0 0 4mm;
+        font-size: 20pt;
+        line-height: 1.15;
+        font-weight: 800;
+      }
+
+      .video {
+        font-size: 13pt;
+        font-weight: 600;
+      }
+
+      .address {
+        margin-top: 1.5mm;
+      }
+
+      .qr svg {
+        display: block;
+        width: 40mm;
+        height: 40mm;
+      }
+
+      h2 {
+        margin: 5mm 0 1.5mm;
+        font-size: 15pt;
+        line-height: 1.2;
+        font-weight: 700;
+      }
+
+      .subtitle {
+        margin: -1mm 0 1.5mm;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th {
+        padding: 0 3mm 1.2mm 0;
+        border-bottom: 0.4mm solid #000000;
+        text-align: left;
+        font-weight: 700;
+      }
+
+      td {
+        padding: 1.2mm 3mm 1.2mm 0;
+        border-bottom: 0.2mm solid #808080;
+        vertical-align: top;
+      }
+
+      td:first-child {
+        font-weight: 600;
+      }
+
+      .situations td:first-child {
+        width: 54mm;
+      }
+
+      .messages td:first-child {
+        width: 64mm;
+      }
+
+      ol {
+        margin: 0;
+        padding-left: 6mm;
+      }
+
+      li + li {
+        margin-top: 0.8mm;
+      }
+
+      footer {
+        margin-top: 5mm;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>ScanDrinks — mémo de la réserve</h1>
+        <p class="video">La vidéo tuto (3 minutes) : vise ce code avec l'appareil photo de l'iPhone.</p>
+        <p class="address">scandrinks.pages.dev/tutoriel</p>
+      </div>
+      <div class="qr"><!--QR--></div>
+    </header>
+
+    <h2>Chaque fois que…</h2>
+    <table class="situations">
+      <thead>
+        <tr><th>Situation</th><th>Dans ScanDrinks</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Une livraison Metro arrive</td><td>« Scanner » › « Entrée + », un scan par pack, puis « Valider ».</td></tr>
+        <tr><td>Je sors un pack de la réserve</td><td>« Scanner » › « Sortie − », le scan, puis « Valider ». Éloigne ensuite le pack.</td></tr>
+        <tr>
+          <td>L'app ne connaît pas le code</td>
+          <td>« Nouveau produit » : la photo du pack (facultative), « Scanner une canette du pack » pour le nom, les unités du pack, puis « Créer le produit ».</td>
+        </tr>
+        <tr><td>Je compte un produit</td><td>« Scanner » › « Inventaire = », le scan, les packs et les unités en plus, puis « Valider ».</td></tr>
+        <tr><td>Un code est illisible</td><td>« Saisie manuelle », puis le produit dans la liste.</td></tr>
+        <tr><td>Je pars chez Metro</td><td>Onglet « À racheter » : le nombre de packs à prendre.</td></tr>
+        <tr><td>Je me suis trompé</td><td>Onglet « Historique » › « Annuler » sur la ligne, puis « OK ».</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Installer l'app sur un iPhone</h2>
+    <p class="subtitle">iOS 16.4 ou plus : Réglages › Général › Informations</p>
+    <ol>
+      <li>Dans Safari, ouvre scandrinks.pages.dev.</li>
+      <li>Touche Partager, puis « Sur l'écran d'accueil », puis « Ajouter ».</li>
+      <li>Ouvre ScanDrinks depuis son icône, puis tape le mot de passe du tabac.</li>
+      <li>Choisis ton prénom, puis autorise la caméra.</li>
+    </ol>
+
+    <h2>Si l'app affiche…</h2>
+    <table class="messages">
+      <thead>
+        <tr><th>Message</th><th>Que faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>« Pas de connexion… »</td><td>Réessaie quand le réseau revient. « Réessayer » ne compte jamais deux fois.</td></tr>
+        <tr><td>« Ta session a expiré »</td><td>Retape le mot de passe du tabac.</td></tr>
+        <tr><td>« Base injoignable »</td><td>Réessaie dans un instant. Si ça dure, préviens la personne qui gère ScanDrinks.</td></tr>
+        <tr>
+          <td>« L'accès à la caméra a été refusé »</td>
+          <td>Réglages › Apps › Safari › Caméra › Autoriser (avant iOS 18 : Réglages › Safari › Caméra), puis ferme et rouvre l'app.</td>
+        </tr>
+        <tr><td>« stock à vérifier »</td><td>Recompte le produit en « Inventaire = ».</td></tr>
+        <tr><td>« Photo non enregistrée »</td><td>Le produit est bien créé. Reprends la photo depuis sa fiche : touche l'image du code.</td></tr>
+        <tr><td>« L'app a rencontré un problème »</td><td>Touche « Recharger ».</td></tr>
+      </tbody>
+    </table>
+
+    <footer>Un souci ? Préviens la personne qui gère ScanDrinks.</footer>
+  </body>
+</html>
