@@ -18,6 +18,24 @@ export const COCA_CODE = '5449000000996'
 // L'image du Coca chez Open Food Facts (adresse de la vraie base, servie ici par PHOTO_JPEG).
 export const OFF_COCA_IMAGE = 'https://images.openfoodfacts.org/images/products/544/900/000/0996/front_fr.4.400.jpg'
 
+// Codes du catalogue « tutoriel » (la vidéo tuto) : des EAN-13 à clé valide, vérifiés le 21/10/2026.
+export const TUTORIAL_CODES = {
+  coca: COCA_CODE,
+  lipton: '3502110123091',
+  oasisPack: '3124480191182',
+  oasisCan: '3124480191014',
+  redbull: '9002490100070',
+  evian: '3068320114491',
+}
+
+// Photos de l'équipe des codes du catalogue « tutoriel » : la vidéo y range ses illustrations de packs (option photos).
+export const TUTORIAL_PHOTOS = {
+  coca: `codes/${TUTORIAL_CODES.coca}/7c0ca000-0000-4000-8000-000000000001.jpg`,
+  lipton: `codes/${TUTORIAL_CODES.lipton}/7110a000-0000-4000-8000-000000000002.jpg`,
+  redbull: `codes/${TUTORIAL_CODES.redbull}/7eedb000-0000-4000-8000-000000000003.jpg`,
+  evian: `codes/${TUTORIAL_CODES.evian}/7e1a0000-0000-4000-8000-000000000004.jpg`,
+}
+
 // Catalogue « images » : le Coca a une photo de l'équipe, présente au stockage ; celle du Lipton (Open Food Facts) manque.
 const IMAGES_COCA_PHOTO = 'codes/5449000000996/11111111-1111-4111-8111-111111111111.jpg'
 const IMAGES_LIPTON_PHOTO = 'codes/3502110123091/22222222-2222-4222-8222-222222222222.jpg'
@@ -102,6 +120,27 @@ function initialCatalogue(name) {
     movements.set('m-i2', movementRow('p-lipton', 'in', 6, 'Sam', '2026-10-19T08:05:00Z'))
     movements.set('m-i3', movementRow('p-evian', 'in', 30, 'Sam', '2026-10-19T08:10:00Z'))
   }
+  // La vidéo tuto, filmée le lundi 26/10/2026 : une semaine déjà commencée, en heures de Paris (UTC+2 jusqu'au 25/10).
+  // L'erreur que le chapitre 8 annule : l'entrée de Red Bull de samedi 18:30, qui était une sortie.
+  if (name === 'tutoriel') {
+    const teamPhoto = (product) => ({ photo_path: TUTORIAL_PHOTOS[product], photo_source: 'equipe' })
+    products.set('p-coca', productRow('p-coca', 'Coca-Cola 33 cl', 24))
+    products.set('p-lipton', productRow('p-lipton', 'Lipton Pêche 50 cl', 12))
+    products.set('p-redbull', productRow('p-redbull', 'Red Bull 25 cl', 24))
+    products.set('p-evian', productRow('p-evian', 'Évian 50 cl', 24))
+    barcodes.set(TUTORIAL_CODES.coca, barcodeRow('p-coca', 24, undefined, teamPhoto('coca')))
+    barcodes.set(TUTORIAL_CODES.lipton, barcodeRow('p-lipton', 12, undefined, teamPhoto('lipton')))
+    barcodes.set(TUTORIAL_CODES.redbull, barcodeRow('p-redbull', 24, undefined, teamPhoto('redbull')))
+    barcodes.set(TUTORIAL_CODES.evian, barcodeRow('p-evian', 24, undefined, teamPhoto('evian')))
+    movements.set('m-t1', movementRow('p-coca', 'in', 48, 'Léa', '2026-10-23T07:05:00Z'))
+    movements.set('m-t2', movementRow('p-coca', 'out', -24, 'Sam', '2026-10-24T15:40:00Z'))
+    movements.set('m-t3', movementRow('p-lipton', 'in', 24, 'Léa', '2026-10-23T07:10:00Z'))
+    movements.set('m-t4', movementRow('p-lipton', 'out', -14, 'Léa', '2026-10-24T16:05:00Z'))
+    movements.set('m-t5', movementRow('p-redbull', 'in', 48, 'Léa', '2026-10-23T07:15:00Z'))
+    movements.set('m-t6', movementRow('p-redbull', 'in', 24, 'Léa', '2026-10-24T16:30:00Z'))
+    movements.set('m-t7', movementRow('p-evian', 'in', 24, 'Léa', '2026-10-23T07:20:00Z'))
+    movements.set('m-t8', movementRow('p-evian', 'out', -18, 'Sam', '2026-10-24T14:00:00Z'))
+  }
   return { products, barcodes, movements }
 }
 
@@ -118,7 +157,10 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
 
 /**
  * Installe le faux backend sur une page.
- * options.catalogue : 'coca_with_code' (par défaut), 'coca_without_code', 'coca_archived', 'pilotage', 'images' ou 'empty'.
+ * options.catalogue : 'coca_with_code' (par défaut), 'coca_without_code', 'coca_archived', 'pilotage', 'images', 'tutoriel'
+ *   (la vidéo tuto : prénoms Sam et Léa, photos de l'équipe sur les codes, TUTORIAL_PHOTOS) ou 'empty'.
+ * options.now : l'horloge des dates enregistrées (created_at, cancelled_at), par défaut l'heure réelle ; la vidéo la
+ *   cale sur l'horloge fixée de la page.
  * options.failNextRecord : coupe le premier record_movement (réseau perdu).
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
  * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
@@ -145,10 +187,13 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
     loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true,
-    failPhotoUpload = false, hangPhotoUpload = false, corruptHistory = false } = options
+    failPhotoUpload = false, hangPhotoUpload = false, corruptHistory = false, now: clock = () => new Date() } = options
   const db = initialCatalogue(catalogue)
   const photos = new Map(Object.entries(givenPhotos))
   if (catalogue === 'images' && !photos.has(IMAGES_COCA_PHOTO)) photos.set(IMAGES_COCA_PHOTO, PHOTO_JPEG)
+  if (catalogue === 'tutoriel') {
+    for (const path of Object.values(TUTORIAL_PHOTOS)) if (!photos.has(path)) photos.set(path, PHOTO_JPEG)
+  }
   const storageCalls = []
   let uploadFailuresLeft = failPhotoUpload ? 1 : 0
   let uploadHangsLeft = hangPhotoUpload ? 1 : 0
@@ -167,7 +212,7 @@ export async function installFakeSupabase(page, options = {}) {
   let createdCount = 0
   let otherPhoneCount = 0
 
-  const now = () => new Date().toISOString()
+  const now = () => clock().toISOString()
   const stockOf = (productId) =>
     [...db.movements.values()].filter((m) => m.product_id === productId && m.cancelled_at === null).reduce((sum, m) => sum + m.delta, 0)
   // Image du produit, comme la vue product_stock : celle du code du pack Metro, sinon la première par date puis par code.
@@ -295,7 +340,11 @@ export async function installFakeSupabase(page, options = {}) {
       if (!corruptHistory || p_before_created_at !== null || page.length === 0) return page
       return [{ ...page[0], id: '00000000-0000-4000-8000-0000000000bd', created_at: 'pas une date' }, ...page.slice(0, p_limit - 1)]
     },
-    list_employees: () => [],
+    // La vidéo montre les prénoms déjà utilisés ; ailleurs, la liste reste vide, comme pour un premier téléphone.
+    list_employees: () =>
+      catalogue === 'tutoriel'
+        ? [...new Set([...db.movements.values()].map((m) => m.employee))].sort((a, b) => a.localeCompare(b, 'fr'))
+        : [],
   }
 
   // Lectures PostgREST : filtre product_id=eq.…, ordre et limite.
@@ -449,14 +498,18 @@ export async function installFakeSupabase(page, options = {}) {
     return reply(404, { message: `Route simulée inconnue : ${url.pathname}` })
   })
 
+  // Open Food Facts connaît le Coca (avec son image) et la canette d'Oasis Tropical (sans image) ; rien d'autre.
+  const offProducts = {
+    [COCA_CODE]: { product_name_fr: 'Coca-Cola', quantity: '330 ml', ...(offImage ? { image_front_url: OFF_COCA_IMAGE } : {}) },
+    [TUTORIAL_CODES.oasisCan]: { product_name_fr: 'Oasis Tropical', quantity: '33 cl' },
+  }
   await page.route('https://world.openfoodfacts.org/**', (route) => {
-    const found = route.request().url().includes(`/product/${COCA_CODE}.json`)
+    const code = new URL(route.request().url()).pathname.match(/\/product\/(\d+)\.json$/)?.[1]
+    const product = code ? offProducts[code] : undefined
     return route.fulfill({
-      status: found ? 200 : 404,
+      status: product ? 200 : 404,
       contentType: 'application/json',
-      body: JSON.stringify(found
-        ? { status: 1, product: { product_name_fr: 'Coca-Cola', quantity: '330 ml', ...(offImage ? { image_front_url: OFF_COCA_IMAGE } : {}) } }
-        : { status: 0 }),
+      body: JSON.stringify(product ? { status: 1, product } : { status: 0 }),
     })
   })
   // Les images d'Open Food Facts : toujours la même photo de test, lisible depuis l'app (CORS).
