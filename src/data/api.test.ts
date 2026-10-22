@@ -17,7 +17,7 @@ function queryBuilder(rows: unknown, calls: unknown[][]) {
   const builder: Record<string, unknown> = {
     then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve(ok(rows)).then(resolve, reject),
   }
-  for (const method of ['select', 'eq', 'order', 'limit']) {
+  for (const method of ['select', 'eq', 'is', 'order', 'limit']) {
     builder[method] = (...args: unknown[]) => {
       calls.push([method, ...args])
       return builder
@@ -170,18 +170,22 @@ test('getProductDetail lit les codes, avec leur image, et les 20 derniers mouvem
       ? queryBuilder([{ code: '5449000000996', units: 24, photo_path: COCA_PHOTO, photo_source: 'equipe' },
           { code: '2000000000015', units: 1, photo_path: null, photo_source: null }], barcodeCalls)
       : queryBuilder([{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', created_at: '2026-10-19T12:32:00Z',
-          cancelled_at: null, cancelled_by: null }], movementCalls),
+          cancelled_at: null, cancelled_by: null, sale_day: null },
+        { id: 'm0', kind: 'out', delta: -2, counted: null, employee: 'Léa', created_at: '2026-10-18T17:42:00Z',
+          cancelled_at: null, cancelled_by: null, sale_day: '2026-10-18' }], movementCalls),
   )
   await expect(createApi({ rpc: vi.fn(), from } as never).getProductDetail('p9')).resolves.toEqual({
     barcodes: [{ code: '5449000000996', units: 24, photoPath: COCA_PHOTO, photoSource: 'equipe' },
       { code: '2000000000015', units: 1, photoPath: null, photoSource: null }],
     movements: [{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', createdAt: '2026-10-19T12:32:00Z',
-      cancelledAt: null, cancelledBy: null, saleDay: null }],
+      cancelledAt: null, cancelledBy: null, saleDay: null },
+    { id: 'm0', kind: 'out', delta: -2, counted: null, employee: 'Léa', createdAt: '2026-10-18T17:42:00Z',
+      cancelledAt: null, cancelledBy: null, saleDay: '2026-10-18' }],
   })
   expect(from).toHaveBeenCalledWith('barcodes')
   expect(from).toHaveBeenCalledWith('movements')
   expect(barcodeCalls).toEqual([['select', 'code, units, photo_path, photo_source'], ['eq', 'product_id', 'p9'], ['order', 'created_at']])
-  expect(movementCalls).toEqual([['select', 'id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by'],
+  expect(movementCalls).toEqual([['select', 'id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by, sale_day'],
     ['eq', 'product_id', 'p9'], ['order', 'created_at', { ascending: false }], ['limit', 20]])
 })
 
@@ -216,4 +220,45 @@ test("recordInventory renvoie l'écart et le stock", async () => {
   await expect(createApi({ rpc, from: vi.fn() } as never).recordInventory({ id: 'i1', productId: 'p9', counted: 53, employee: 'Sam' }))
     .resolves.toEqual({ delta: -3, stock: 53, counted: 53, duplicate: false })
   expect(rpc).toHaveBeenCalledWith('record_inventory', { p_id: 'i1', p_product_id: 'p9', p_counted: 53, p_employee: 'Sam' })
+})
+
+test("listHistory rend le jour des ventes ; une ligne d'avant le jalon 5, sans lui, en a un vide", async () => {
+  const sale = { ...historyRow(2), kind: 'out', delta: -2, sale_day: '2026-10-19' }
+  const rpc = vi.fn(async () => ok([sale, historyRow(1)]))
+  const page = await createApi({ rpc, from: vi.fn() } as never).listHistory(null)
+  expect(page.movements.map((m) => m.saleDay)).toEqual(['2026-10-19', null])
+})
+
+// Fin de journée (§4.8, §6.3).
+test('recordSales appelle record_sales avec le jour, les lignes et le prénom', async () => {
+  const rpc = vi.fn(async () => ok({ status: 'recorded', units: 3, duplicate: false }))
+  await expect(createApi({ rpc, from: vi.fn() } as never)
+    .recordSales({ day: '2026-10-22', lines: [{ id: 'l1', productId: 'p1', quantity: 3 }], employee: 'Sam' }))
+    .resolves.toEqual({ status: 'recorded', units: 3, duplicate: false })
+  expect(rpc).toHaveBeenCalledWith('record_sales', { p_day: '2026-10-22', p_lines: [{ id: 'l1', product_id: 'p1', quantity: 3 }],
+    p_employee: 'Sam' })
+})
+
+test('recordSales : déjà saisi ailleurs, les produits sont nommés dans l\'ordre alphabétique français', async () => {
+  const rpc = vi.fn(async () => ok({ status: 'already_recorded', products: ['Red Bull 25 cl', 'Évian 1,5 L', 'Coca-Cola 33 cl'] }))
+  await expect(createApi({ rpc, from: vi.fn() } as never)
+    .recordSales({ day: '2026-10-22', lines: [{ id: 'l1', productId: 'p1', quantity: 3 }], employee: 'Sam' }))
+    .resolves.toEqual({ status: 'already_recorded', products: ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Red Bull 25 cl'] })
+})
+
+test("listDaySales lit les ventes actives d'un jour, avec le nom du produit, triées à la française", async () => {
+  const calls: unknown[][] = []
+  const from = vi.fn(() => queryBuilder([
+    { id: 's1', product_id: 'p-redbull', delta: -1, employee: 'Léa', created_at: '2026-10-22T17:31:00Z', product: { name: 'Red Bull 25 cl' } },
+    { id: 's2', product_id: 'p-evian', delta: -2, employee: 'Sam', created_at: '2026-10-22T17:30:00Z', product: { name: 'Évian 1,5 L' } },
+    { id: 's3', product_id: 'p-coca', delta: -3, employee: 'Sam', created_at: '2026-10-22T17:30:00Z', product: { name: 'Coca-Cola 33 cl' } },
+  ], calls))
+  await expect(createApi({ rpc: vi.fn(), from } as never).listDaySales('2026-10-22')).resolves.toEqual([
+    { id: 's3', productId: 'p-coca', productName: 'Coca-Cola 33 cl', units: 3, employee: 'Sam', createdAt: '2026-10-22T17:30:00Z' },
+    { id: 's2', productId: 'p-evian', productName: 'Évian 1,5 L', units: 2, employee: 'Sam', createdAt: '2026-10-22T17:30:00Z' },
+    { id: 's1', productId: 'p-redbull', productName: 'Red Bull 25 cl', units: 1, employee: 'Léa', createdAt: '2026-10-22T17:31:00Z' },
+  ])
+  expect(from).toHaveBeenCalledWith('movements')
+  expect(calls).toEqual([['select', 'id, product_id, delta, employee, created_at, product:products(name)'],
+    ['eq', 'sale_day', '2026-10-22'], ['is', 'cancelled_at', null]])
 })

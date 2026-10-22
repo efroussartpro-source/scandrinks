@@ -74,9 +74,16 @@ function productRow(id, name, packSize, extra = {}) {
     created_at: '2026-10-19T08:00:00Z', updated_at: '2026-10-19T08:00:00Z', ...extra }
 }
 
-function movementRow(productId, kind, delta, employee, createdAt, counted = null) {
-  return { product_id: productId, kind, delta, counted, employee, created_at: createdAt, cancelled_at: null, cancelled_by: null }
+// saleDay : le jour des ventes (AAAA-MM-JJ) d'une vente de fin de journée, une sortie ; vide sinon.
+function movementRow(productId, kind, delta, employee, createdAt, counted = null, saleDay = null) {
+  return { product_id: productId, kind, delta, counted, employee, created_at: createdAt, cancelled_at: null, cancelled_by: null,
+    sale_day: saleDay }
 }
+
+// Le jour du calendrier de Paris (AAAA-MM-JJ) d'une date, comme (now() at time zone 'Europe/Paris')::date dans la base.
+const parisDay = (date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' })
+  .format(date)
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const barcodeRow = (productId, units, createdAt = '2026-10-19T08:00:00Z', photo = { photo_path: null, photo_source: null }) => ({
   product_id: productId,
@@ -165,8 +172,8 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
  * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
  * options.failLogout : coupe la déconnexion (/auth/v1/logout), comme sans réseau.
- * options.loseFirst : fonctions SQL (create_product, record_inventory…) dont le premier appel est enregistré, mais sa réponse
- *   se perd ; 'auth:user' fait de même pour le changement de mot de passe.
+ * options.loseFirst : fonctions SQL (create_product, record_inventory, record_sales…) dont le premier appel est enregistré,
+ *   mais sa réponse se perd ; 'auth:user' fait de même pour le changement de mot de passe.
  * options.extraMovements : nombre d'entrées de +1 sur le Lipton ajoutées avant le catalogue, une par minute (Historique).
  * options.longNames : chaque nom de produit reçoit la suite « — édition limitée, format familial » (rien ne doit déborder).
  * options.photos : images déjà au stockage, { chemin: octets } (la vidéo du jalon 4 s'en sert).
@@ -180,7 +187,8 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * Renvoie { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
  * - calls : appels des fonctions SQL ; authCalls : 'token', 'user' et 'logout:<portée>', dans l'ordre ;
  * - storageCalls : { kind: 'upload' | 'sign' | 'get', paths, contentType? }, dans l'ordre ; photos : chemin → octets ;
- * - addMovement et cancelElsewhere simulent un mouvement ou une annulation faits sur un autre téléphone ;
+ * - addMovement et cancelElsewhere simulent un mouvement ou une annulation faits sur un autre téléphone ; addMovement accepte
+ *   saleDay, pour une vente de fin de journée ;
  * - revokeAllSessions ferme toutes les sessions, comme un changement de mot de passe sur un autre téléphone ;
  * - restoreReads rétablit les lectures coupées par cutReads.
  */
@@ -333,12 +341,48 @@ export async function installFakeSupabase(page, options = {}) {
       const page = [...db.movements.entries()]
         .map(([id, m]) => ({ id, kind: m.kind, delta: m.delta, counted: m.counted, employee: m.employee, created_at: m.created_at,
           cancelled_at: m.cancelled_at, cancelled_by: m.cancelled_by, product_id: m.product_id,
-          product_name: db.products.get(m.product_id).name }))
+          product_name: db.products.get(m.product_id).name, sale_day: m.sale_day }))
         .filter((row) => p_before_created_at === null || beforeCursor(row))
         .sort(newestFirst)
         .slice(0, p_limit)
       if (!corruptHistory || p_before_created_at !== null || page.length === 0) return page
       return [{ ...page[0], id: '00000000-0000-4000-8000-0000000000bd', created_at: 'pas une date' }, ...page.slice(0, p_limit - 1)]
+    },
+    // Fin de journée, avec les règles de la base (20261022130000_fin_de_journee.sql) : 7 derniers jours de Paris, de 1 à 999
+    // par produit, une ligne par produit ; rejouée, une ligne compte ce qui avait été enregistré ; un produit qui a déjà sa
+    // vente active ce jour-là sous un autre identifiant : rien n'est enregistré, et les produits sont nommés.
+    record_sales: ({ p_day = null, p_lines = null, p_employee = '' }) => {
+      const employee = (p_employee ?? '').trim()
+      if (employee.length < 1 || employee.length > 30) return invalid('employee')
+      const today = parisDay(clock())
+      const dayNumber = (day) => Date.parse(`${day}T00:00:00Z`) / 86_400_000
+      if (typeof p_day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p_day) || p_day > today || dayNumber(today) - dayNumber(p_day) > 6) {
+        return invalid('day')
+      }
+      if (!Array.isArray(p_lines) || p_lines.length < 1 || p_lines.length > 200
+        || p_lines.some((line) => typeof line !== 'object' || line === null || Array.isArray(line))) return invalid('lines')
+      const ids = p_lines.map((line) => line.id ?? null)
+      const products = p_lines.map((line) => line.product_id ?? null)
+      const distinct = (values) => new Set(values.filter((value) => value !== null)).size === values.filter((value) => value !== null).length
+      if (!distinct(ids) || !distinct(products)) return invalid('lines')
+      if (ids.some((id) => id === null || !UUID.test(id))) return invalid('id')
+      if (products.some((id) => id === null || !db.products.has(id))) return invalid('product')
+      if (p_lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 999)) return invalid('quantity')
+      const replayed = p_lines.filter((line) => db.movements.has(line.id))
+      if (replayed.some((line) => {
+        const sale = db.movements.get(line.id)
+        return sale.kind !== 'out' || sale.sale_day !== p_day || sale.product_id !== line.product_id
+      })) return invalid('id')
+      const fresh = p_lines.filter((line) => !db.movements.has(line.id))
+      const conflicts = fresh
+        .filter((line) => [...db.movements.values()].some((m) => m.product_id === line.product_id && m.sale_day === p_day && m.cancelled_at === null))
+        .map((line) => db.products.get(line.product_id).name)
+      if (conflicts.length > 0) return { status: 'already_recorded', products: conflicts }
+      for (const line of fresh) {
+        db.movements.set(line.id, movementRow(line.product_id, 'out', -line.quantity, employee, now(), null, p_day))
+      }
+      const units = p_lines.reduce((sum, line) => sum - db.movements.get(line.id).delta, 0)
+      return { status: 'recorded', units, duplicate: fresh.length === 0 }
     },
     // La vidéo montre les prénoms déjà utilisés ; ailleurs, la liste reste vide, comme pour un premier téléphone.
     list_employees: () =>
@@ -347,8 +391,9 @@ export async function installFakeSupabase(page, options = {}) {
         : [],
   }
 
-  // Lectures PostgREST : filtre product_id=eq.…, ordre et limite.
+  // Lectures PostgREST : filtres product_id=eq.…, sale_day=eq.… et cancelled_at=is.null, ordre et limite.
   const productIdOf = (url) => url.searchParams.get('product_id')?.replace(/^eq\./, '') ?? null
+  const saleDayOf = (url) => url.searchParams.get('sale_day')?.replace(/^eq\./, '') ?? null
 
   await page.route(`${SUPABASE_URL}/**`, async (route) => {
     const request = route.request()
@@ -418,13 +463,19 @@ export async function installFakeSupabase(page, options = {}) {
 
     if (url.pathname === '/rest/v1/movements') {
       const productId = productIdOf(url)
+      const saleDay = saleDayOf(url)
+      const activeOnly = url.searchParams.get('cancelled_at') === 'is.null'
+      // Le nom du produit, quand la lecture le demande (product:products(name)), comme une jointure PostgREST.
+      const withProduct = (url.searchParams.get('select') ?? '').includes('product:products(name)')
       const limit = Number(url.searchParams.get('limit') ?? 1000)
       const rows = [...db.movements.entries()]
-        .filter(([, m]) => m.product_id === productId)
+        .filter(([, m]) => (productId === null || m.product_id === productId) && (saleDay === null || m.sale_day === saleDay)
+          && (!activeOnly || m.cancelled_at === null))
         .sort(([, a], [, b]) => b.created_at.localeCompare(a.created_at))
         .slice(0, limit)
-        .map(([id, m]) => ({ id, kind: m.kind, delta: m.delta, counted: m.counted, employee: m.employee,
-          created_at: m.created_at, cancelled_at: m.cancelled_at, cancelled_by: m.cancelled_by }))
+        .map(([id, m]) => ({ id, product_id: m.product_id, kind: m.kind, delta: m.delta, counted: m.counted, employee: m.employee,
+          created_at: m.created_at, cancelled_at: m.cancelled_at, cancelled_by: m.cancelled_by, sale_day: m.sale_day,
+          ...(withProduct ? { product: { name: db.products.get(m.product_id).name } } : {}) }))
       return reply(200, rows)
     }
 
@@ -516,8 +567,8 @@ export async function installFakeSupabase(page, options = {}) {
   await page.route('https://images.openfoodfacts.org/**', (route) =>
     route.fulfill({ status: 200, headers: { 'content-type': 'image/jpeg', 'access-control-allow-origin': '*' }, body: PHOTO_JPEG }))
 
-  const addMovement = ({ productId, kind, delta, employee }) => {
-    db.movements.set(`m-other-${++otherPhoneCount}`, movementRow(productId, kind, delta, employee, now()))
+  const addMovement = ({ productId, kind, delta, employee, saleDay = null }) => {
+    db.movements.set(`m-other-${++otherPhoneCount}`, movementRow(productId, kind, delta, employee, now(), null, saleDay))
   }
 
   const cancelElsewhere = (id, employee) => {

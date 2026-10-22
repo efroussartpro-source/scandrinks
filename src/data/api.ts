@@ -4,7 +4,7 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§6.3)
  *
  * Les noms et paramètres (p_…) sont ceux des fonctions SQL de
- * supabase/migrations/ (schéma initial, pilotage, puis suivi). Le client est passé
+ * supabase/migrations/ (schéma initial, pilotage, suivi, images, puis fin de journée). Le client est passé
  * en paramètre : les tests utilisent un faux client, l'app celui de
  * supabaseClient.ts. Toute erreur devient une ApiError (voir apiErrors.ts).
  * Les listes de produits sont triées dans l'ordre alphabétique français.
@@ -12,7 +12,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { HistoryMovement, Movement, MovementKind } from '../domain/movements'
-import { sortByName } from '../domain/names'
+import { compareNames, sortByName } from '../domain/names'
 import type { NewProductInput } from '../domain/productDraft'
 import type { MoveMode } from '../domain/stock'
 import type { PhotoSource } from '../photos/photos'
@@ -90,6 +90,32 @@ export interface CancelResult {
   cancelledBy: string
 }
 
+// Vente active d'un jour (fin de journée, §4.8) : units est la quantité vendue, positive.
+export interface DaySale {
+  id: string
+  productId: string
+  productName: string
+  units: number
+  employee: string
+  createdAt: string
+}
+
+// Une ligne de fin de journée ; l'identifiant vient du téléphone et reste le même à chaque nouvel essai.
+export interface SaleLine {
+  id: string
+  productId: string
+  quantity: number
+}
+
+export interface SalesInput {
+  day: string
+  lines: SaleLine[]
+  employee: string
+}
+
+// Déjà saisi ailleurs : rien n'est enregistré, et les produits concernés sont nommés.
+export type RecordSalesResult = { status: 'recorded'; units: number; duplicate: boolean } | { status: 'already_recorded'; products: string[] }
+
 export interface MovementInput {
   id: string
   productId: string
@@ -131,11 +157,22 @@ interface MovementRow {
   created_at: string
   cancelled_at: string | null
   cancelled_by: string | null
+  // Absent des réponses d'avant la migration de la fin de journée (jalon 5).
+  sale_day?: string | null
 }
 
 interface HistoryRow extends MovementRow {
   product_id: string
   product_name: string
+}
+
+interface DaySaleRow {
+  id: string
+  product_id: string
+  delta: number
+  employee: string
+  created_at: string
+  product: { name: string }
 }
 
 interface QueryResult {
@@ -153,8 +190,7 @@ const toMovement = (row: MovementRow): Movement => ({
   createdAt: row.created_at,
   cancelledAt: row.cancelled_at,
   cancelledBy: row.cancelled_by,
-  // Le jour des ventes n'est pas encore lu (Tâche 3 du jalon 5).
-  saleDay: null,
+  saleDay: row.sale_day ?? null,
 })
 
 const toHistoryMovement = (row: HistoryRow): HistoryMovement => ({
@@ -230,7 +266,7 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
         run<MovementRow[] | null>(
           client
             .from('movements')
-            .select('id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by')
+            .select('id, kind, delta, counted, employee, created_at, cancelled_at, cancelled_by, sale_day')
             .eq('product_id', productId)
             .order('created_at', { ascending: false })
             .limit(20),
@@ -342,6 +378,42 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
         movements: rows.map(toHistoryMovement),
         next: rows.length === HISTORY_PAGE_SIZE ? { createdAt: last.created_at, id: last.id } : null,
       }
+    },
+
+    // Fin de journée : l'identifiant de chaque ligne rend l'envoi rejouable sans doublon.
+    async recordSales(input: SalesInput): Promise<RecordSalesResult> {
+      const row = await run<{ status: 'recorded'; units: number; duplicate: boolean } | { status: 'already_recorded'; products: string[] }>(
+        client.rpc('record_sales', {
+          p_day: input.day,
+          p_lines: input.lines.map((line) => ({ id: line.id, product_id: line.productId, quantity: line.quantity })),
+          p_employee: input.employee,
+        }),
+      )
+      return row.status === 'recorded'
+        ? { status: 'recorded', units: row.units, duplicate: row.duplicate }
+        : { status: 'already_recorded', products: [...row.products].sort(compareNames) }
+    },
+
+    // Les ventes actives d'un jour, avec le nom du produit (archivé compris), dans l'ordre alphabétique français.
+    async listDaySales(day: string): Promise<DaySale[]> {
+      const rows =
+        (await run<DaySaleRow[] | null>(
+          client
+            .from('movements')
+            .select('id, product_id, delta, employee, created_at, product:products(name)')
+            .eq('sale_day', day)
+            .is('cancelled_at', null),
+        )) ?? []
+      return rows
+        .map((row) => ({
+          id: row.id,
+          productId: row.product_id,
+          productName: row.product.name,
+          units: -row.delta,
+          employee: row.employee,
+          createdAt: row.created_at,
+        }))
+        .sort((a, b) => compareNames(a.productName, b.productName))
     },
 
     async listEmployees(): Promise<string[]> {
