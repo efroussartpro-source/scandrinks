@@ -116,7 +116,8 @@ test('listHistory lit la première page ; pleine, elle donne le curseur de sa de
   expect(rpc).toHaveBeenCalledWith('list_history', { p_before_created_at: null, p_before_id: null, p_limit: 50 })
   expect(page.movements).toHaveLength(50)
   expect(page.movements[0]).toEqual({ id: 'm50', kind: 'in', delta: 1, counted: null, employee: 'Sam',
-    createdAt: '2026-10-19T12:00:00.000050+00:00', cancelledAt: null, cancelledBy: null, productId: 'p1', productName: 'Lipton Pêche 50 cl' })
+    createdAt: '2026-10-19T12:00:00.000050+00:00', cancelledAt: null, cancelledBy: null, saleDay: null, productId: 'p1',
+    productName: 'Lipton Pêche 50 cl' })
   // Le texte exact de la date : arrondie à la milliseconde, elle ferait sauter des lignes.
   expect(page.next).toEqual({ createdAt: '2026-10-19T12:00:00.000001+00:00', id: 'm1' })
 })
@@ -175,7 +176,7 @@ test('getProductDetail lit les codes, avec leur image, et les 20 derniers mouvem
     barcodes: [{ code: '5449000000996', units: 24, photoPath: COCA_PHOTO, photoSource: 'equipe' },
       { code: '2000000000015', units: 1, photoPath: null, photoSource: null }],
     movements: [{ id: 'm1', kind: 'inventory', delta: -3, counted: 53, employee: 'Sam', createdAt: '2026-10-19T12:32:00Z',
-      cancelledAt: null, cancelledBy: null }],
+      cancelledAt: null, cancelledBy: null, saleDay: null }],
   })
   expect(from).toHaveBeenCalledWith('barcodes')
   expect(from).toHaveBeenCalledWith('movements')
