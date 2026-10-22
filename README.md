@@ -3,7 +3,7 @@
 Gestion du stock de boissons d'un bureau de tabac par scan de code-barres, depuis un iPhone (app web installable, sans App Store).
 
 - **Cahier des charges** : [docs/superpowers/specs/2026-10-19-scandrinks-design.md](docs/superpowers/specs/2026-10-19-scandrinks-design.md)
-- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en test. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md).
+- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, avant le jour J et la semaine d'essai. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md).
 - **Installation** : uniquement depuis https://scandrinks.pages.dev (Safari, Partager → « Sur l'écran d'accueil »). Les préversions des branches servent aux tests, dans Safari, sans les installer.
 
 ## Jalon 1 — le cœur
