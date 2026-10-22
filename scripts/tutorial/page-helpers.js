@@ -9,7 +9,9 @@
  *   qui montre l'étiquette d'un code-barres ou un pack au moment voulu ;
  * - installTouchMarker : un rond marque chaque toucher ;
  * - installConfirmDialog : la confirmation de l'Historique est dessinée dans la
- *   page, façon iOS, puis acceptée.
+ *   page, façon iOS, puis acceptée ;
+ * - installRepaintPulse : un point invisible fait redessiner l'écran à chaque
+ *   image, pour que la capture n'en perde aucune.
  */
 
 export function installCamera() {
@@ -138,6 +140,32 @@ export function installTouchMarker() {
     },
     { capture: true },
   )
+}
+
+export function installRepaintPulse() {
+  // La capture CDP n'envoie une image que quand l'écran change, et saute un changement qui arrive avant que
+  // l'image précédente soit reçue : le dernier état d'une suite rapide (l'alerte qui se ferme, puis la ligne qui
+  // se barre) n'était jamais filmé. Un point d'un pixel, presque transparent, qui pulse sans fin fait redessiner
+  // l'écran à chaque image : la capture suit l'écran sans trou.
+  const attach = () => {
+    const dot = document.createElement('div')
+    dot.setAttribute('aria-hidden', 'true')
+    Object.assign(dot.style, {
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      width: '1px',
+      height: '1px',
+      background: '#000000',
+      opacity: '0.01',
+      pointerEvents: 'none',
+      zIndex: '2147483647',
+    })
+    document.documentElement.append(dot)
+    dot.animate([{ opacity: 0.01 }, { opacity: 0.02 }], { duration: 500, iterations: Infinity, direction: 'alternate' })
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach)
+  else attach()
 }
 
 export function installConfirmDialog() {

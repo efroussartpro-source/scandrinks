@@ -39,7 +39,7 @@ import { ean13Modules } from '../../e2e/ean13.mjs'
 import { GOOD_PASSWORD, TUTORIAL_CODES, TUTORIAL_PHOTOS, installFakeSupabase } from '../../e2e/fakeSupabase.mjs'
 import { ffmpeg } from './hls.mjs'
 import { PACK_STYLES, packSvg } from './packs.mjs'
-import { installCamera, installConfirmDialog, installTouchMarker } from './page-helpers.js'
+import { installCamera, installConfirmDialog, installRepaintPulse, installTouchMarker } from './page-helpers.js'
 import { CHAPTERS, readingTime } from './storyboard.mjs'
 
 const PORT = 4174
@@ -97,7 +97,8 @@ async function startRecorder(context, page, origin) {
     frames.push({ file, t: metadata.timestamp * 1000 - origin })
     cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => undefined)
   })
-  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: 780, maxHeight: 1688, everyNthFrame: 1 })
+  // Une image sur deux : 30 images par seconde suffisent, avec l'écran redessiné en continu (installRepaintPulse).
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: 780, maxHeight: 1688, everyNthFrame: 2 })
   return {
     async stop(end) {
       await cdp.send('Page.stopScreencast')
@@ -369,6 +370,7 @@ try {
   await page.addInitScript(installCamera)
   await page.addInitScript(installTouchMarker)
   await page.addInitScript(installConfirmDialog)
+  await page.addInitScript(installRepaintPulse)
   await installFakeSupabase(page, { catalogue: 'tutoriel', now, photos })
   // Après le « OK » dessiné (1,8 s), la ligne de l'Historique se barre : la réponse de l'annulation attend autant.
   await page.route('**/rest/v1/rpc/cancel_movement', async (route) => {
