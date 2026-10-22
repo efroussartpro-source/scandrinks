@@ -5,8 +5,10 @@
  *
  * On saisit les ventes d'aujourd'hui ou de l'un des 6 jours d'avant, à
  * l'heure de Paris. Les jours d'avant suivent le calendrier : le changement
- * d'heure ne fait ni sauter ni doubler un jour. Une case vide ou à 0 ne
- * compte pas ; sinon, de 1 à 999 unités vendues, en chiffres.
+ * d'heure ne fait ni sauter ni doubler un jour. Aucun jour n'est proposé
+ * avant le premier jour de ventes : l'inventaire de la bascule (§9) compte
+ * déjà les ventes d'avant. Une case vide ou à 0 ne compte pas ; sinon, de 1
+ * à 999 unités vendues, en chiffres.
  */
 
 export const SOLD_MAX = 999
@@ -42,15 +44,18 @@ function partsOf(format: Intl.DateTimeFormat, date: Date): Record<string, string
   return parts
 }
 
-export function salesDays(now: Date): SalesDay[] {
+// firstDay (AAAA-MM-JJ) : le premier jour de ventes ; les jours d'avant ne sont pas proposés.
+export function salesDays(now: Date, firstDay: string | null = null): SalesDay[] {
   const today = partsOf(parisDate, now)
   const days: SalesDay[] = []
   for (let back = 0; back < DAY_COUNT; back += 1) {
     const date = new Date(Date.UTC(Number(today.year), Number(today.month) - 1, Number(today.day) - back))
+    const day = date.toISOString().slice(0, 10)
+    if (firstDay !== null && day < firstDay) break
     const parts = partsOf(calendarDay, date)
     const short = `${parts.weekday} ${parts.day}/${parts.month}`
     const label = back === 0 ? `Aujourd'hui, ${short}` : back === 1 ? `Hier, ${short}` : short
-    days.push({ day: date.toISOString().slice(0, 10), label, short })
+    days.push({ day, label, short })
   }
   return days
 }

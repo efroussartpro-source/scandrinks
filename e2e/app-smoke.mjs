@@ -1658,8 +1658,9 @@ async function scenarioSales(browser) {
     await button(page, 'Ventes').click()
     await page.getByRole('heading', { name: 'Fin de journée' }).waitFor()
     assert.ok(await page.evaluate(() => document.querySelector('video').srcObject === null), 'caméra arrêtée hors du Scanner')
+    // Le premier jour de ventes de la version e2e est le 17/10 (.env.e2e) : le 16/10 n'est pas proposé.
     assert.deepEqual(await daySelect(page).locator('option').allTextContents(), ["Aujourd'hui, jeu. 22/10", 'Hier, mer. 21/10',
-      'mar. 20/10', 'lun. 19/10', 'dim. 18/10', 'sam. 17/10', 'ven. 16/10'])
+      'mar. 20/10', 'lun. 19/10', 'dim. 18/10', 'sam. 17/10'])
     assert.equal(await daySelect(page).inputValue(), '2026-10-22')
     await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
     assert.equal(await doneList(page).count(), 0, 'rien de déjà saisi')
@@ -1684,6 +1685,13 @@ async function scenarioSales(browser) {
     await page.getByLabel('Rechercher un produit').fill('')
     await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
     assert.equal(await sold(page, 'Coca-Cola 33 cl').inputValue(), '3')
+    await waitForTotal(page, 'Total du jour : 9 boissons')
+    // Un tour par un autre onglet (« Une boisson manque ? « Stock » ») ne perd rien de la saisie.
+    await button(page, 'Stock').click()
+    await page.getByRole('list', { name: 'Produits' }).waitFor()
+    await button(page, 'Ventes').click()
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    assert.deepEqual(await toEnter(page).getByRole('textbox').evaluateAll((boxes) => boxes.map((box) => box.value)), ['3', '2', '4', '0'])
     await waitForTotal(page, 'Total du jour : 9 boissons')
 
     // 4. Récapitulatif, puis « Revenir » : la saisie est intacte.
@@ -1795,6 +1803,67 @@ async function scenarioSales(browser) {
     await sheet.getByRole('list', { name: 'Derniers mouvements' }).locator('.movement-title').first()
       .filter({ hasText: exactly('Vente −1 (ventes du 21/10)') }).waitFor()
     assert.deepEqual(pageErrors, [])
+    await context.close()
+  }
+  {
+    // 10 bis. Envoi coupé avant la base : le récapitulatif et son « Réessayer » survivent à un tour par un autre onglet,
+    // et le nouvel essai renvoie les mêmes lignes.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', failFirst: ['record_sales'] }, { clockAt: EVENING })
+    const notConfirmed = 'Pas de connexion : enregistrement non confirmé. Touche « Réessayer ».'
+    await signIn(page)
+    await button(page, 'Ventes').click()
+    await sold(page, 'Coca-Cola 33 cl').fill('3')
+    await button(page, 'Valider').click()
+    await button(page, 'Enregistrer').click()
+    await page.getByRole('alert').filter({ hasText: exactly(notConfirmed) }).waitFor()
+    await button(page, 'Historique').click()
+    await page.getByRole('heading', { name: 'Historique' }).waitFor()
+    await button(page, 'Ventes').click()
+    await page.getByRole('heading', { name: 'Ventes du jeu. 22/10' }).waitFor()
+    await page.getByRole('alert').filter({ hasText: exactly(notConfirmed) }).waitFor()
+    await button(page, 'Réessayer').click()
+    await page.getByRole('status').filter({ hasText: exactly('Fin de journée enregistrée : 3 boissons.') }).waitFor()
+    const sent = fake.calls.filter((call) => call.fn === 'record_sales')
+    assert.equal(sent.length, 2, 'deux envois')
+    assert.deepEqual(sent[1].body, sent[0].body, 'le nouvel essai renvoie les mêmes lignes')
+    await context.close()
+  }
+  {
+    // 10 ter. L'app restée ouverte jusqu'au lendemain : au retour, « Aujourd'hui » est le nouveau jour ; une saisie en
+    // cours garde le sien, devenu « Hier ».
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage' }, { clockAt: EVENING })
+    const comeBack = async () => {
+      for (const state of ['hidden', 'visible']) {
+        await page.evaluate((value) => {
+          Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
+          document.dispatchEvent(new Event('visibilitychange'))
+        }, state)
+      }
+    }
+    const firstOption = () => page.locator('.sales-day option').first().textContent()
+    await signIn(page)
+    await button(page, 'Ventes').click()
+    await waitForList(page, 'À saisir', ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    await page.clock.fastForward('24:00:00')
+    await comeBack()
+    await page.waitForFunction(() => document.querySelector('.sales-day select')?.value === '2026-10-23')
+    assert.equal(await firstOption(), "Aujourd'hui, ven. 23/10")
+    await sold(page, 'Coca-Cola 33 cl').fill('3')
+    await page.clock.fastForward('24:00:00')
+    await comeBack()
+    await page.waitForFunction(() => document.querySelector('.sales-day option')?.textContent === "Aujourd'hui, sam. 24/10")
+    assert.equal(await daySelect(page).inputValue(), '2026-10-23')
+    assert.equal(await page.locator('.sales-day option').nth(1).textContent(), 'Hier, ven. 23/10')
+    assert.equal(await sold(page, 'Coca-Cola 33 cl').inputValue(), '3')
+    await context.close()
+  }
+  {
+    // 10 quater. Avant le premier jour de ventes (le 17/10 dans la version e2e) : rien à saisir.
+    const { context, page } = await openApp(browser, { catalogue: 'pilotage' }, { clockAt: new Date('2026-10-16T17:30:00Z') })
+    await signIn(page)
+    await button(page, 'Ventes').click()
+    await page.getByText('La fin de journée commence le 17/10.', { exact: true }).waitFor()
+    assert.equal(await daySelect(page).count(), 0, 'aucun jour à choisir')
     await context.close()
   }
   {

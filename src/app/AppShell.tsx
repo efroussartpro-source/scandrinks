@@ -20,7 +20,7 @@ import { apiErrorMessage } from '../data/apiErrors'
 import { supabase } from '../data/supabaseClient'
 import { shoppingList } from '../domain/restock'
 import HistoryScreen from '../history/HistoryScreen'
-import SalesScreen from '../sales/SalesScreen'
+import SalesScreen, { type SalesDraftState } from '../sales/SalesScreen'
 import ScannerScreen from '../scanner/ScannerScreen'
 import ChangePasswordScreen from '../settings/ChangePasswordScreen'
 import SettingsScreen from '../settings/SettingsScreen'
@@ -45,6 +45,8 @@ export default function AppShell() {
   const [loginNotice, setLoginNotice] = useState<LoginNotice | null>(null)
   // Vrai pendant une déconnexion demandée : l'événement SIGNED_OUT n'est alors pas une session perdue.
   const signingOut = useRef(false)
+  // Saisie de l'onglet « Ventes » en cours : un autre onglet démonte l'écran, elle reste ici.
+  const salesDraft = useRef<SalesDraftState | null>(null)
 
   useEffect(() => {
     // Le rappel se contente de mettre à jour l'état : un appel Supabase ici peut bloquer supabase-js.
@@ -143,7 +145,13 @@ export default function AppShell() {
           <StockScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
         )}
         {tab === 'sales' && (
-          <SalesScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
+          <SalesScreen
+            catalog={catalog}
+            employee={employee}
+            keep={salesDraft}
+            onCatalogChanged={catalog.refresh}
+            onSessionExpired={onSessionExpired}
+          />
         )}
         {tab === 'history' && (
           <HistoryScreen employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />

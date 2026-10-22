@@ -72,3 +72,15 @@ test('le total en boissons, et le jour des ventes', () => {
   expect(formatDrinks(9)).toBe('9 boissons')
   expect(formatSaleDay('2026-10-22')).toBe('22/10')
 })
+
+test("avant le premier jour de ventes, aucun jour n'est proposé ; ensuite, seulement les jours à partir de lui", () => {
+  expect(salesDays(new Date('2026-10-22T17:30:00Z'), '2026-10-23')).toEqual([])
+  expect(salesDays(new Date('2026-10-25T17:30:00Z'), '2026-10-23')).toEqual([
+    { day: '2026-10-25', label: "Aujourd'hui, dim. 25/10", short: 'dim. 25/10' },
+    { day: '2026-10-24', label: 'Hier, sam. 24/10', short: 'sam. 24/10' },
+    { day: '2026-10-23', label: 'ven. 23/10', short: 'ven. 23/10' },
+  ])
+  expect(salesDays(new Date('2026-10-30T17:30:00Z'), '2026-10-23').map((day) => day.day)).toEqual([
+    '2026-10-30', '2026-10-29', '2026-10-28', '2026-10-27', '2026-10-26', '2026-10-25', '2026-10-24',
+  ])
+})

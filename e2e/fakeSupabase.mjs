@@ -170,6 +170,7 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * options.now : l'horloge des dates enregistrées (created_at, cancelled_at), par défaut l'heure réelle ; la vidéo la
  *   cale sur l'horloge fixée de la page.
  * options.failNextRecord : coupe le premier record_movement (réseau perdu).
+ * options.failFirst : fonctions SQL (record_sales…) dont le premier appel est coupé avant d'atteindre la base (réseau perdu).
  * options.expireSessionOn : nom de la fonction SQL qui répond « jeton expiré » (401).
  * options.hangFirst : nom de la fonction SQL dont le premier appel ne reçoit jamais de réponse.
  * options.failLogout : coupe la déconnexion (/auth/v1/logout), comme sans réseau.
@@ -194,7 +195,7 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  * - restoreReads rétablit les lectures coupées par cutReads.
  */
 export async function installFakeSupabase(page, options = {}) {
-  const { catalogue = 'coca_with_code', failNextRecord = false, expireSessionOn = null, hangFirst = null, failLogout = false,
+  const { catalogue = 'coca_with_code', failNextRecord = false, failFirst = [], expireSessionOn = null, hangFirst = null, failLogout = false,
     loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true,
     failPhotoUpload = false, hangPhotoUpload = false, corruptHistory = false, now: clock = () => new Date() } = options
   const db = initialCatalogue(catalogue)
@@ -218,6 +219,7 @@ export async function installFakeSupabase(page, options = {}) {
   let readsCut = cutReads !== null
   let hangLeft = hangFirst ? 1 : 0
   const responsesToLose = new Set(loseFirst)
+  const callsToFail = new Set(failFirst)
   let createdCount = 0
   let otherPhoneCount = 0
 
@@ -493,6 +495,10 @@ export async function installFakeSupabase(page, options = {}) {
       }
       if (fn === 'record_movement' && recordFailuresLeft > 0) {
         recordFailuresLeft -= 1
+        return route.abort('internetdisconnected')
+      }
+      if (callsToFail.has(fn)) {
+        callsToFail.delete(fn)
         return route.abort('internetdisconnected')
       }
       const handler = rpc[fn]
