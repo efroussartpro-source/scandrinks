@@ -3,7 +3,7 @@ import type { HistoryMovement } from '../domain/movements'
 import { appendHistoryPage, markCancelled, mergeHistoryPage } from './historyList'
 
 const row = (id: string): HistoryMovement => ({ id, kind: 'in', delta: 1, counted: null, employee: 'Sam', createdAt: '2026-10-19T12:00:00Z',
-  cancelledAt: null, cancelledBy: null, productId: 'p1', productName: 'Coca-Cola 33 cl' })
+  cancelledAt: null, cancelledBy: null, saleDay: null, productId: 'p1', productName: 'Coca-Cola 33 cl' })
 
 test('page suivante : ajoutée à la fin, sans doublon', () => {
   expect(mergeHistoryPage([row('a'), row('b')], [row('b'), row('c')]).map((m) => m.id)).toEqual(['a', 'b', 'c'])

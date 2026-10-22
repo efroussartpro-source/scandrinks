@@ -1,9 +1,11 @@
 /**
  * movements.ts — Lignes de mouvements, à l'heure de Paris.
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, §4.5)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, §4.5, §4.8)
  *
  * « lun. 14:32 — Sam — Entrée +24 », « … — Inventaire : 53 comptés (−3) ».
+ * Une vente de fin de journée est une sortie datée du jour des ventes :
+ * « jeu. 19:42 — Sam — Vente −2 (ventes du 22/10) ».
  * Le jour de la semaine suffit pendant 7 jours ; au-delà, la date s'affiche,
  * avec l'année si elle diffère. Une ligne annulée porte « annulé par … ».
  * Sert à la fiche produit (jalon 2) et à l'Historique (jalon 3), où le nom
@@ -12,6 +14,7 @@
  * phrase entière reste pour VoiceOver.
  */
 import { describeInventory, formatCounted, formatGap } from './inventory'
+import { formatSaleDay } from './sales'
 import { formatDelta } from './stock'
 
 export type MovementKind = 'in' | 'out' | 'inventory'
@@ -25,6 +28,8 @@ export interface Movement {
   createdAt: string
   cancelledAt: string | null
   cancelledBy: string | null
+  // Jour des ventes (AAAA-MM-JJ) d'une vente de fin de journée ; vide pour un autre mouvement.
+  saleDay: string | null
 }
 
 // Ligne de l'Historique : tous produits confondus, archivés compris.
@@ -75,7 +80,7 @@ export function describeMovement(m: Movement): string {
     case 'in':
       return `Entrée ${formatDelta(m.delta)}`
     case 'out':
-      return `Sortie ${formatDelta(m.delta)}`
+      return m.saleDay === null ? `Sortie ${formatDelta(m.delta)}` : `Vente ${formatDelta(m.delta)} (ventes du ${formatSaleDay(m.saleDay)})`
     case 'inventory':
       return describeInventory(m.counted ?? 0, m.delta)
   }
@@ -101,10 +106,15 @@ export function movementParts(m: Movement, now: Date): { title: string; meta: st
   return { title: describeMovement(m), meta: withCancellation(`${formatWhen(m.createdAt, now)} · ${m.employee}`, m) }
 }
 
-// Historique : le produit et la quantité (« −24 », « 53 comptés »), puis « Sortie · mer. 12:03 · Sam ».
+// Historique : le produit et la quantité (« −24 », « 53 comptés »), puis « Sortie · mer. 12:03 · Sam »
+// (« Vente (ventes du 22/10) · … » pour une fin de journée).
 export function historyParts(m: HistoryMovement, now: Date): { title: string; amount: string; meta: string } {
   const inventory = m.kind === 'inventory'
   const amount = inventory ? formatCounted(m.counted ?? 0) : formatDelta(m.delta)
-  const kind = inventory ? `${KIND_NAMES.inventory} (${formatGap(m.delta)})` : KIND_NAMES[m.kind]
+  const kind = inventory
+    ? `${KIND_NAMES.inventory} (${formatGap(m.delta)})`
+    : m.saleDay !== null
+      ? `Vente (ventes du ${formatSaleDay(m.saleDay)})`
+      : KIND_NAMES[m.kind]
   return { title: m.productName, amount, meta: withCancellation(`${kind} · ${formatWhen(m.createdAt, now)} · ${m.employee}`, m) }
 }

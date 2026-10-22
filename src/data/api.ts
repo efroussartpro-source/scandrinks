@@ -153,6 +153,8 @@ const toMovement = (row: MovementRow): Movement => ({
   createdAt: row.created_at,
   cancelledAt: row.cancelled_at,
   cancelledBy: row.cancelled_by,
+  // Le jour des ventes n'est pas encore lu (Tâche 3 du jalon 5).
+  saleDay: null,
 })
 
 const toHistoryMovement = (row: HistoryRow): HistoryMovement => ({
