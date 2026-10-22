@@ -11,6 +11,9 @@
  *   moins de 20 Mo pour le dossier, en ligne pour tous ;
  * - avec ffprobe, du H.264 en 1080 × 1920, et la durée : de 9,5 à 10,5 s pour
  *   l'essai (--trial), de 150 à 240 s pour la vraie vidéo (sans option).
+ * Sans option, en plus, le MP4 remis au porteur du projet
+ * (dist-tutorial/ScanDrinks-tuto.mp4) : moins de 25 Mo, H.264 en 1080 × 1920 à
+ * 30 images/s, et la même durée que le HLS, à 0,5 s près.
  *
  * Avec --raw, le tournage (dist-tutorial/raw/) : les neuf chapitres du
  * storyboard dans l'ordre, chaque sous-titre une seule fois, et un
@@ -27,6 +30,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const VIDEO_DIR = join(ROOT, 'public', 'tutoriel', 'video')
 const RAW_DIR = join(ROOT, 'dist-tutorial', 'raw')
+const MP4_PATH = join(ROOT, 'dist-tutorial', 'ScanDrinks-tuto.mp4')
 const MB = 1024 * 1024
 const DURATIONS = { trial: [9.5, 10.5], full: [150, 240], raw: [140, 240] }
 
@@ -43,7 +47,26 @@ function durationOf(file) {
   return Math.max(...times)
 }
 
-function checkServedVideo([minSeconds, maxSeconds]) {
+// Le MP4 remis au porteur du projet : la même vidéo que le HLS, en un seul fichier.
+function checkMp4(hlsDuration) {
+  assert.ok(existsSync(MP4_PATH), `MP4 absent : ${MP4_PATH}`)
+  const size = statSync(MP4_PATH).size
+  assert.ok(size < 25 * MB, `le MP4 fait ${(size / MB).toFixed(1)} Mo : plus que 25 Mo`)
+  const probe = JSON.parse(
+    execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type,codec_name,width,height,r_frame_rate:format=duration', '-of', 'json', MP4_PATH], {
+      encoding: 'utf8',
+    }),
+  )
+  const video = probe.streams.find((stream) => stream.codec_type === 'video')
+  assert.ok(video, 'MP4 sans flux vidéo')
+  assert.equal(video.codec_name, 'h264', 'codec vidéo du MP4')
+  assert.deepEqual([video.width, video.height], [1080, 1920], 'dimensions du MP4')
+  assert.equal(video.r_frame_rate, '30/1', 'images par seconde du MP4')
+  const duration = Number(probe.format.duration)
+  assert.ok(Math.abs(duration - hlsDuration) <= 0.5, `le MP4 dure ${duration} s, le HLS ${hlsDuration} s`)
+}
+
+function checkServedVideo([minSeconds, maxSeconds], { withMp4 }) {
   // 1. La liste HLS.
   const playlistPath = join(VIDEO_DIR, 'tutoriel.m3u8')
   assert.ok(existsSync(playlistPath), `liste absente : ${playlistPath}`)
@@ -87,6 +110,7 @@ function checkServedVideo([minSeconds, maxSeconds]) {
   assert.deepEqual([video.width, video.height], [1080, 1920], 'dimensions de la vidéo')
   const duration = Number(probe.format.duration)
   assert.ok(duration >= minSeconds && duration <= maxSeconds, `durée de ${duration} s, attendu de ${minSeconds} à ${maxSeconds} s`)
+  if (withMp4) checkMp4(duration)
 
   console.log(`Vidéo OK : ${duration.toFixed(1)} s, ${(total / MB).toFixed(2)} Mo`)
 }
@@ -116,5 +140,6 @@ async function checkRecording() {
 
 const option = process.argv[2]
 if (option === '--raw') await checkRecording()
-else if (option === undefined || option === '--trial') checkServedVideo(DURATIONS[option === '--trial' ? 'trial' : 'full'])
+else if (option === '--trial') checkServedVideo(DURATIONS.trial, { withMp4: false })
+else if (option === undefined) checkServedVideo(DURATIONS.full, { withMp4: true })
 else throw new Error(`Option inconnue : ${option} (attendu : --trial, --raw, ou rien)`)

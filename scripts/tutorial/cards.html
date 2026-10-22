@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  cards.html — Les cartes de la vidéo tuto, en 1080 × 1920, rendues en PNG par Chromium (edit.mjs).
+
+  Référence : docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md (Tâche 6)
+
+  ?card=title : le vert de ScanDrinks, l'icône de l'app, puis les trois lignes
+  de TITLE_CARD ; ?card=end : le même fond et les deux lignes de END_CARD ;
+  ?card=frame : le cadre de l'écran, vert sombre partout sauf la fenêtre de
+  l'app (transparente, coins arrondis de 36 px, x = 208, y = 210,
+  664 × 1437). Les textes viennent de storyboard.mjs, donnés par edit.mjs
+  (window.CARDS).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: transparent;
+        font-family: Inter, -apple-system, system-ui, sans-serif;
+        color: #ffffff;
+      }
+
+      .card {
+        width: 1080px;
+        height: 1920px;
+        box-sizing: border-box;
+        padding: 140px 110px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        text-align: center;
+        background: #1f6f3f;
+      }
+
+      .icon {
+        width: 260px;
+        height: 260px;
+        border-radius: 58px;
+        box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.35);
+        margin-bottom: 30px;
+      }
+
+      .name {
+        margin: 0;
+        font-size: 116px;
+        font-weight: 800;
+        letter-spacing: -2px;
+      }
+
+      .lead {
+        margin: 0;
+        font-size: 66px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .note {
+        margin: 0;
+        font-size: 52px;
+        line-height: 1.35;
+        opacity: 0.92;
+      }
+
+      /* La fenêtre de l'app : transparente ; son ombre pleine couvre tout le reste du cadre. */
+      .window {
+        position: absolute;
+        left: 208px;
+        top: 210px;
+        width: 664px;
+        height: 1437px;
+        border-radius: 36px;
+        box-shadow: 0 0 0 2400px #14301f;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const kind = new URLSearchParams(location.search).get('card')
+      const texts = window.CARDS ?? { title: [], end: [] }
+      const add = (parent, tag, className, text) => {
+        const element = document.createElement(tag)
+        element.className = className
+        if (text !== undefined) element.textContent = text
+        parent.append(element)
+        return element
+      }
+      if (kind === 'frame') {
+        add(document.body, 'div', 'window')
+      } else {
+        const card = add(document.body, 'main', 'card')
+        if (kind === 'title') {
+          const icon = add(card, 'img', 'icon')
+          icon.src = '../../public/icon.svg'
+          icon.alt = ''
+          const [name, lead, note] = texts.title
+          add(card, 'h1', 'name', name)
+          add(card, 'p', 'lead', lead)
+          add(card, 'p', 'note', note)
+        } else {
+          texts.end.forEach((line, index) => add(card, 'p', index === 0 ? 'lead' : 'note', line))
+        }
+      }
+    </script>
+  </body>
+</html>
