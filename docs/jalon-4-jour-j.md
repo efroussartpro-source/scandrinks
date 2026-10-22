@@ -71,10 +71,11 @@ Les règles depuis le 23/10/2026 :
 - [ ] Chaque livraison Metro est scannée en « Entrée + ».
 - [ ] Un pack porté au frigo ne se scanne plus : il reste dans la boutique.
 - [ ] « Sortie − » sert seulement à la casse, au périmé et aux boissons offertes.
-- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour.
-- [ ] Avant chaque passage chez Metro, compare « À racheter » avec ce que tu vois en boutique.
+- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour. Jamais les ventes du 22/10 ni d'avant : l'inventaire du 22/10 au soir les compte déjà, et l'app ne propose pas ces jours.
+- [ ] Un comptage (« Inventaire = », « Corriger le stock ») se fait boutique fermée : le soir après la fin de journée, ou le matin avant l'ouverture. En journée, il retirerait deux fois les ventes du matin.
+- [ ] Avant chaque passage chez Metro, regarde « À racheter » le matin avant l'ouverture, ou le soir après la fin de journée : en journée, l'app compte encore les boissons vendues depuis le matin.
 - [ ] Tiens un carnet de bord : la date, l'iPhone, ce qui s'est passé, et une capture d'écran si possible.
-- [ ] En fin de semaine, recompte 5 produits en « Inventaire = » et note les écarts affichés.
+- [ ] En fin de semaine, boutique fermée (le soir après la fin de journée, ou le matin avant l'ouverture), recompte 5 produits en « Inventaire = » et note les écarts affichés.
 - [ ] Puis le bilan avec moi. Le jalon est validé si rien n'a bloqué et si « À racheter » était juste. Un écart au recomptage doit s'expliquer, par exemple par un scan oublié, retrouvé dans l'Historique.
 
 ## Si la base est en pause

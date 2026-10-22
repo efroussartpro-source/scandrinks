@@ -29,6 +29,7 @@ const KEY_TEXTS = [
   'En fin de journée',
   'Lecture jour',
   'Un pack porté au frigo ne se scanne pas.',
+  'Boutique fermée : le soir après la fin de journée, ou le matin avant l',
   'Inventaire =',
   'À racheter',
   'Historique',

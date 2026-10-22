@@ -83,8 +83,8 @@ Il faut Node 22 (voir `.node-version`). Le fichier `.npmrc` active `legacy-peer-
 ### Configuration
 
 Ces fichiers ne contiennent que des valeurs publiques :
-- `.env.production` : adresse du projet Supabase, clé publique (`sb_publishable_…`) et adresse du compte du tabac. La sécurité vient de la Row Level Security et de la table `allowed_users`, pas du secret de la clé.
-- `.env.e2e` : valeurs factices du test de bout en bout.
+- `.env.production` : adresse du projet Supabase, clé publique (`sb_publishable_…`) et adresse du compte du tabac. La sécurité vient de la Row Level Security et de la table `allowed_users`, pas du secret de la clé. Aussi le premier jour de ventes de la fin de journée (`VITE_FIRST_SALES_DAY`, le 23/10/2026) : l'onglet « Ventes » ne propose pas les jours d'avant, déjà comptés par l'inventaire de la bascule.
+- `.env.e2e` : valeurs factices du test de bout en bout (premier jour de ventes : le 17/10/2026).
 
 ### Base de données (Supabase, Paris)
 

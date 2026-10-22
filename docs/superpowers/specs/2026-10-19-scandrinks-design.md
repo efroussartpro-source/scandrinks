@@ -581,7 +581,8 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet.
 
 - **Le 22/10/2026 au soir, boutique fermée** : inventaire de toute la boutique (réserve, frigos et rayons), avec les deux règles de l'inventaire. La remise à zéro a lieu à midi ; rien n'est scanné entre les deux.
 - **À partir du 23/10** : on scanne les livraisons (« Entrée + ») ; un pack porté au frigo ne se scanne plus ; « Sortie − » sert à la casse, au périmé et aux boissons offertes.
-- **Chaque soir** : la fin de journée (§4.8). Tant que l'onglet n'est pas en service, on note les jours ; on les rattrape ensuite (7 jours au plus), avec l'historique jour par jour de la caisse.
+- **Chaque soir** : la fin de journée (§4.8). Tant que l'onglet n'est pas en service, on note les jours ; on les rattrape ensuite (7 jours au plus), avec l'historique jour par jour de la caisse. Le premier jour de ventes est le 23/10 : l'onglet ne propose pas les jours d'avant, que l'inventaire du 22/10 au soir compte déjà.
+- **Les comptages** (« Inventaire = », « Corriger le stock ») se font boutique fermée : le soir après la fin de journée, ou le matin avant l'ouverture. En journée, les ventes du matin seraient retirées deux fois : par le comptage, puis par la fin de journée du soir.
 - **Après l'inventaire** : relever les seuils et les stocks idéaux, qui comptent maintenant le frigo et les rayons.
 - **La feuille A4 et la vidéo tuto** suivent : « Je sors un pack de la réserve » devient « En fin de journée », et le chapitre 3 de la vidéo montre la fin de journée.
 
@@ -676,6 +677,9 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet.
 | 22/10/2026 | Une vente est une sortie qui porte le jour des ventes (`sale_day`), au plus une active par produit et par jour ; saisie possible sur les 7 derniers jours | Migration par simples ajouts, sans toucher aux contraintes existantes ; l'app du jalon 4 la montre comme une sortie ; un soir oublié se rattrape sans double compte |
 | 22/10/2026 | Bascule le 22/10/2026 au soir : inventaire de toute la boutique, boutique fermée | La caisse donne les ventes de toute la journée : compter en pleine journée retirerait deux fois les ventes du matin |
 | 22/10/2026 | Libellé d'onglet en 11 px sous 360 px de large | Les cinq noms tiennent sur une ligne à 320 px (iPhone en affichage agrandi), sans texte coupé ; 12 px partout ailleurs |
+| 22/10/2026 | Premier jour de ventes : le 23/10 (`VITE_FIRST_SALES_DAY`) ; l'onglet ne propose pas les jours d'avant | L'inventaire du 22/10 au soir compte déjà ces ventes : un rattrapage les retirerait deux fois (relecture finale) |
+| 22/10/2026 | Les comptages se font boutique fermée, le soir après la fin de journée ou le matin avant l'ouverture | Les ventes ne quittent le stock qu'à la fin de journée : un comptage en journée retirerait deux fois celles du matin (relecture finale) |
+| 22/10/2026 | La saisie de l'onglet « Ventes » est gardée quand on change d'onglet ; au retour dans l'app, « Aujourd'hui » suit la date | Créer une boisson qui manque passe par « Stock » ; une app restée ouverte jusqu'au lendemain ne doit pas enregistrer sous la veille (relecture finale) |
 
 ## 12. Glossaire
 
