@@ -79,7 +79,7 @@ export const CHAPTERS = [
     captions: {
       ouvrir: 'Avant Metro, ouvre « À racheter » : le chiffre dit combien de produits manquent.',
       packs: 'Chaque ligne donne le nombre de packs à prendre.',
-      disparait: "Une ligne disparaît dès que l'entrée du produit est scannée.",
+      disparait: 'Une ligne disparaît quand une entrée fait passer le stock au-dessus du seuil.',
     },
   },
   {

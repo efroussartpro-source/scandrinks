@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import page from '../../public/tutoriel/index.html?raw'
 import playlist from '../../public/tutoriel/video/tutoriel.m3u8?raw'
+import storyboard from '../../scripts/tutorial/storyboard.mjs?raw'
 import { TUTORIAL_LENGTH_NOTE, TUTORIAL_LOAD_ERROR, TUTORIAL_PLAYLIST, TUTORIAL_POSTER } from './tutorial'
 
 // Les segments présents dans le dossier de la vidéo, par leur nom (seg-000.m4s…).
@@ -37,4 +38,11 @@ test('la liste HLS cite exactement les segments présents', () => {
     .sort()
   expect(listed.length).toBeGreaterThan(0)
   expect(listed).toEqual(segmentFiles)
+})
+
+// Une ligne d'« À racheter » ne s'en va que si une entrée fait passer le stock au-dessus du seuil (§4.3, RG-5) :
+// un seul pack reçu pour un produit épuisé la laisse dans la liste, et le film le montre (l'Oasis).
+test("la vidéo tuto dit quand une ligne d'« À racheter » disparaît, comme la spec", () => {
+  expect(storyboard).toContain("disparait: 'Une ligne disparaît quand une entrée fait passer le stock au-dessus du seuil.',")
+  expect(storyboard).not.toContain("dès que l'entrée du produit est scannée")
 })
