@@ -44,7 +44,7 @@ Depuis le jalon 5, le stock couvre toute la boutique (réserve, frigos et rayons
 - Plusieurs codes-barres par produit (canette = 1 unité, pack = N unités).
 - Liste À racheter exprimée en packs Metro.
 - Fin de journée : les ventes du jour, lues sur la caisse, saisies dans l'onglet « Ventes » (jalon 5).
-- Liste du stock, fiche produit modifiable, archivage.
+- Liste du stock, fiche produit modifiable, archivage et suppression définitive (jalon 6).
 - Inventaire (comptage) et correction du stock.
 - Historique de tous les mouvements, avec annulation.
 - Compte unique du tabac, prénom par téléphone, changement de mot de passe.
@@ -108,6 +108,7 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
    - **Seuil d'alerte** et **stock idéal** : pré-remplis à 1 et 2 packs Metro, modifiables. Ils suivent le pack Metro tant qu'on ne les a pas changés à la main.
 
    - **Image** (facultative, §4.7) : celle d'Open Food Facts si le code y est connu, sinon « Prendre la photo », prise par la caméra du Scanner.
+   - **Photo de la canette** (facultative, jalon 6) : après « Scanner une canette du pack », la canette a son propre cadre, sous la ligne « Canette : … (1 unité) ». Il propose l'image d'Open Food Facts de la canette s'il la connaît, sinon « Prendre la photo », en visant la canette. Le premier cadre s'appelle alors « Photo du pack ». Une autre canette scannée efface la photo de la précédente, qui allait avec l'autre code.
 
    Une fois la fiche créée, l'app affiche la fiche de confirmation du mode en cours : « +24 » en Entrée, « −24 » en Sortie, la saisie du comptage en Inventaire.
 2. **Ajouter ce code à un produit existant.** On choisit le produit dans la liste, puis on indique combien d'unités vaut ce code. Exemple : le code d'une canette seule, pour une fiche créée depuis le pack (1 unité). L'image du code se choisit comme pour un nouveau produit.
@@ -129,20 +130,26 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 ### 4.4 Stock et fiche produit
 
 - La liste montre tous les produits actifs par ordre alphabétique : l'image du produit, le nom, son état ou ses packs (« 2 packs + 5 ») et le stock en gros à droite. Un produit est en rouge si son stock est inférieur ou égal au seuil (il figure alors dans À racheter) ou négatif. Un champ de recherche est placé en haut.
-- Le filtre « Archivés » affiche les produits archivés, que l'on peut réactiver.
+- Le filtre « Archivés » affiche les produits archivés, que l'on peut réactiver ou supprimer depuis leur fiche.
 - La fiche produit contient, de haut en bas :
   - « Retour », puis l'image et le nom du produit ;
   - le stock en très gros, avec le pack Metro, le seuil et le stock idéal ;
   - deux boutons : « Corriger le stock » et « Modifier » ;
   - les codes, chacun avec son image, ses unités et la provenance de l'image ; « Modifier » et « Retirer » en liens sur la ligne ; « Ajouter un code » en fin de liste ;
   - les 20 derniers mouvements, le type en couleur ;
-  - « Archiver le produit », en bas, en rouge.
+  - en bas : « Archiver le produit », en rouge (« Réactiver » pour un produit archivé), puis « Supprimer le produit », en rouge.
 - Depuis la fiche, on peut :
   - modifier les champs ;
   - ajouter, modifier ou retirer un code, et changer son image en la touchant (appareil photo de l'iPhone) ;
   - « Corriger le stock », c'est-à-dire faire l'inventaire de ce seul produit ;
-  - archiver le produit. Il n'y a pas de suppression définitive : l'archivage la remplace et préserve l'historique.
+  - archiver le produit : il disparaît des listes, garde son historique et se réactive (RG-11) ;
+  - le supprimer pour de bon (RG-15, jalon 6).
 - Le bouton « Nouveau produit » crée une fiche sans scan, pour un produit dont le code est illisible.
+- **Supprimer le produit** (jalon 6), depuis la fiche de tout produit, actif ou archivé :
+  - un message de confirmation s'affiche dans la fenêtre de l'iPhone (« Annuler » / « OK ») : « Supprimer « Coca-Cola 33 cl » pour de bon ? Ses codes et tout son historique (entrées, sorties, ventes, inventaires) seront effacés. Impossible de revenir en arrière. » ;
+  - « Annuler » ne change rien. Après « OK », la fiche se ferme, et la liste d'où elle avait été ouverte (Stock ou À racheter) affiche « Coca-Cola 33 cl a été supprimé. » ;
+  - le produit disparaît partout (Stock, Archivés, À racheter, Ventes, choix d'un produit), avec ses codes et tous ses mouvements (Historique, « Déjà saisi » des Ventes). Ses codes redeviennent inconnus au scan ;
+  - pour un produit qu'on arrête de vendre mais qui peut revenir, on l'archive plutôt : il garde son historique.
 
 ### 4.5 Historique
 
@@ -168,12 +175,14 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 - **Provenance :**
   - Open Food Facts, quand il connaît le code (souvent les canettes et les bouteilles) : l'image est proposée à la création, puis recopiée dans le stockage de ScanDrinks, avec la mention « Image : Open Food Facts » ;
   - sinon, une photo de l'équipe (souvent les packs Metro) : « Prendre la photo » à la création, par la caméra du Scanner, ou plus tard depuis la fiche, en touchant l'image d'un code, avec l'appareil photo de l'iPhone.
+- **À la création depuis un pack**, la canette scannée pour le nom a son propre cadre, « Photo de la canette » (§4.2, jalon 6). Son image va au code de la canette, jamais à celui du pack.
 - **Affichage :**
   - après un scan, sur la fiche de confirmation : l'image du code scanné ;
   - dans la fiche produit : l'image du produit en haut, et celle de chaque code ;
   - dans Stock et À racheter : l'image du produit.
 - L'image du produit est celle du code dont les unités valent le pack Metro, sinon la première image disponible. Sans image, une icône grise la remplace.
 - Les images montrent les produits, jamais les personnes.
+- Les images d'un produit supprimé restent dans le stockage, sans servir (RG-15).
 
 ### 4.8 Fin de journée (onglet « Ventes », jalon 5)
 
@@ -207,6 +216,7 @@ Chaque soir, à la fermeture, une personne de l'équipe reporte dans l'app les v
 | RG-12 | Déplacer un code vers un autre produit ne change pas les mouvements passés. |
 | RG-13 | **Chaque code lu est normalisé avant toute recherche.** Un UPC-A (12 chiffres) devient son EAN-13, avec un 0 devant. Un GTIN à 14 chiffres qui commence par 0 (carton ITF-14 ou code long) est ramené à 13 chiffres. Un code long GS1 (Code 128) qui contient un identifiant produit (01) est ramené à ce GTIN : le code court et le code long d'une même étiquette désignent donc le même produit. Un code long sans identifiant produit (lot ou date seuls) est ignoré, avec le message « Ce code n'identifie pas un produit ». Un code EAN, UPC ou ITF dont la clé de contrôle est fausse est ignoré, car c'est une lecture parasite. |
 | RG-14 | **Vente** (fin de journée) : stock − quantité vendue, en unités, de 1 à 999 par produit et par jour. Le jour est l'un des 7 derniers (aujourd'hui compris, heure de Paris), jamais à venir. Un produit a **au plus une vente active par jour** : une seconde saisie est refusée tant que la première n'est pas annulée. |
+| RG-15 | **Suppression** (jalon 6) : après confirmation, le produit, ses codes et tous ses mouvements, annulés compris, sont effacés pour de bon, en une seule fois. Ses codes redeviennent inconnus ; les autres produits ne changent pas. Ses images restent dans le stockage, sans servir. On ne peut pas revenir en arrière : pour mettre un produit de côté en gardant son historique, on l'archive (RG-11). |
 
 ## 6. Architecture technique
 
@@ -306,6 +316,7 @@ déploiement automatique depuis GitHub
 - `detach_barcode(code)` : retire un code de son produit. Les mouvements passés gardent le code en texte.
 - `lookup_barcode(code)` : le produit d'un code, ses unités et son image.
 - `set_barcode_photo(code, path, source)` : relie au code une image déjà envoyée dans le stockage, et en note la provenance.
+- `delete_product(product_id)` (jalon 6) : supprime le produit pour de bon (RG-15). Le produit est d'abord verrouillé, puis ses mouvements, ses codes et la fiche sont effacés, en une seule transaction. Un mouvement envoyé au même moment passe donc avant, et il est effacé avec le produit, ou bien il est refusé. Rejouée, ou envoyée par deux téléphones, elle renvoie le même résultat. L'effacement lui-même est fait par `private.erase_product`, en `security definer` dans le schéma non exposé, comme `private.is_allowed` : l'app n'a aucun droit d'effacer directement un produit ou un mouvement.
 
 Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une action ne crée pas de doublon.
 
@@ -317,6 +328,7 @@ Les fonctions sont **idempotentes** : rejouée avec le même identifiant, une ac
 - **Changement de mot de passe** depuis les Réglages : le mot de passe actuel est vérifié, le nouveau enregistré, puis toutes les sessions sont révoquées, celle du téléphone compris.
 - **Session vérifiée à chaque appel** : la fonction d'accès (`is_allowed`) refuse un jeton dont la session est fermée. Un téléphone déconnecté par un changement de mot de passe est donc refusé tout de suite, sans attendre l'expiration de son jeton (jusqu'à une heure).
 - **Images** : le compartiment `photos` est privé. Seuls les comptes de `allowed_users` y lisent et y ajoutent des images ; personne ne les modifie ni ne les supprime depuis l'app. L'app les affiche par des liens signés, valables une heure.
+- **Suppression** (jalon 6) : un produit ne s'efface que par `delete_product`, en entier (RG-15). Le rôle de l'app n'a aucun droit de suppression sur les produits ni sur les mouvements ; il garde seulement celui de retirer un code. Une ligne d'historique ne s'efface donc jamais seule.
 - **Données personnelles** : uniquement des prénoms. Pas de suivi d'audience, pas de publicité, pas d'outil de mesure.
 
 ### 6.5 Hébergement, comptes et coûts
@@ -421,6 +433,8 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 | Image impossible à afficher | Une icône grise la remplace. |
 | Coupure réseau en enregistrant une fin de journée | Le même message et le même « Réessayer » qu'après un scan : chaque ligne a son identifiant, rien n'est compté deux fois. |
 | Fin de journée déjà saisie ailleurs pour un produit (deux téléphones) | « Déjà saisi pour ce jour : [produits]. La liste est relue. » Rien n'est enregistré, et la liste se met à jour. |
+| Coupure réseau en supprimant un produit | « Pas de connexion. Réessaie quand le réseau revient. » La fiche reste ouverte. Si la base avait déjà effacé, une nouvelle suppression aboutit sans rien faire de plus. |
+| Produit supprimé sur un autre téléphone | Ce qui le vise encore (scan validé, comptage, code ajouté, annulation dans l'Historique) est refusé : « Enregistrement refusé : vérifie la saisie ou scanne de nouveau. » ; scanné de nouveau, son code est inconnu. Sa fiche, ouverte ailleurs, se ferme à la relecture suivante de la liste. Une fin de journée qui le contenait est refusée une fois (« Enregistrement refusé : vérifie le jour et les quantités. »), puis la liste est relue sans lui. |
 
 ## 8. Stratégie de test
 
@@ -445,6 +459,9 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
   - `record_sales`, en tests SQL : la baisse du stock, les bornes (quantité, jour), l'identifiant rejoué, une vente déjà active le même jour, l'annulation puis une nouvelle saisie, les droits ; et deux téléphones au même instant (deux sessions PostgreSQL simultanées, en local) ;
   - les règles pures, par des tests unitaires : les jours proposés (heure de Paris), la lecture des cases, le total, le libellé des ventes dans l'Historique ;
   - l'onglet « Ventes », dans les tests de bout en bout : saisie, récapitulatif, enregistrement, « Déjà saisi », coupure réseau puis « Réessayer », une saisie faite ailleurs entre-temps.
+- **Jalon 6** :
+  - `delete_product`, en tests SQL : les droits, l'identifiant vide, l'effacement du produit, de ses codes et de tous ses mouvements (annulés et ventes compris), les autres produits intacts, un code de nouveau libre, l'appel rejoué ; et une suppression en même temps qu'un scan, dans les deux ordres (deux sessions PostgreSQL simultanées, en local) ;
+  - dans les tests de bout en bout : la confirmation refusée puis acceptée, le message de la liste, le produit absent de partout, un produit supprimé ailleurs pendant une fin de journée ; la photo de la canette (image d'Open Food Facts, photo de l'équipe, une autre canette scannée, un envoi qui échoue).
 - **Recette en boutique** avec le porteur du projet, le jour J et pendant la semaine d'essai (§9, « Mise en service »), à partir d'une liste à cocher :
   - scans de vrais packs Metro et création de 3 fiches ;
   - une sortie et un inventaire ;
@@ -478,6 +495,7 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 | 3. Le suivi | Historique, annulation, changement de mot de passe, finitions. | Annuler une erreur, changer le mot de passe. |
 | 4. La mise en service | Refonte visuelle (style iPhone, jour et nuit) et images des codes ; vidéo tuto (bouton « Tutoriel » et QR code), feuille A4 de la réserve, quatre corrections ; puis le jour J : remise à zéro, installation sur les iPhones de l'équipe, inventaire du premier jour. | Une semaine d'utilisation par l'équipe (détail ci-dessous). |
 | 5. La fin de journée | Onglet « Ventes » : les ventes du jour, lues sur la caisse, saisies chaque soir ; le stock couvre toute la boutique ; feuille A4 et vidéo mises à jour. | Une semaine de fins de journée, puis le recomptage de 5 produits : les écarts s'expliquent. |
+| 6. Suppression et photo de la canette | « Supprimer le produit », avec un message de confirmation ; la photo de la canette à la création depuis un pack. | Sur l'iPhone, dans la préversion : un produit d'essai créé avec un pack et une canette, leurs deux photos, puis sa suppression. |
 
 Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai dépend surtout des moments disponibles pour tester en boutique.
 
@@ -586,6 +604,16 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. 
 - **Après l'inventaire** : relever les seuils et les stocks idéaux, qui comptent maintenant le frigo et les rayons.
 - **La feuille A4 et la vidéo tuto** suivent : « Je sors un pack de la réserve » devient « En fin de journée », et le chapitre 3 de la vidéo montre la fin de journée.
 
+### Mise en service (jalon 6)
+
+Décidée le 27/10/2026, à la demande du porteur du projet.
+
+1. **La base.** La migration du jalon 6 contient des effacements, dans le corps de `private.erase_product`. Le connecteur Supabase risque alors d'attendre une confirmation qui ne parvient pas au porteur du projet (leçon du 20/10). Le porteur du projet colle donc le fichier dans l'éditeur SQL de Supabase et le lance, guidé pas à pas. Claude vérifie ensuite, en lecture seule, que les deux fonctions et leurs droits sont identiques au fichier, puis inscrit la ligne d'historique de la migration (un ajout, comme le 20/10). L'app en ligne n'est pas touchée : elle n'appelle pas les nouvelles fonctions.
+2. **La préversion**, sur l'iPhone du porteur du projet : un produit d'essai créé avec un pack et une canette, leurs deux photos, puis sa suppression. L'essai se nettoie ainsi tout seul.
+3. **La publication**, sur son « go ».
+
+La vidéo tuto et la feuille A4 ne changent pas : la photo de la canette est facultative, et la suppression est rare.
+
 ## 10. Risques et parades
 
 | Risque | Probabilité | Impact | Parade |
@@ -606,6 +634,7 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. 
 | Une fin de journée oubliée | Moyenne | Moyen | Rattrapage sur 7 jours avec l'historique de la caisse. En attendant, le stock est trop haut et « À racheter » peut manquer un produit : on rattrape avant d'aller chez Metro. |
 | Une quantité mal recopiée de la caisse | Moyenne | Faible | Récapitulatif avant d'enregistrer, total à comparer avec la caisse ; annulation dans l'Historique, puis nouvelle saisie. |
 | Une boisson quitte la boutique sans passer en caisse (offerte, cassée) | Moyenne | Faible | « Sortie − » ; le recomptage montre l'écart. |
+| Un produit supprimé par erreur | Faible | Moyen | Le message de confirmation dit tout ce qui sera effacé ; « Archiver » reste pour mettre de côté. Sans retour possible : on recrée la fiche au scan suivant, puis on recompte en « Inventaire ». |
 
 ## 11. Journal des décisions
 
@@ -681,6 +710,11 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. 
 | 22/10/2026 | Les comptages se font boutique fermée, le soir après la fin de journée ou le matin avant l'ouverture | Les ventes ne quittent le stock qu'à la fin de journée : un comptage en journée retirerait deux fois celles du matin (relecture finale) |
 | 22/10/2026 | Bascule reportée au 23/10 au soir (la remise à zéro, puis l'inventaire) ; premier jour de ventes : le 24/10 | La remise à zéro n'avait pas eu lieu le 22/10 ; choix du porteur du projet |
 | 22/10/2026 | La saisie de l'onglet « Ventes » est gardée quand on change d'onglet ; au retour dans l'app, « Aujourd'hui » suit la date | Créer une boisson qui manque passe par « Stock » ; une app restée ouverte jusqu'au lendemain ne doit pas enregistrer sous la veille (relecture finale) |
+| 27/10/2026 | Suppression définitive d'un produit, directement depuis sa fiche (actif ou archivé), après un message de confirmation : le produit, ses codes et tous ses mouvements ; « Archiver » reste | Choix du porteur du projet : « effacer pour de bon » plutôt qu'un simple changement de mot, et « directement » plutôt qu'« en deux temps » (archiver, puis supprimer depuis les Archivés). Remplace la règle d'origine « pas de suppression définitive » (§4.4) |
+| 27/10/2026 | Une seule porte pour effacer : `delete_product`, qui appelle `private.erase_product` (`security definer`, schéma non exposé) : le produit verrouillé, puis ses mouvements, ses codes et la fiche effacés ; aucun droit de suppression directe sur les produits ni les mouvements ; les images restent dans le stockage | Une ligne d'historique ne s'efface jamais seule ; un mouvement envoyé au même moment passe avant ou il est refusé ; même règle que pour une image remplacée |
+| 27/10/2026 | Migration du jalon 6 lancée par le porteur du projet dans l'éditeur SQL ; Claude vérifie ensuite en lecture seule et inscrit la ligne d'historique | Elle contient des effacements : le connecteur Supabase attend une confirmation qui ne parvient pas au porteur du projet (leçon du 20/10) |
+| 27/10/2026 | Un enregistrement qui vise un produit supprimé entre-temps est « refusé », jamais « base injoignable » ; une fin de journée refusée relit la liste | Le message dit vrai ; la ligne disparue ne bloque pas la saisie suivante |
+| 27/10/2026 | Photo de la canette à la création, quand on scanne une canette du pack ; le premier cadre devient « Photo du pack » ; l'image du produit reste celle du pack ; vidéo et feuille A4 inchangées | Demande du porteur du projet. Remplace la décision du 22/10 (« la canette scannée pour le nom ne donne pas d'image à la création ») : l'image de la canette va au code de la canette, jamais au pack. La photo est facultative : pas de nouveau tournage ni de nouvelle feuille à imprimer |
 
 ## 12. Glossaire
 
@@ -696,3 +730,5 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. 
 - **Apparence** : le thème de l'app, jour (clair) ou nuit (sombre).
 - **Fin de journée** : la saisie, chaque soir, des ventes du jour lues sur la caisse (onglet « Ventes »).
 - **Vente** : le mouvement d'une fin de journée, une sortie datée du jour des ventes.
+- **Archiver** : mettre un produit de côté. Il disparaît des listes, garde son historique et se réactive.
+- **Supprimer** : effacer un produit pour de bon, avec ses codes et tout son historique (jalon 6).
