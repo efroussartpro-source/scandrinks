@@ -17,7 +17,7 @@ import { api } from '../data/supabaseClient'
 import { parseIntInRange } from '../domain/productDraft'
 import { appPhotoDeps } from '../photos/appPhotoDeps'
 import CodePhotoPicker from '../photos/CodePhotoPicker'
-import { savePhoto, type PhotoChoice } from '../photos/savePhoto'
+import { choosePhoto, savePhoto } from '../photos/savePhoto'
 import type { ConfirmTarget } from '../scanner/scanFlow'
 import { FIELD_HELP } from './fieldHelp'
 import HelpField from './HelpField'
@@ -49,12 +49,7 @@ export default function AttachForm({ code, preselected, offName, photo, onReady,
   const submittingRef = useRef(false)
 
   const offImageUrl = photo && !offImageFailed ? photo.offImageUrl : null
-  // La photo de l'équipe, sinon l'image d'Open Food Facts, sinon rien.
-  const photoChoice: PhotoChoice | null = teamPhoto
-    ? { source: 'equipe', jpeg: teamPhoto }
-    : offImageUrl
-      ? { source: 'off', url: offImageUrl }
-      : null
+  const photoChoice = choosePhoto(teamPhoto, offImageUrl)
   const addLabel = (label: string) => (sendingPhoto ? 'Envoi de la photo…' : label)
 
   async function attach(move: boolean) {

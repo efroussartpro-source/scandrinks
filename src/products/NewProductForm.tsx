@@ -8,9 +8,12 @@
  * fiche, l'app propose d'y ajouter le pack plutôt que de créer un doublon. Un
  * carton (ITF-14) ou un code long n'est pas pris pour une canette (m8).
  * Une photo du pack est proposée en premier (celle de l'équipe, prise avec la
- * caméra du Scanner, sinon l'image d'Open Food Facts) ; elle part après la
- * création, sans jamais la bloquer (savePhoto.ts). La canette scannée pour
- * le nom n'a pas d'image : on l'ajoute ensuite depuis la fiche.
+ * caméra du Scanner, sinon l'image d'Open Food Facts). La canette scannée pour
+ * le nom a son propre cadre, sous sa ligne, et le premier devient « Photo du
+ * pack » (jalon 6). Une image ne sert que pour le code pour lequel on l'a
+ * obtenue : une autre canette repart d'un cadre neuf, et une réponse d'Open
+ * Food Facts arrivée pour une canette remplacée est ignorée. Les photos
+ * partent ensemble après la création, sans jamais la bloquer (savePhoto.ts).
  * L'identifiant de la fiche est tiré à l'ouverture : une création rejouée
  * après une réponse perdue renvoie la fiche déjà créée (m10). Comme cette
  * fiche est peut-être déjà enregistrée, le formulaire se fige alors :
@@ -26,7 +29,7 @@ import { newDraft, updateDraft, validateDraft, type DraftField, type ProductDraf
 import { lookupProduct, type OffLookupResult } from '../off/openFoodFacts'
 import { appPhotoDeps } from '../photos/appPhotoDeps'
 import CodePhotoPicker from '../photos/CodePhotoPicker'
-import { savePhoto, type PhotoChoice } from '../photos/savePhoto'
+import { choosePhoto, savePhoto } from '../photos/savePhoto'
 import type { ConfirmTarget } from '../scanner/scanFlow'
 import { FIELD_HELP } from './fieldHelp'
 import HelpField from './HelpField'
@@ -67,7 +70,14 @@ export default function NewProductForm(props: NewProductFormProps) {
   const [unconfirmed, setUnconfirmed] = useState(false)
   const [teamPhoto, setTeamPhoto] = useState<Blob | null>(null)
   const [offImageFailed, setOffImageFailed] = useState(false)
-  const [sendingPhoto, setSendingPhoto] = useState(false)
+  // La canette scannée pour le nom : son résultat d'Open Food Facts, sa photo et l'image qui ne se charge pas, gardés
+  // avec son code. Ils ne servent que si ce code est encore celui de la canette.
+  const [unitOff, setUnitOff] = useState<{ code: string; result: OffLookupResult } | null>(null)
+  const [unitPhoto, setUnitPhoto] = useState<{ code: string; jpeg: Blob } | null>(null)
+  const [unitOffFailed, setUnitOffFailed] = useState<string | null>(null)
+  const unitLookup = useRef<string | null>(null)
+  // Nombre de photos en cours d'envoi, après la création (0 : aucune).
+  const [sendingPhotos, setSendingPhotos] = useState(0)
   const submittingRef = useRef(false)
   const unitHelpId = useId()
   const [productId] = useState(() => crypto.randomUUID())
@@ -80,8 +90,12 @@ export default function NewProductForm(props: NewProductFormProps) {
   // Les codes lus ne doivent plus arriver au formulaire une fois fermé.
   useEffect(() => () => setCapture(null), [setCapture])
 
-  const fillNameFromUnit = useCallback((unit: string) => {
+  // Le nom et l'image de la canette ; seule compte la réponse de la dernière canette scannée.
+  const lookUpUnit = useCallback((unit: string) => {
+    unitLookup.current = unit
     void lookupProduct(unit).then((result) => {
+      if (unitLookup.current !== unit) return
+      setUnitOff({ code: unit, result })
       if (result.status === 'found') {
         setDraft((current) => (current.name.trim() === '' ? updateDraft(current, 'name', result.suggestedName) : current))
       }
@@ -109,7 +123,7 @@ export default function NewProductForm(props: NewProductFormProps) {
           } else {
             setKnownUnit(null)
             setUnitCode(normalized.code)
-            fillNameFromUnit(normalized.code)
+            lookUpUnit(normalized.code)
           }
         },
         (thrown: unknown) => {
@@ -120,7 +134,7 @@ export default function NewProductForm(props: NewProductFormProps) {
         },
       )
     },
-    [code, setCapture, fillNameFromUnit, onSessionExpired],
+    [code, setCapture, lookUpUnit, onSessionExpired],
   )
 
   function startCapture() {
@@ -131,12 +145,12 @@ export default function NewProductForm(props: NewProductFormProps) {
   }
 
   const offImageUrl = off?.status === 'found' && !offImageFailed ? off.imageUrl : null
-  // La photo de l'équipe, sinon l'image d'Open Food Facts, sinon rien.
-  const photoChoice: PhotoChoice | null = teamPhoto
-    ? { source: 'equipe', jpeg: teamPhoto }
-    : offImageUrl
-      ? { source: 'off', url: offImageUrl }
-      : null
+  const photoChoice = choosePhoto(teamPhoto, offImageUrl)
+  const unitResult = unitCode !== null && unitOff?.code === unitCode ? unitOff.result : undefined
+  const unitOffImage = unitResult?.status === 'found' ? unitResult.imageUrl : null
+  const unitOffImageUrl = unitOffImage !== null && unitOffImage !== unitOffFailed ? unitOffImage : null
+  const unitTeamPhoto = unitCode !== null && unitPhoto?.code === unitCode ? unitPhoto.jpeg : null
+  const unitChoice = choosePhoto(unitTeamPhoto, unitOffImageUrl)
 
   function change(field: DraftField, value: string) {
     setDraft((current) => updateDraft(current, field, value))
@@ -157,15 +171,22 @@ export default function NewProductForm(props: NewProductFormProps) {
     setCapture(null)
     setCaptureState('idle')
     const barcodes = [{ code, units: checked.codeUnits }, ...(unitCode ? [{ code: unitCode, units: 1 }] : [])]
+    // Les photos choisies, chacune avec son code : celle du pack, puis celle de la canette.
+    const photos = [
+      ...(photoChoice ? [{ code, choice: photoChoice }] : []),
+      ...(unitCode !== null && unitChoice ? [{ code: unitCode, choice: unitChoice }] : []),
+    ]
     try {
       const product = await api.createProduct({ ...checked.product, barcodes, id: productId })
-      if (photoChoice === null) {
+      if (photos.length === 0) {
         onReady({ product, units: checked.codeUnits, code, photoPath: null })
         return
       }
-      setSendingPhoto(true)
-      const photoPath = await savePhoto(code, photoChoice, appPhotoDeps)
-      onReady({ product, units: checked.codeUnits, code, photoPath, ...(photoPath === null ? { photoWarning: true as const } : {}) })
+      setSendingPhotos(photos.length)
+      const paths = await Promise.all(photos.map((photo) => savePhoto(photo.code, photo.choice, appPhotoDeps)))
+      const scanned = photos.findIndex((photo) => photo.code === code)
+      const photoPath = scanned === -1 ? null : paths[scanned]
+      onReady({ product, units: checked.codeUnits, code, photoPath, ...(paths.includes(null) ? { photoWarning: true as const } : {}) })
     } catch (thrown) {
       const error = classifyApiError(thrown)
       if (error.kind === 'session') {
@@ -191,6 +212,7 @@ export default function NewProductForm(props: NewProductFormProps) {
       <p className="muted">Code : {code}</p>
       <div className="form">
         <CodePhotoPicker
+          subject={unitCode ? 'pack' : 'code'}
           offImageUrl={offImageUrl}
           teamPhoto={teamPhoto}
           onTeamPhoto={setTeamPhoto}
@@ -228,6 +250,18 @@ export default function NewProductForm(props: NewProductFormProps) {
           </div>
         )}
         {unitCode && <p className="message">Canette : {unitCode} (1 unité)</p>}
+        {unitCode && (
+          <CodePhotoPicker
+            key={unitCode}
+            subject="canette"
+            offImageUrl={unitOffImageUrl}
+            teamPhoto={unitTeamPhoto}
+            onTeamPhoto={(jpeg) => setUnitPhoto(jpeg ? { code: unitCode, jpeg } : null)}
+            takeFrame={takeFrame}
+            disabled={submitting || unconfirmed}
+            onOffImageError={() => setUnitOffFailed(unitOffImage)}
+          />
+        )}
 
         {NUMBER_FIELDS.map(({ field, label, help }) => (
           <HelpField
@@ -251,7 +285,15 @@ export default function NewProductForm(props: NewProductFormProps) {
         )}
         <div className="card-actions">
           <button type="button" className="primary" disabled={submitting} onClick={() => void create()}>
-            {sendingPhoto ? 'Envoi de la photo…' : submitting ? 'Création…' : unconfirmed ? 'Réessayer' : 'Créer le produit'}
+            {sendingPhotos > 1
+              ? 'Envoi des photos…'
+              : sendingPhotos === 1
+                ? 'Envoi de la photo…'
+                : submitting
+                  ? 'Création…'
+                  : unconfirmed
+                    ? 'Réessayer'
+                    : 'Créer le produit'}
           </button>
           <button type="button" disabled={submitting} onClick={onCancel}>
             Annuler

@@ -16,6 +16,12 @@ import { photoPath, type PhotoSource } from './photos'
 
 export type PhotoChoice = { source: 'off'; url: string } | { source: 'equipe'; jpeg: Blob }
 
+// L'image d'un code à la création : la photo de l'équipe, sinon celle d'Open Food Facts, sinon rien.
+export function choosePhoto(teamPhoto: Blob | null, offImageUrl: string | null): PhotoChoice | null {
+  if (teamPhoto) return { source: 'equipe', jpeg: teamPhoto }
+  return offImageUrl ? { source: 'off', url: offImageUrl } : null
+}
+
 export interface PhotoDeps {
   fetchImage(url: string): Promise<Blob>
   toJpeg(blob: Blob): Promise<Blob>

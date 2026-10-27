@@ -16,8 +16,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
-import { ean13Y4m } from './ean13.mjs'
-import { COCA_CODE, GOOD_PASSWORD, OFF_COCA_IMAGE, SUPABASE_URL, installFakeSupabase } from './fakeSupabase.mjs'
+import { installCamera } from '../scripts/tutorial/page-helpers.js'
+import { ean13Modules, ean13Y4m } from './ean13.mjs'
+import { COCA_CODE, GOOD_PASSWORD, OFF_COCA_IMAGE, SUPABASE_URL, TUTORIAL_CODES, installFakeSupabase } from './fakeSupabase.mjs'
 import { signIn } from './helpers.mjs'
 import { jpegSize, PHOTO_JPEG, withExifOrientation } from './jpeg.mjs'
 
@@ -2062,6 +2063,87 @@ async function scenarioDelete(browser) {
   console.log('Scénario U (suppression) : OK')
 }
 
+// V. La photo de la canette à la création depuis un pack (§4.2, §4.7, jalon 6) : un cadre par code, une image qui ne sert
+// que pour son code, les deux envois après la création, puis une photo qui n'arrive pas. La caméra est celle du tournage
+// de la vidéo (un canvas) : elle montre le code voulu au moment voulu.
+async function scenarioUnitPhoto(browser) {
+  const PACK = TUTORIAL_CODES.oasisPack
+  const CAN = TUTORIAL_CODES.oasisCan
+  const show = (page, code) => page.evaluate(([modules, digits]) => window.__tutorialCamera.show(modules, digits), [ean13Modules(code), code])
+  const form = (page) => page.getByRole('region', { name: 'Nouveau produit' })
+  const group = (page, name) => form(page).getByRole('group', { name, exact: true })
+  const button = (scope, name) => scope.getByRole('button', { name, exact: true })
+  const photoLinks = (fake) =>
+    fake.calls.filter((call) => call.fn === 'set_barcode_photo').map((call) => call.body).sort((a, b) => a.p_code.localeCompare(b.p_code))
+  const waitForValue = async (page, locator, value) => {
+    const element = await locator.elementHandle()
+    await page.waitForFunction(([input, expected]) => input.value === expected, [element, value])
+  }
+  // Le pack scanné et sa photo prise ; puis la canette Oasis, scannée pour le nom, et sa photo.
+  const packThenCan = async (page) => {
+    await signIn(page)
+    await show(page, PACK)
+    await page.getByText(`Code inconnu : ${PACK}`).waitFor({ timeout: SCAN_TIMEOUT })
+    await button(page, 'Nouveau produit').click()
+    await group(page, 'Photo du code').waitFor()
+    assert.equal(await group(page, 'Photo de la canette').count(), 0, 'pas de cadre de la canette avant son scan')
+    await button(group(page, 'Photo du code'), 'Prendre la photo').click()
+    await group(page, 'Photo du code').getByText('Photo prise').waitFor()
+    await button(form(page), 'Scanner une canette du pack').click()
+    await show(page, CAN)
+    await form(page).getByText(`Canette : ${CAN} (1 unité)`).waitFor({ timeout: SCAN_TIMEOUT })
+    await waitForValue(page, form(page).getByLabel('Nom'), 'Oasis Tropical 33 cl')
+    await group(page, 'Photo du pack').getByText('Photo prise').waitFor()
+    await group(page, 'Photo de la canette').getByText('Photo de la canette', { exact: true }).waitFor()
+    await button(group(page, 'Photo de la canette'), 'Prendre la photo').click()
+    await group(page, 'Photo de la canette').getByText('Photo prise').waitFor()
+  }
+  {
+    const { context, page, fake, pageErrors } = await openApp(browser, { catalogue: 'empty' }, { initScript: installCamera })
+
+    // 1-2. Le pack, puis sa canette : le premier cadre devient « Photo du pack », le second appartient à la canette.
+    await packThenCan(page)
+
+    // 3. Une autre canette : la photo de la première ne la suit pas ; le cadre propose l'image d'Open Food Facts du Coca.
+    await button(form(page), 'Scanner une canette du pack').click()
+    await show(page, COCA_CODE)
+    await form(page).getByText(`Canette : ${COCA_CODE} (1 unité)`).waitFor({ timeout: SCAN_TIMEOUT })
+    await group(page, 'Photo de la canette').getByText('Image trouvée').waitFor()
+    assert.equal(await group(page, 'Photo de la canette').getByText('Photo prise').count(), 0, "la photo de l'autre canette ne suit pas")
+    assert.equal(await form(page).getByLabel('Nom').inputValue(), 'Oasis Tropical 33 cl')
+
+    // 4. Les deux cadres tiennent à 320 px de large.
+    await page.setViewportSize({ width: 320, height: 800 })
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= 320), 'deux cadres sans débordement à 320 px')
+    await page.setViewportSize({ width: 390, height: 844 })
+
+    // 5. La création : les deux codes, puis une image par code, chacune sous son propre code.
+    await form(page).getByLabel('Ce code vaut (unités)').fill('24')
+    await button(form(page), 'Créer le produit').click()
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24')
+    assert.deepEqual(fake.calls.find((call) => call.fn === 'create_product')?.body.p_barcodes,
+      [{ code: PACK, units: 24 }, { code: COCA_CODE, units: 1 }])
+    const links = photoLinks(fake)
+    assert.deepEqual(links.map((link) => [link.p_code, link.p_source]), [[PACK, 'equipe'], [COCA_CODE, 'off']])
+    for (const link of links) assert.ok(link.p_path.startsWith(`codes/${link.p_code}/`), `chemin sous son code : ${link.p_path}`)
+    assert.deepEqual(pageErrors, [], "pas d'erreur dans la page")
+    await context.close()
+  }
+  {
+    // 6. Une des deux photos n'arrive pas : le produit est créé, l'autre photo enregistrée, et l'écran le dit une fois.
+    const { context, page, fake } = await openApp(browser, { catalogue: 'empty', failPhotoUpload: true }, { initScript: installCamera })
+    await packThenCan(page)
+    await form(page).getByLabel('Ce code vaut (unités)').fill('24')
+    await button(form(page), 'Créer le produit').click()
+    const card = confirmCard(page)
+    await waitForConfirmLine(card, 'Pack de 24 → +24')
+    await card.getByText('Photo non enregistrée : réessaie depuis la fiche du produit.', { exact: true }).waitFor()
+    assert.equal(photoLinks(fake).length, 1, 'une seule image rattachée')
+    await context.close()
+  }
+  console.log('Scénario V (photo de la canette) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -2099,6 +2181,7 @@ try {
     ['S', scenarioImages],
     ['T', scenarioSales],
     ['U', scenarioDelete],
+    ['V', scenarioUnitPhoto],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { savePhoto, type PhotoDeps } from './savePhoto'
+import { choosePhoto, savePhoto, type PhotoDeps } from './savePhoto'
 
 const OFF_URL = 'https://images.openfoodfacts.org/images/products/544/900/000/0996/front_fr.4.400.jpg'
 const fetched = new Blob(["image d'Open Food Facts"], { type: 'image/jpeg' })
@@ -91,4 +91,11 @@ test("envoi qui répond après le délai : l'image n'est ni rattachée au code n
   await vi.advanceTimersByTimeAsync(5_000)
   expect(deps.link).not.toHaveBeenCalled()
   expect(deps.remember).not.toHaveBeenCalled()
+})
+
+test("choosePhoto : la photo de l'équipe, sinon l'image d'Open Food Facts, sinon rien", () => {
+  const jpeg = new Blob(['x'], { type: 'image/jpeg' })
+  expect(choosePhoto(jpeg, OFF_URL)).toEqual({ source: 'equipe', jpeg })
+  expect(choosePhoto(null, OFF_URL)).toEqual({ source: 'off', url: OFF_URL })
+  expect(choosePhoto(null, null)).toBeNull()
 })
