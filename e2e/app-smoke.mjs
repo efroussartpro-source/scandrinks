@@ -2094,9 +2094,12 @@ async function scenarioUnitPhoto(browser) {
     await form(page).getByText(`Canette : ${CAN} (1 unité)`).waitFor({ timeout: SCAN_TIMEOUT })
     await waitForValue(page, form(page).getByLabel('Nom'), 'Oasis Tropical 33 cl')
     await group(page, 'Photo du pack').getByText('Photo prise').waitFor()
+    // Le texte que cite le guide d'essai (docs/jalon-6-test.md, étape 6).
+    await group(page, 'Photo du pack').getByText('Elle sera gardée avec le code du pack.', { exact: true }).waitFor()
     await group(page, 'Photo de la canette').getByText('Photo de la canette', { exact: true }).waitFor()
     await button(group(page, 'Photo de la canette'), 'Prendre la photo').click()
     await group(page, 'Photo de la canette').getByText('Photo prise').waitFor()
+    await group(page, 'Photo de la canette').getByText('Elle sera gardée avec le code de la canette.', { exact: true }).waitFor()
   }
   {
     const { context, page, fake, pageErrors } = await openApp(browser, { catalogue: 'empty' }, { initScript: installCamera })

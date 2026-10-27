@@ -33,8 +33,8 @@ Ouvre la préversion dans Safari, connecte-toi, puis choisis ton prénom. Reste 
 - [ ] **5. Le pack et sa photo.** Scanne le pack : « Code inconnu ». Touche « Nouveau produit », vise le pack, puis « Prendre la photo » : « Photo prise ».
 - [ ] **6. La canette et sa photo.**
   - Touche « Scanner une canette du pack », puis vise une canette.
-  - La ligne « Canette : … (1 unité) » apparaît. Le premier cadre s'appelle maintenant « Photo du pack », et un second cadre, « Photo de la canette », est apparu sous la ligne.
-  - Dans ce second cadre : soit l'image d'Open Food Facts est déjà là (« Image trouvée »), soit tu vises la canette et tu touches « Prendre la photo ».
+  - La ligne « Canette : … (1 unité) » apparaît. Le premier cadre dit maintenant « Elle sera gardée avec le code du pack. ».
+  - Sous la ligne, un second cadre est apparu, pour la canette : soit « Image trouvée » (l'image d'Open Food Facts, déjà prête), soit « Photo de la canette » : vise alors la canette et touche « Prendre la photo ». Dans les deux cas, son texte finit par « … avec le code de la canette. ».
 - [ ] **7. La création.** Indique combien d'unités vaut le code du pack, puis « Créer le produit ». La fiche de confirmation montre la photo du pack : touche « Valider ». Cette entrée d'essai sera effacée à l'étape 10, avec le produit.
 - [ ] **8. La canette seule.** Éloigne le pack, puis scanne la canette seule : la fiche de confirmation montre la photo de la canette. Touche « Annuler », sans valider.
 - [ ] **9. La suppression refusée.** « Stock » › le produit d'essai › tout en bas, « Supprimer le produit ».

@@ -28,8 +28,11 @@ begin
   if not private.is_allowed() then
     raise exception 'not_allowed' using errcode = '42501';
   end if;
-  -- Verrou d'abord, comme record_movement : un mouvement envoyé au même moment passe avant, et il est effacé avec le
-  -- produit, ou bien il attend, puis il est refusé (« produit » inconnu ou clé étrangère).
+  -- Les verrous d'abord, dans l'ordre de cancel_movement (un mouvement, puis son produit) : ses mouvements, dans
+  -- l'ordre des identifiants, puis la fiche. Une annulation commencée passe donc avant, sans interblocage. Un mouvement
+  -- envoyé au même moment (scan, comptage, fin de journée, qui verrouillent le produit) passe avant, et il est effacé
+  -- avec le produit, ou bien il attend, puis il est refusé (« produit » inconnu ou clé étrangère).
+  perform 1 from public.movements where product_id = p_product_id order by id for update;
   perform 1 from public.products where id = p_product_id for update;
   if not found then
     return;
