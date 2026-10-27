@@ -3,7 +3,7 @@
 Gestion du stock de boissons d'un bureau de tabac par scan de code-barres, depuis un iPhone (app web installable, sans App Store).
 
 - **Cahier des charges** : [docs/superpowers/specs/2026-10-19-scandrinks-design.md](docs/superpowers/specs/2026-10-19-scandrinks-design.md)
-- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, inventaire de la bascule le 23/10/2026 au soir ; jalon 5 (la fin de journée) en ligne, première fin de journée le 24/10/2026. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md), [jalon 5](docs/superpowers/plans/2026-10-22-jalon-5-fin-de-journee.md).
+- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, inventaire de la bascule le 23/10/2026 au soir ; jalon 5 (la fin de journée) en ligne, première fin de journée le 24/10/2026 ; jalon 6 (suppression et photo de la canette) en préparation. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md), [jalon 5](docs/superpowers/plans/2026-10-22-jalon-5-fin-de-journee.md), [jalon 6](docs/superpowers/plans/2026-10-27-jalon-6-suppression-et-photo-canette.md).
 - **Installation** : uniquement depuis https://scandrinks.pages.dev (Safari, Partager → « Sur l'écran d'accueil »). Les préversions des branches servent aux tests, dans Safari, sans les installer.
 
 ## Jalon 1 — le cœur
@@ -59,6 +59,15 @@ Ce jalon apporte :
 
 Le protocole de test sur iPhone est dans [docs/jalon-5-test.md](docs/jalon-5-test.md).
 
+## Jalon 6 — suppression et photo de la canette
+
+Ce jalon apporte :
+- « Supprimer le produit », en bas de la fiche de chaque produit, actif ou archivé : après un message de confirmation, le produit, ses codes et tout son historique sont effacés pour de bon. La liste d'où la fiche avait été ouverte (Stock ou À racheter) le dit. « Archiver » reste, pour un produit mis de côté qui garde son historique ;
+- la photo de la canette à la création depuis un pack : après « Scanner une canette du pack », un second cadre, « Photo de la canette », et le premier devient « Photo du pack ». Les deux photos partent après la création ;
+- une fin de journée qui contient un produit supprimé entre-temps sur un autre téléphone : refusée une fois, puis la liste est relue sans lui.
+
+La mise en place dans la base (un fichier lancé par le porteur du projet dans l'éditeur SQL de Supabase) et le protocole de test sur iPhone sont dans [docs/jalon-6-test.md](docs/jalon-6-test.md).
+
 ## Développement
 
 Il faut Node 22 (voir `.node-version`). Le fichier `.npmrc` active `legacy-peer-deps` pour contourner un plantage de npm 10.9 avec vitest 5.
@@ -94,8 +103,9 @@ Ces fichiers ne contiennent que des valeurs publiques :
   - Jalon 3 (`20261020180000_suivi.sql`) : `list_history` (historique par pages) ; `cancel_movement` renvoie aussi qui a annulé et quand ; `create_product` ne peut plus échouer sur un envoi en double. `private.is_allowed()` vérifie que la session du jeton est encore ouverte : après un changement de mot de passe, les autres téléphones sont refusés tout de suite (code `PT401`, rendu en 401).
   - Jalon 4 (`20261021120000_images.sql`, refonte) : une image par code (`photo_path`, `photo_source` : Open Food Facts ou l'équipe), enregistrée par `set_barcode_photo` ; compartiment privé « photos » (JPEG, 256 Kio au plus), en lecture et en ajout seulement, pour le compte du tabac ; `lookup_barcode` et la vue `product_stock` donnent aussi l'image.
   - Jalon 5 (`20261022130000_fin_de_journee.sql`) : une vente est une sortie qui porte le jour des ventes (`sale_day`), au plus une active par produit et par jour (index unique) ; `record_sales` enregistre la fin de journée d'un jour en une transaction, rejouable sans doublon, et répond « déjà saisi » si un autre téléphone l'a fait ; `list_history` donne aussi `sale_day`.
+  - Jalon 6 (`20261027120000_suppression.sql`) : `delete_product`, qui appelle `private.erase_product` (security definer, dans le schéma non exposé). Elle verrouille le produit, puis efface ses mouvements, ses codes et la fiche : c'est la seule porte pour effacer, et le rôle de l'app n'a toujours aucun droit de suppression sur les produits ni sur les mouvements. Ce fichier contient des effacements : le porteur du projet le lance dans l'éditeur SQL.
 - `supabase/remise-a-zero.sql` : la remise à zéro du jour J, hors des migrations. Elle efface produits, codes et mouvements, et garde le compte du tabac ; elle vérifie d'abord qu'elle tourne sur le projet ScanDrinks. Le porteur du projet la lance dans l'éditeur SQL ; Claude ne la lance jamais.
-- `supabase/tests/database.test.sql` : tests de la base, dans une transaction annulée à la fin. On les lance sur le vrai projet avec l'outil `execute_sql`, ou en local avec `run-local.sh`. `reset.test.sh` essaie la remise à zéro en local, dont ses arrêts sur un autre projet ; `sales-race.test.sh`, deux fins de journée envoyées au même instant par deux sessions.
+- `supabase/tests/database.test.sql` : tests de la base, dans une transaction annulée à la fin. On les lance sur le vrai projet avec l'outil `execute_sql`, ou en local avec `run-local.sh`. `reset.test.sh` essaie la remise à zéro en local, dont ses arrêts sur un autre projet ; `sales-race.test.sh`, deux fins de journée envoyées au même instant par deux sessions ; `delete-race.test.sh`, une suppression en même temps qu'un scan ou qu'un code ajouté.
 - Le compte du tabac est créé dans le tableau de bord Supabase, inscriptions désactivées. Il est ensuite inscrit dans `allowed_users`.
 
 ### Organisation du code
