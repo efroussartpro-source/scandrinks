@@ -1,4 +1,4 @@
--- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3, les images des codes, puis la fin de journée).
+-- database.test.sql — Tests de la base ScanDrinks (jalons 1 à 3, les images des codes, la fin de journée, puis la suppression).
 --
 -- Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.7, §4.8, §5, §6.3, §6.4, §8)
 --
@@ -883,6 +883,108 @@ begin
   end if;
   if entry is null or not entry ? 'sale_day' or entry -> 'sale_day' is distinct from 'null'::jsonb then
     raise exception 'ÉCHEC : une entrée de l''historique sans jour de ventes vide (%)', entry;
+  end if;
+end
+$$;
+
+-- 34 à 36. Suppression définitive (RG-15, jalon 6). Mise en place, en tant que postgres : le produit D, avec le code
+-- de son pack (une image au stockage) et celui de sa canette, et des mouvements de toutes sortes (entrée, sortie
+-- annulée, inventaire, vente du jour) ; le produit E, témoin, avec son entrée.
+reset role;
+select set_config('scandrinks_test.deleted_photo', format('codes/2000000000091/%s.jpg', gen_random_uuid()), true);
+insert into public.products (id, name, pack_size, alert_threshold, target_stock) values
+  ('00000000-0000-4000-8000-00000000d0d1', 'Test suppression', 6, 6, 12),
+  ('00000000-0000-4000-8000-00000000e0e1', 'Témoin suppression', 6, 6, 12);
+insert into storage.objects (bucket_id, name) values ('photos', current_setting('scandrinks_test.deleted_photo'));
+insert into public.barcodes (code, product_id, units, photo_path, photo_source) values
+  ('2000000000091', '00000000-0000-4000-8000-00000000d0d1', 6, current_setting('scandrinks_test.deleted_photo'), 'equipe'),
+  ('2000000000107', '00000000-0000-4000-8000-00000000d0d1', 1, null, null);
+insert into public.movements (id, product_id, kind, delta, barcode, counted, employee, cancelled_at, cancelled_by, sale_day) values
+  ('00000000-0000-4000-8000-00000000d1e1', '00000000-0000-4000-8000-00000000d0d1', 'in', 6, '2000000000091', null, 'Testeur', null, null, null),
+  ('00000000-0000-4000-8000-00000000d1e2', '00000000-0000-4000-8000-00000000d0d1', 'out', -1, '2000000000107', null, 'Testeur', now(), 'Testeur', null),
+  ('00000000-0000-4000-8000-00000000d1e3', '00000000-0000-4000-8000-00000000d0d1', 'inventory', -2, null, 4, 'Testeur', null, null, null),
+  ('00000000-0000-4000-8000-00000000d1e4', '00000000-0000-4000-8000-00000000d0d1', 'out', -1, null, null, 'Testeur', null, null, pg_temp.today()),
+  ('00000000-0000-4000-8000-00000000e1e1', '00000000-0000-4000-8000-00000000e0e1', 'in', 12, null, null, 'Testeur', null, null, null);
+
+-- 34. Droits : sans connexion ou sans accès (B), la suppression est refusée, même par la fonction qui efface ;
+-- un identifiant vide aussi. D reste entier, et l'Historique montre ses lignes.
+set local role anon;
+select pg_temp.expect_error($q$select public.delete_product('00000000-0000-4000-8000-00000000d0d1')$q$, '42501');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000b2","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000b2b2"}', true);
+select pg_temp.expect_error($q$select public.delete_product('00000000-0000-4000-8000-00000000d0d1')$q$, '42501');
+select pg_temp.expect_error($q$select private.erase_product('00000000-0000-4000-8000-00000000d0d1')$q$, '42501');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated","session_id":"00000000-0000-4000-8000-00000000a1a1"}', true);
+select pg_temp.expect_error($q$select public.delete_product(null)$q$, 'invalid_input:product');
+do $$
+declare
+  d uuid := '00000000-0000-4000-8000-00000000d0d1';
+begin
+  if (select count(*) from public.products where id = d) <> 1
+     or (select count(*) from public.barcodes where product_id = d) <> 2
+     or (select count(*) from public.movements where product_id = d) <> 4 then
+    raise exception 'ÉCHEC : une suppression refusée a entamé D';
+  end if;
+  if not exists (select 1 from jsonb_array_elements(public.list_history(null, null, 100)) h where h ->> 'product_id' = d::text) then
+    raise exception 'ÉCHEC : l''Historique ne montre pas les lignes de D avant sa suppression';
+  end if;
+end
+$$;
+
+-- 35. Effacement (RG-15), en tant que A : la fiche, ses codes et tous ses mouvements, annulés et ventes compris. E ne
+-- bouge pas. Rejouée, ou pour un produit inconnu, la suppression répond pareil. Le code effacé est de nouveau libre.
+do $$
+declare
+  d uuid := '00000000-0000-4000-8000-00000000d0d1';
+  e uuid := '00000000-0000-4000-8000-00000000e0e1';
+  result jsonb;
+begin
+  result := public.delete_product(d);
+  if result is distinct from '{"status": "deleted"}'::jsonb then
+    raise exception 'ÉCHEC : suppression (%)', result;
+  end if;
+  if exists (select 1 from public.products where id = d) or exists (select 1 from public.product_stock where id = d) then
+    raise exception 'ÉCHEC : la fiche supprimée existe encore';
+  end if;
+  if exists (select 1 from public.barcodes where product_id = d or code in ('2000000000091', '2000000000107')) then
+    raise exception 'ÉCHEC : un code du produit supprimé existe encore';
+  end if;
+  if exists (select 1 from public.movements where product_id = d) then
+    raise exception 'ÉCHEC : un mouvement du produit supprimé existe encore';
+  end if;
+  if public.lookup_barcode('2000000000091') is not null then
+    raise exception 'ÉCHEC : le code du produit supprimé désigne encore un produit';
+  end if;
+  if (select stock from public.product_stock where id = e) is distinct from 12
+     or (select count(*) from public.movements where product_id = e) <> 1 then
+    raise exception 'ÉCHEC : la suppression a touché un autre produit';
+  end if;
+  if public.delete_product(d) is distinct from '{"status": "deleted"}'::jsonb
+     or public.delete_product(gen_random_uuid()) is distinct from '{"status": "deleted"}'::jsonb then
+    raise exception 'ÉCHEC : une suppression rejouée ne répond pas pareil';
+  end if;
+  perform public.create_product('Recréé', 6, 6, 12, '[{"code":"2000000000091","units":6}]');
+  if not exists (select 1 from public.barcodes b join public.products p on p.id = b.product_id
+                 where b.code = '2000000000091' and p.name = 'Recréé') then
+    raise exception 'ÉCHEC : le code du produit supprimé n''est pas de nouveau libre';
+  end if;
+end
+$$;
+
+-- 36. Historique : plus aucune ligne du produit supprimé. Son image, elle, reste au stockage (RG-15).
+do $$
+begin
+  if exists (select 1 from jsonb_array_elements(public.list_history(null, null, 100)) h
+             where h ->> 'product_id' = '00000000-0000-4000-8000-00000000d0d1') then
+    raise exception 'ÉCHEC : l''Historique montre encore une ligne du produit supprimé';
+  end if;
+end
+$$;
+reset role;
+do $$
+begin
+  if not exists (select 1 from storage.objects where bucket_id = 'photos' and name = current_setting('scandrinks_test.deleted_photo')) then
+    raise exception 'ÉCHEC : l''image du produit supprimé a quitté le stockage';
   end if;
 end
 $$;
