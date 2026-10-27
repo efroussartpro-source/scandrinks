@@ -1913,6 +1913,155 @@ async function scenarioSales(browser) {
   console.log('Scénario T (ventes) : OK')
 }
 
+// U. Supprimer un produit pour de bon (RG-15, jalon 6) : la confirmation refusée puis acceptée, le message de la liste,
+// le produit absent de partout ; un produit supprimé sur un autre téléphone pendant un scan, une fin de journée ou une
+// fiche ouverte ; une réponse perdue.
+async function scenarioDelete(browser) {
+  const EVENING = new Date('2026-10-22T17:30:00Z')
+  const button = (page, name) => page.getByRole('button', { name, exact: true })
+  const shoppingTab = (page) => page.getByRole('button', { name: /^À racheter/ })
+  const productList = (page) => page.getByRole('list', { name: 'Produits' })
+  const productRow = (page, name) => productList(page).getByRole('button', { name: new RegExp(`^${name}`) })
+  const sheet = (page) => page.getByRole('region', { name: 'Fiche produit' })
+  const deleteCalls = (fake) => fake.calls.filter((call) => call.fn === 'delete_product')
+  // Le message qui suit une suppression, en tête de la liste d'où la fiche avait été ouverte.
+  const deletedNotice = (page, name) => page.getByRole('status').filter({ hasText: exactly(`${name} a été supprimé.`) })
+  const confirmText = (name) =>
+    `Supprimer « ${name} » pour de bon ? Ses codes et tout son historique (entrées, sorties, ventes, inventaires) seront effacés. ` +
+    'Impossible de revenir en arrière.'
+  // Les confirmations : chaque message est noté ; acceptée, sauf si la suivante doit être refusée.
+  const watchDialogs = (page) => {
+    const dialogs = { messages: [], declineNext: false }
+    page.on('dialog', (dialog) => {
+      dialogs.messages.push(dialog.message())
+      if (dialogs.declineNext) void dialog.dismiss()
+      else void dialog.accept()
+      dialogs.declineNext = false
+    })
+    return dialogs
+  }
+  const waitForProducts = (page, names) =>
+    page.waitForFunction((want) =>
+      JSON.stringify([...document.querySelectorAll('ul[aria-label="Produits"] .product-name')].map((element) => element.textContent)) ===
+        JSON.stringify(want), names)
+  {
+    const { context, page, fake, pageErrors } = await openApp(browser, { catalogue: 'pilotage' }, { clockAt: EVENING })
+    const dialogs = watchDialogs(page)
+    await signIn(page)
+
+    // 1. Un scan validé sur un produit supprimé ailleurs : refusé, sans rien enregistrer ; relu, son code est inconnu. Un
+    // code qui reste devant la caméra n'est pas relu (§7) : on quitte le Scanner, puis on y revient (caméra rouverte).
+    const card = confirmCard(page)
+    await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
+    fake.deleteElsewhere('p-coca')
+    await card.getByRole('button', { name: 'Valider' }).click()
+    await card.getByRole('alert').filter({ hasText: exactly('Enregistrement refusé : vérifie la saisie ou scanne de nouveau.') }).waitFor()
+    await card.getByRole('button', { name: 'Annuler' }).click()
+    await button(page, 'Historique').click()
+    await button(page, 'Scanner').click()
+    await page.getByText(`Code inconnu : ${COCA_CODE}`).waitFor({ timeout: SCAN_TIMEOUT })
+
+    // 2. La confirmation refusée : rien n'est envoyé, la fiche reste ouverte.
+    await button(page, 'Stock').click()
+    await waitForProducts(page, ['Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
+    await productRow(page, 'Lipton Pêche 50 cl').click()
+    await sheet(page).getByRole('heading', { name: 'Lipton Pêche 50 cl' }).waitFor()
+    dialogs.declineNext = true
+    await sheet(page).getByRole('button', { name: 'Supprimer le produit' }).click()
+    await page.waitForTimeout(300)
+    assert.deepEqual(dialogs.messages, [confirmText('Lipton Pêche 50 cl')])
+    assert.equal(deleteCalls(fake).length, 0, 'aucune suppression sans accord')
+    await sheet(page).getByRole('heading', { name: 'Lipton Pêche 50 cl' }).waitFor()
+
+    // 3. La confirmation acceptée : retour à la liste, avec le message ; le produit n'est plus nulle part.
+    await sheet(page).getByRole('button', { name: 'Supprimer le produit' }).click()
+    await deletedNotice(page, 'Lipton Pêche 50 cl').waitFor()
+    await waitForProducts(page, ['Évian 1,5 L', 'Red Bull 25 cl'])
+    assert.deepEqual(deleteCalls(fake).map((call) => call.body), [{ p_product_id: 'p-lipton' }])
+    await button(page, 'Historique').click()
+    const history = page.getByRole('list', { name: 'Historique' })
+    await history.locator('.history-line').first().waitFor()
+    const historyText = (await history.locator('.history-line').allTextContents()).join('\n')
+    assert.ok(!historyText.includes('Lipton') && !historyText.includes('Coca'), `plus de ligne des produits supprimés : ${historyText}`)
+
+    // 4. Un produit archivé se supprime aussi, depuis sa fiche.
+    await button(page, 'Stock').click()
+    await button(page, 'Archivés').click()
+    await productRow(page, 'Oasis Tropical 33 cl').click()
+    await sheet(page).getByRole('button', { name: 'Réactiver' }).waitFor()
+    await sheet(page).getByRole('button', { name: 'Supprimer le produit' }).click()
+    await deletedNotice(page, 'Oasis Tropical 33 cl').waitFor()
+    await page.getByText('Aucun produit archivé.').waitFor()
+    // Le message s'efface quand on ouvre une autre fiche.
+    await button(page, 'Actifs').click()
+    await productRow(page, 'Évian 1,5 L').click()
+    await sheet(page).getByRole('heading', { name: 'Évian 1,5 L' }).waitFor()
+    await sheet(page).getByRole('button', { name: 'Retour' }).click()
+    await productList(page).waitFor()
+    assert.equal(await page.getByText('a été supprimé.').count(), 0, 'le message ne revient pas')
+
+    // 5. Une fin de journée qui contient un produit supprimé entre-temps : refusée une fois, puis relue sans lui.
+    await button(page, 'Ventes').click()
+    await page.getByRole('heading', { name: 'Fin de journée' }).waitFor()
+    await page.getByLabel('Vendus : Red Bull 25 cl', { exact: true }).fill('2')
+    await page.getByLabel('Vendus : Évian 1,5 L', { exact: true }).fill('3')
+    await button(page, 'Valider').click()
+    const recap = page.getByRole('list', { name: 'Récapitulatif' })
+    await recap.waitFor()
+    assert.deepEqual(await recap.getByRole('listitem').allTextContents(), ['Évian 1,5 L : −3', 'Red Bull 25 cl : −2'])
+    fake.deleteElsewhere('p-evian')
+    await button(page, 'Enregistrer').click()
+    await page.getByRole('alert').filter({ hasText: exactly('Enregistrement refusé : vérifie le jour et les quantités.') }).waitFor()
+    await page.waitForFunction(() =>
+      JSON.stringify([...document.querySelectorAll('ul[aria-label="Récapitulatif"] li')].map((item) => item.textContent)) ===
+        JSON.stringify(['Red Bull 25 cl : −2']))
+    await button(page, 'Réessayer').click()
+    await page.getByRole('status').filter({ hasText: exactly('Fin de journée enregistrée : 2 boissons.') }).waitFor()
+    const sales = fake.calls.filter((call) => call.fn === 'record_sales')
+    assert.equal(sales.length, 2, 'un refus, puis un enregistrement')
+    assert.deepEqual(sales[1].body.p_lines.map((line) => [line.product_id, line.quantity]), [['p-redbull', 2]])
+    assert.equal(sales[1].body.p_lines[0].id, sales[0].body.p_lines.find((line) => line.product_id === 'p-redbull').id,
+      'la ligne gardée garde son identifiant')
+
+    // 6. Depuis À racheter : la fiche se ferme sur À racheter, avec le message.
+    await shoppingTab(page).click()
+    await page.getByRole('list', { name: 'À racheter' }).getByRole('button', { name: /Red Bull 25 cl/ }).click()
+    await sheet(page).getByRole('heading', { name: 'Red Bull 25 cl' }).waitFor()
+    await sheet(page).getByRole('button', { name: 'Supprimer le produit' }).click()
+    await deletedNotice(page, 'Red Bull 25 cl').waitFor()
+    await page.getByRole('heading', { name: 'À racheter' }).waitFor()
+    assert.equal(deleteCalls(fake).length, 3)
+    assert.deepEqual(pageErrors, [], "pas d'erreur dans la page")
+    await context.close()
+  }
+  {
+    const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', loseFirst: ['delete_product'] })
+    watchDialogs(page)
+    await signIn(page)
+
+    // 7. Une réponse perdue : la fiche reste ouverte avec le message ; le nouvel essai aboutit, sans rien effacer d'autre.
+    await button(page, 'Stock').click()
+    await productRow(page, 'Lipton Pêche 50 cl').click()
+    await sheet(page).getByRole('button', { name: 'Supprimer le produit' }).click()
+    await sheet(page).getByRole('alert').filter({ hasText: exactly('Pas de connexion. Réessaie quand le réseau revient.') }).waitFor()
+    await sheet(page).getByRole('heading', { name: 'Lipton Pêche 50 cl' }).waitFor()
+    await sheet(page).getByRole('button', { name: 'Supprimer le produit' }).click()
+    await deletedNotice(page, 'Lipton Pêche 50 cl').waitFor()
+    await waitForProducts(page, ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Red Bull 25 cl'])
+    assert.deepEqual(deleteCalls(fake).map((call) => call.body), [{ p_product_id: 'p-lipton' }, { p_product_id: 'p-lipton' }])
+
+    // 8. Une fiche ouverte pendant qu'un autre téléphone supprime le produit : elle se ferme à la relecture suivante.
+    await productRow(page, 'Coca-Cola 33 cl').click()
+    await sheet(page).getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
+    fake.deleteElsewhere('p-coca')
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+    await sheet(page).waitFor({ state: 'detached' })
+    await waitForProducts(page, ['Évian 1,5 L', 'Red Bull 25 cl'])
+    await context.close()
+  }
+  console.log('Scénario U (suppression) : OK')
+}
+
 const tmp = mkdtempSync(join(tmpdir(), 'scandrinks-e2e-'))
 const y4m = join(tmp, 'ean13.y4m')
 writeFileSync(y4m, ean13Y4m(COCA_CODE))
@@ -1949,6 +2098,7 @@ try {
     ['R', scenarioAppearance],
     ['S', scenarioImages],
     ['T', scenarioSales],
+    ['U', scenarioDelete],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

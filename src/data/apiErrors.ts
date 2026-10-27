@@ -49,7 +49,8 @@ export function saveErrorMessage(kind: ApiErrorKind): string {
 const NETWORK_MESSAGE = /failed to fetch|load failed|networkerror/i
 // PT401 : session fermée (mot de passe changé), voir private.is_allowed() dans supabase/migrations/.
 const SESSION_CODES = ['PGRST301', 'PGRST302', 'PGRST303', 'PT401']
-const INVALID_CODES = ['23514', '22003', '23502', '22P02']
+// 23503 : un enregistrement qui vise un produit supprimé entre-temps sur un autre téléphone (RG-15).
+const INVALID_CODES = ['23514', '22003', '23502', '22P02', '23503']
 const BARCODE_TAKEN = 'barcode_taken:'
 const INVALID_INPUT = 'invalid_input:'
 

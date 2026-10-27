@@ -4,7 +4,7 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§6.3)
  *
  * Les noms et paramètres (p_…) sont ceux des fonctions SQL de
- * supabase/migrations/ (schéma initial, pilotage, suivi, images, puis fin de journée). Le client est passé
+ * supabase/migrations/ (schéma initial, pilotage, suivi, images, fin de journée, puis suppression). Le client est passé
  * en paramètre : les tests utilisent un faux client, l'app celui de
  * supabaseClient.ts. Toute erreur devient une ApiError (voir apiErrors.ts).
  * Les listes de produits sont triées dans l'ordre alphabétique français.
@@ -317,6 +317,11 @@ export function createApi(client: Pick<SupabaseClient, 'rpc' | 'from'>) {
 
     async detachBarcode(code: string): Promise<void> {
       await run<{ status: 'detached' }>(client.rpc('detach_barcode', { p_code: code }))
+    },
+
+    // RG-15 : le produit, ses codes et tous ses mouvements, pour de bon. Rejouable : un produit déjà supprimé répond pareil.
+    async deleteProduct(productId: string): Promise<void> {
+      await run<{ status: 'deleted' }>(client.rpc('delete_product', { p_product_id: productId }))
     },
 
     async attachBarcode(input: { code: string; productId: string; units: number; move: boolean }): Promise<AttachResult> {

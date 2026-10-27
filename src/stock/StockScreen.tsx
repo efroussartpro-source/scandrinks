@@ -8,6 +8,8 @@
  * en rouge quand ils sont à racheter (stock au seuil ou en dessous, négatif
  * compris). Le filtre « Archivés » montre les produits archivés, que l'on
  * réactive depuis leur fiche. Une ligne ouvre la fiche du produit.
+ * Après une suppression (RG-15), la liste revient avec « X a été supprimé. »,
+ * jusqu'à l'ouverture d'une fiche ou « Nouveau produit ».
  * « Nouveau produit » crée une fiche sans scan, puis l'ouvre sans attendre
  * que le catalogue relu la contienne. « Annuler » relit aussi la liste : une
  * fiche créée malgré une réponse perdue y apparaît, et n'est pas refaite.
@@ -22,6 +24,7 @@ import { formatUnits } from '../domain/stock'
 import Thumb from '../photos/Thumb'
 import { filterProducts } from '../products/search'
 import { IconChevronRight, IconPlus, IconSearch } from '../ui/icons'
+import { deletedMessage } from './deletion'
 import ProductCreateForm from './ProductCreateForm'
 import ProductSheet from './ProductSheet'
 import './Stock.css'
@@ -40,6 +43,8 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
   const [creating, setCreating] = useState(false)
   // Fiche tout juste créée : le catalogue ne la contient qu'après sa prochaine lecture.
   const [created, setCreated] = useState<Product | null>(null)
+  // Nom du produit qui vient d'être supprimé : la liste le dit.
+  const [deleted, setDeleted] = useState<string | null>(null)
   const { products, errorKind, updatedAt, refresh } = catalog
 
   if (creating) {
@@ -69,6 +74,10 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
         employee={employee}
         onCatalogChanged={onCatalogChanged}
         onClose={() => setOpenId(null)}
+        onDeleted={(name) => {
+          setDeleted(name)
+          setOpenId(null)
+        }}
         onSessionExpired={onSessionExpired}
       />
     )
@@ -81,11 +90,23 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
     <section className="stock" aria-labelledby="stock-title">
       <div className="title-row">
         <h1 id="stock-title">Stock</h1>
-        <button type="button" className="pill-button" onClick={() => setCreating(true)}>
+        <button
+          type="button"
+          className="pill-button"
+          onClick={() => {
+            setDeleted(null)
+            setCreating(true)
+          }}
+        >
           <IconPlus size={18} strokeWidth={2.4} />
           Nouveau produit
         </button>
       </div>
+      {deleted && (
+        <p role="status" className="message message-ok">
+          {deletedMessage(deleted)}
+        </p>
+      )}
       <label className="search">
         <span className="visually-hidden">Rechercher un produit</span>
         <IconSearch size={18} />
@@ -121,7 +142,10 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
                 <button
                   type="button"
                   className={!product.archived && isLow(product) ? 'row product-row stock-low' : 'row product-row'}
-                  onClick={() => setOpenId(product.id)}
+                  onClick={() => {
+                    setDeleted(null)
+                    setOpenId(product.id)
+                  }}
                 >
                   <Thumb path={product.photoPath} size={44} />
                   <span className="row-text">

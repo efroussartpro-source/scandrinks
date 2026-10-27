@@ -186,13 +186,17 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  *   restoreReads(). Une seule coupure ne suffit pas : supabase-js relance seul une lecture jusqu'à trois fois.
  * options.corruptHistory : la première page de list_history commence par un mouvement daté « pas une date », une
  *   réponse abîmée que l'Historique ne sait pas afficher (le filet de sécurité doit la rattraper).
- * Renvoie { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads } :
+ * Renvoie { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, deleteElsewhere,
+ *   restoreReads } :
  * - calls : appels des fonctions SQL ; authCalls : 'token', 'user' et 'logout:<portée>', dans l'ordre ;
  * - storageCalls : { kind: 'upload' | 'sign' | 'get', paths, contentType? }, dans l'ordre ; photos : chemin → octets ;
  * - addMovement et cancelElsewhere simulent un mouvement ou une annulation faits sur un autre téléphone ; addMovement accepte
  *   saleDay, pour une vente de fin de journée ;
+ * - deleteElsewhere(productId) simule une suppression faite sur un autre téléphone (delete_product, RG-15) ;
  * - revokeAllSessions ferme toutes les sessions, comme un changement de mot de passe sur un autre téléphone ;
  * - restoreReads rétablit les lectures coupées par cutReads.
+ * Comme la base, delete_product efface le produit, ses codes et tous ses mouvements, et répond « supprimé » même pour un
+ * produit absent ; record_movement, attach_barcode et les autres refusent un produit absent (invalid_input:product).
  */
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, failFirst = [], expireSessionOn = null, hangFirst = null, failLogout = false,
@@ -254,6 +258,13 @@ export async function installFakeSupabase(page, options = {}) {
     }
   }
 
+  // Comme private.erase_product : les mouvements du produit (annulés compris), ses codes, puis la fiche.
+  const eraseProduct = (productId) => {
+    for (const [id, movement] of db.movements) if (movement.product_id === productId) db.movements.delete(id)
+    for (const [code, barcode] of db.barcodes) if (barcode.product_id === productId) db.barcodes.delete(code)
+    db.products.delete(productId)
+  }
+
   const rpc = {
     lookup_barcode: ({ p_code }) => {
       const barcode = db.barcodes.get(p_code)
@@ -286,6 +297,7 @@ export async function installFakeSupabase(page, options = {}) {
       return withStock(product)
     },
     attach_barcode: ({ p_code, p_product_id, p_units, p_move }) => {
+      if (!db.products.has(p_product_id)) return invalid('product')
       const current = db.barcodes.get(p_code)
       if (current && current.product_id !== p_product_id && !p_move) {
         return { status: 'already_attached', product_id: current.product_id, product_name: db.products.get(current.product_id).name }
@@ -309,9 +321,16 @@ export async function installFakeSupabase(page, options = {}) {
       db.barcodes.delete(p_code)
       return { status: 'detached' }
     },
+    // RG-15 : le produit, ses codes et tous ses mouvements. Un produit absent répond pareil : l'appel se rejoue.
+    delete_product: ({ p_product_id = null }) => {
+      if (!p_product_id) return invalid('product')
+      eraseProduct(p_product_id)
+      return { status: 'deleted' }
+    },
     record_movement: ({ p_id, p_product_id, p_kind, p_units, p_quantity, p_employee }) => {
       const existing = db.movements.get(p_id)
       if (existing) return { movement_id: p_id, delta: existing.delta, stock: stockOf(existing.product_id), duplicate: true }
+      if (!db.products.has(p_product_id)) return invalid('product')
       const delta = (p_kind === 'in' ? 1 : -1) * p_units * p_quantity
       db.movements.set(p_id, movementRow(p_product_id, p_kind, delta, p_employee.trim(), now()))
       return { movement_id: p_id, delta, stock: stockOf(p_product_id), duplicate: false }
@@ -589,5 +608,6 @@ export async function installFakeSupabase(page, options = {}) {
     readsCut = false
   }
 
-  return { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, restoreReads }
+  return { calls, authCalls, storageCalls, photos, addMovement, revokeAllSessions, cancelElsewhere, deleteElsewhere: eraseProduct,
+    restoreReads }
 }

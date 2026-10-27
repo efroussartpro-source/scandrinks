@@ -5,7 +5,8 @@
  *
  * De haut en bas (maquette J-fiche) : « Retour », le nom, le stock en grand
  * avec les packs et les chiffres, les actions, les codes, les derniers
- * mouvements, puis « Archiver le produit » ou « Réactiver ».
+ * mouvements, puis « Archiver le produit » ou « Réactiver », et enfin
+ * « Supprimer le produit ».
  * Les codes et les 20 derniers mouvements sont relus à l'ouverture, quand le
  * stock change et après un changement de code. Depuis la fiche d'un produit
  * actif, on le modifie, on gère ses codes et on corrige son stock : chaque
@@ -14,9 +15,11 @@
  * même si elle échoue. Une lecture impossible garde son message et
  * « Réessayer » jusqu'à une lecture réussie, même si un panneau s'ouvre puis
  * se ferme entre-temps (s3).
- * On archive au lieu de supprimer : le produit disparaît
- * des listes, son historique reste, et il se réactive ici ou en scannant un
- * de ses codes. Un produit archivé se consulte sans se modifier.
+ * Archiver met le produit de côté : il disparaît des listes, son historique
+ * reste, et il se réactive ici ou en scannant un de ses codes. Un produit
+ * archivé se consulte sans se modifier. Supprimer, après confirmation, efface
+ * pour de bon le produit, ses codes et tout son historique (RG-15, jalon 6) ;
+ * la liste d'où la fiche avait été ouverte le dit ensuite.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Product, ProductDetail } from '../data/api'
@@ -29,6 +32,7 @@ import Thumb from '../photos/Thumb'
 import { IconChevronLeft } from '../ui/icons'
 import AddCodeForm from './AddCodeForm'
 import CodeList from './CodeList'
+import { deleteConfirmMessage } from './deletion'
 import MovementList from './MovementList'
 import ProductEditForm from './ProductEditForm'
 
@@ -39,10 +43,19 @@ interface ProductSheetProps {
   employee: string
   onCatalogChanged: () => void
   onClose: () => void
+  // Le produit vient d'être supprimé (RG-15) : la liste se rouvre et le dit, à la place de onClose.
+  onDeleted: (name: string) => void
   onSessionExpired: () => void
 }
 
-export default function ProductSheet({ product: fromCatalog, employee, onCatalogChanged, onClose, onSessionExpired }: ProductSheetProps) {
+export default function ProductSheet({
+  product: fromCatalog,
+  employee,
+  onCatalogChanged,
+  onClose,
+  onDeleted,
+  onSessionExpired,
+}: ProductSheetProps) {
   const [detail, setDetail] = useState<ProductDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -116,6 +129,23 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
     try {
       show(await api.setArchived(product.id, archived))
       if (archived) onClose()
+    } catch (thrown) {
+      fail(thrown)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // RG-15 : pour de bon, après confirmation. Une réponse perdue laisse la fiche ouverte : le nouvel essai répond pareil.
+  async function remove() {
+    if (!window.confirm(deleteConfirmMessage(product.name))) return
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await api.deleteProduct(product.id)
+      onCatalogChanged()
+      onDeleted(product.name)
     } catch (thrown) {
       fail(thrown)
     } finally {
@@ -265,6 +295,9 @@ export default function ProductSheet({ product: fromCatalog, employee, onCatalog
           Archiver le produit
         </button>
       )}
+      <button type="button" className="danger block" disabled={busy} onClick={() => void remove()}>
+        Supprimer le produit
+      </button>
     </section>
   )
 }

@@ -11,7 +11,8 @@
  * dans l'Historique. Chaque ligne envoyée garde son identifiant jusqu'à son
  * enregistrement : « Réessayer » ne compte jamais deux fois. Si un autre
  * téléphone a saisi un produit entre-temps, rien n'est enregistré et la liste
- * est relue. Une réponse arrivée pour un autre jour que celui affiché est
+ * est relue ; de même s'il l'a supprimé (RG-15) : l'envoi est refusé une fois,
+ * puis le récapitulatif se refait sans lui. Une réponse arrivée pour un autre jour que celui affiché est
  * ignorée. La saisie en cours est gardée par AppShell : un tour par un autre
  * onglet (« Stock », pour créer une boisson qui manque) ne perd rien,
  * « Réessayer » compris. Au retour dans l'app, si la date a changé, l'écran
@@ -226,6 +227,12 @@ export default function SalesScreen({ catalog, employee, keep, onCatalogChanged,
       const kind = classifyApiError(thrown).kind
       if (kind === 'session') onSessionExpired()
       else setSaveError(kind === 'invalid' ? SALES_REFUSED : saveErrorMessage(kind))
+      // Refusée (un produit supprimé entre-temps sur un autre téléphone, RG-15) : la liste et le jour sont relus, et le
+      // récapitulatif se refait sans lui ; « Réessayer » envoie le reste.
+      if (kind === 'invalid') {
+        load(day)
+        onCatalogChanged()
+      }
     } finally {
       setSaving(false)
     }

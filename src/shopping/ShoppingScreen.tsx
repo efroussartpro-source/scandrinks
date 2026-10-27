@@ -8,7 +8,9 @@
  * Les ruptures passent en premier, en rouge. Le nombre de produits et
  * l'heure de la dernière lecture, sous le titre, rassurent avant de partir
  * chez Metro. Une ligne ouvre la fiche du produit (pour « Corriger le
- * stock » quand il est à vérifier) ; VoiceOver la lit en une phrase.
+ * stock » quand il est à vérifier) ; VoiceOver la lit en une phrase. Un
+ * produit supprimé depuis sa fiche (RG-15) : la liste revient avec « X a été
+ * supprimé. ».
  */
 import { useState } from 'react'
 import type { Catalog } from '../app/useCatalog'
@@ -16,6 +18,7 @@ import { apiErrorMessage } from '../data/apiErrors'
 import { formatClock } from '../domain/movements'
 import { describeShoppingLine, shoppingList, shoppingParts, shoppingSummary } from '../domain/restock'
 import Thumb from '../photos/Thumb'
+import { deletedMessage } from '../stock/deletion'
 import ProductSheet from '../stock/ProductSheet'
 import { IconChevronRight, IconTriangleAlert } from '../ui/icons'
 import './Shopping.css'
@@ -30,6 +33,8 @@ interface ShoppingScreenProps {
 export default function ShoppingScreen({ catalog, employee, onCatalogChanged, onSessionExpired }: ShoppingScreenProps) {
   const { products, errorKind, updatedAt, refresh } = catalog
   const [openId, setOpenId] = useState<string | null>(null)
+  // Nom du produit qui vient d'être supprimé depuis sa fiche : la liste le dit, jusqu'à l'ouverture d'une autre fiche.
+  const [deleted, setDeleted] = useState<string | null>(null)
 
   const opened = openId === null ? null : (products?.find((product) => product.id === openId) ?? null)
   if (opened) {
@@ -39,6 +44,10 @@ export default function ShoppingScreen({ catalog, employee, onCatalogChanged, on
         employee={employee}
         onCatalogChanged={onCatalogChanged}
         onClose={() => setOpenId(null)}
+        onDeleted={(name) => {
+          setDeleted(name)
+          setOpenId(null)
+        }}
         onSessionExpired={onSessionExpired}
       />
     )
@@ -52,6 +61,11 @@ export default function ShoppingScreen({ catalog, employee, onCatalogChanged, on
         <h1 id="shopping-title">À racheter</h1>
         {updatedAt && <p className="subtitle">{shoppingSummary(lines.length, formatClock(updatedAt))}</p>}
       </div>
+      {deleted && (
+        <p role="status" className="message message-ok">
+          {deletedMessage(deleted)}
+        </p>
+      )}
       {errorKind && (
         <div className="message message-error shopping-error">
           <p role="alert">{apiErrorMessage(errorKind)}</p>
@@ -74,7 +88,10 @@ export default function ShoppingScreen({ catalog, employee, onCatalogChanged, on
                     type="button"
                     className={outOfStock ? 'row out-of-stock' : 'row'}
                     aria-label={describeShoppingLine(line)}
-                    onClick={() => setOpenId(line.product.id)}
+                    onClick={() => {
+                      setDeleted(null)
+                      setOpenId(line.product.id)
+                    }}
                   >
                     <Thumb path={line.product.photoPath} size={44} />
                     <span className="row-text">

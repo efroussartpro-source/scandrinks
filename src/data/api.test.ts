@@ -215,6 +215,12 @@ test('detachBarcode appelle detach_barcode', async () => {
   expect(rpc).toHaveBeenCalledWith('detach_barcode', { p_code: '2000000000015' })
 })
 
+test('deleteProduct appelle delete_product', async () => {
+  const rpc = vi.fn(async () => ok({ status: 'deleted' }))
+  await expect(createApi({ rpc, from: vi.fn() } as never).deleteProduct('p9')).resolves.toBeUndefined()
+  expect(rpc).toHaveBeenCalledWith('delete_product', { p_product_id: 'p9' })
+})
+
 test("recordInventory renvoie l'écart et le stock", async () => {
   const rpc = vi.fn(async () => ok({ movement_id: 'i1', delta: -3, stock: 53, counted: 53, duplicate: false }))
   await expect(createApi({ rpc, from: vi.fn() } as never).recordInventory({ id: 'i1', productId: 'p9', counted: 53, employee: 'Sam' }))

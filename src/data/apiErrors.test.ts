@@ -13,6 +13,9 @@ test.each([
   [{ message: 'duplicate key value violates unique constraint "barcodes_pkey"', code: '23505', status: 409 }, 'barcode_taken'],
   [{ message: 'invalid_input:quantity', code: 'P0001', status: 400 }, 'invalid'],
   [{ message: 'new row for relation "products" violates check constraint', code: '23514', status: 400 }, 'invalid'],
+  // Un code ajouté à un produit supprimé au même moment sur un autre téléphone (RG-15) : refusé, pas « base injoignable ».
+  [{ message: 'insert or update on table "barcodes" violates foreign key constraint "barcodes_product_id_fkey"', code: '23503', status: 409 },
+    'invalid'],
   [{ message: 'boom', status: 500 }, 'unknown'],
 ])('%o → %s', (raw, kind) => { expect(classifyApiError(raw).kind).toBe(kind) })
 
