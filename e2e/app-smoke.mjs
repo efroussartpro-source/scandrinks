@@ -137,7 +137,7 @@ async function fieldHelp(locator) {
 }
 
 async function scenarioMain(browser) {
-  const { context, page, fake, pageErrors } = await openApp(browser)
+  const { context, page, fake, pageErrors } = await openApp(browser, { employees: ['Léa', 'Sam'] })
   const requests = []
   const wasmResponses = []
   page.on('request', (request) => requests.push(request.url()))
@@ -149,10 +149,23 @@ async function scenarioMain(browser) {
   const firstUrl = page.url()
 
   // 1-2. Connexion (mauvais puis bon mot de passe), prénom.
+  // L'écran de connexion (spec §6.7) : une mosaïque de six dessins de boissons, décorative, au-dessus du formulaire.
+  const mosaic = page.locator('.login-mosaic')
+  await mosaic.waitFor()
+  assert.equal(await mosaic.getAttribute('aria-hidden'), 'true')
+  assert.equal(await mosaic.locator('img').count(), 6)
   await page.getByLabel('Mot de passe').fill('faux')
   await page.getByRole('button', { name: 'Se connecter' }).click()
   await page.getByText('Mot de passe incorrect.').waitFor()
-  await signIn(page)
+  await page.getByLabel('Mot de passe').fill(GOOD_PASSWORD)
+  await page.getByRole('button', { name: 'Se connecter' }).click()
+  await page.getByRole('heading', { name: 'Qui es-tu ?' }).waitFor()
+  // Les prénoms déjà utilisés, en cartes avec leur initiale (décorative : le nom du bouton reste le prénom).
+  assert.equal(await page.locator('.choices button').count(), 2)
+  const sam = page.getByRole('button', { name: 'Sam', exact: true })
+  assert.equal(await sam.locator('.name-initial').textContent(), 'S')
+  assert.equal(await sam.locator('.name-initial').getAttribute('aria-hidden'), 'true')
+  await sam.click()
 
   // 3. Code connu : fiche en Entrée.
   const card = confirmCard(page)

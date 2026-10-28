@@ -1,11 +1,13 @@
-/* Tutoriel (§4.6, §9) : la vidéo verticale pleine largeur, sur le fond de la caméra, sans dépasser l'écran. */
+/* Tutoriel (§4.6, §9, maquette C4) : la vidéo verticale pleine largeur dans une grande carte arrondie, sur le fond de la
+   caméra, sans dépasser l'écran. */
 .tutorial video {
   display: block;
   width: 100%;
   aspect-ratio: 9 / 16;
   max-height: 70vh;
-  border-radius: 18px;
+  border-radius: 22px;
   background: var(--camera);
+  box-shadow: var(--shadow);
 }
 
 /* Vidéo injoignable : le message, puis « Réessayer », espacés comme le reste de l'écran. */

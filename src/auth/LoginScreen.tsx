@@ -7,13 +7,23 @@
  * Le champ e-mail en lecture seule permet au trousseau iCloud d'enregistrer
  * le mot de passe avec la bonne adresse. Le message d'accueil dit pourquoi
  * se reconnecter : en vert après un changement de mot de passe, en rouge
- * après une session perdue. Le logo et le formulaire sont centrés dans la
- * hauteur (maquette docs/maquettes/J-connexion.dc.html).
+ * après une session perdue. En haut, une mosaïque de dessins de boissons,
+ * livrés avec l'app : avant la connexion, les vrais produits ne sont pas
+ * lisibles (maquette C4-Connexion, §6.7). Puis le logo, et le formulaire en
+ * carte.
  */
 import { useState, type FormEvent } from 'react'
 import { SHOP_EMAIL, supabase } from '../data/supabaseClient'
 import { IconBarcode } from '../ui/icons'
+import bottleWater from './drinks/bouteille-eau.svg'
+import canAmber from './drinks/canette-ambre.svg'
+import canBlue from './drinks/canette-bleue.svg'
+import canOrange from './drinks/canette-orange.svg'
+import canRed from './drinks/canette-rouge.svg'
+import canYellow from './drinks/canette-jaune.svg'
 import { loginErrorMessage } from './loginError'
+
+const DRINKS = [canRed, canOrange, bottleWater, canYellow, canBlue, canAmber]
 
 export interface LoginNotice {
   text: string
@@ -43,6 +53,13 @@ export default function LoginScreen({ notice }: { notice: LoginNotice | null }) 
 
   return (
     <main className="screen login">
+      <div className="login-mosaic" aria-hidden="true">
+        {DRINKS.map((drink) => (
+          <span key={drink} className="login-plate">
+            <img src={drink} alt="" width={44} height={62} />
+          </span>
+        ))}
+      </div>
       <div className="login-head">
         <span className="brand-tile large" aria-hidden="true">
           <IconBarcode size={40} strokeWidth={2.2} />

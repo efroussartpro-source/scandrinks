@@ -55,15 +55,13 @@ export default function SettingsScreen({ employee, onChangeName, onTutorial, onC
           </span>
         </button>
       </div>
-      <h2 className="section-label">Apparence</h2>
-      <div className="card appearance">
-        <div className="segmented" role="group" aria-label="Apparence">
-          {APPEARANCE_CHOICES.map(({ value, label }) => (
-            <button key={value} type="button" aria-pressed={appearance === value} onClick={() => choose(value)}>
-              {label}
-            </button>
-          ))}
-        </div>
+      <h2 className="section-title">Apparence</h2>
+      <div className="segmented" role="group" aria-label="Apparence">
+        {APPEARANCE_CHOICES.map(({ value, label }) => (
+          <button key={value} type="button" aria-pressed={appearance === value} onClick={() => choose(value)}>
+            {label}
+          </button>
+        ))}
       </div>
       <p className="note settings-note">« Automatique » suit le réglage de l'iPhone. Ce choix ne vaut que pour ce téléphone.</p>
       <div className="group">
@@ -89,9 +87,11 @@ export default function SettingsScreen({ employee, onChangeName, onTutorial, onC
           </span>
         </button>
       </div>
-      <button type="button" className="danger block" onClick={signOut}>
-        Se déconnecter
-      </button>
+      <div className="danger-group">
+        <button type="button" onClick={signOut}>
+          Se déconnecter
+        </button>
+      </div>
     </main>
   )
 }

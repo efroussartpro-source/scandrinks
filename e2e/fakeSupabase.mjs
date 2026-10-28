@@ -178,6 +178,8 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
  *   mais sa réponse se perd ; 'auth:user' fait de même pour le changement de mot de passe.
  * options.extraMovements : nombre d'entrées de +1 sur le Lipton ajoutées avant le catalogue, une par minute (Historique).
  * options.longNames : chaque nom de produit reçoit la suite « — édition limitée, format familial » (rien ne doit déborder).
+ * options.employees : les prénoms déjà utilisés que renvoie list_employees, triés à la française (l'écran « Qui es-tu ? »
+ *   les montre en cartes) ; sans elle, ceux du catalogue « tutoriel », aucun ailleurs.
  * options.photos : images déjà au stockage, { chemin: octets } (la vidéo du jalon 4 s'en sert).
  * options.offImage : false retire l'image du Coca de la réponse d'Open Food Facts.
  * options.failPhotoUpload : le premier envoi d'image est coupé (réseau perdu).
@@ -201,7 +203,7 @@ const invalid = (field) => ({ status: 400, body: { code: 'P0001', message: `inva
 export async function installFakeSupabase(page, options = {}) {
   const { catalogue = 'coca_with_code', failNextRecord = false, failFirst = [], expireSessionOn = null, hangFirst = null, failLogout = false,
     loseFirst = [], extraMovements = 0, cutReads = null, longNames = false, photos: givenPhotos = {}, offImage = true,
-    failPhotoUpload = false, hangPhotoUpload = false, corruptHistory = false, now: clock = () => new Date() } = options
+    failPhotoUpload = false, hangPhotoUpload = false, corruptHistory = false, employees = null, now: clock = () => new Date() } = options
   const db = initialCatalogue(catalogue)
   const photos = new Map(Object.entries(givenPhotos))
   if (catalogue === 'images' && !photos.has(IMAGES_COCA_PHOTO)) photos.set(IMAGES_COCA_PHOTO, PHOTO_JPEG)
@@ -406,11 +408,14 @@ export async function installFakeSupabase(page, options = {}) {
       const units = p_lines.reduce((sum, line) => sum - db.movements.get(line.id).delta, 0)
       return { status: 'recorded', units, duplicate: fresh.length === 0 }
     },
-    // La vidéo montre les prénoms déjà utilisés ; ailleurs, la liste reste vide, comme pour un premier téléphone.
+    // La vidéo montre les prénoms déjà utilisés ; ailleurs, la liste reste vide, comme pour un premier téléphone, sauf si
+    // le test en donne une (options.employees).
     list_employees: () =>
-      catalogue === 'tutoriel'
-        ? [...new Set([...db.movements.values()].map((m) => m.employee))].sort((a, b) => a.localeCompare(b, 'fr'))
-        : [],
+      employees !== null
+        ? [...employees].sort((a, b) => a.localeCompare(b, 'fr'))
+        : catalogue === 'tutoriel'
+          ? [...new Set([...db.movements.values()].map((m) => m.employee))].sort((a, b) => a.localeCompare(b, 'fr'))
+          : [],
   }
 
   // Lectures PostgREST : filtres product_id=eq.…, sale_day=eq.… et cancelled_at=is.null, ordre et limite.

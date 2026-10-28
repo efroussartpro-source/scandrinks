@@ -1,19 +1,26 @@
-/* Réglages (§4.6) : des listes groupées, l'Apparence dans sa carte, « Se déconnecter » à part. */
-.settings .appearance {
-  padding: 10px;
+/* Réglages (§4.6, maquette C4-Reglages) : les lignes en cartes avec leurs tuiles d'icônes, l'Apparence, puis
+   « Se déconnecter » à part. */
+.settings .row {
+  min-height: 60px;
+}
+
+.settings .tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
 }
 
 .settings-note {
-  margin: -4px 16px 0;
+  margin: -4px 4px 0;
 }
 
 /* Précision sous le nom d'une ligne (« Vidéo de 3 minutes »). */
 .settings-row-note {
   font-size: 13px;
+  font-weight: 600;
   color: var(--text-2);
 }
 
-.settings > .danger {
+.settings > .danger-group {
   margin-top: 10px;
-  min-height: 50px;
 }

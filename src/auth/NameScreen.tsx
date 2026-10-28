@@ -3,7 +3,8 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.1, §4.6)
  *
- * Les prénoms déjà utilisés s'affichent en boutons ; sinon on en tape un.
+ * Les prénoms déjà utilisés s'affichent en grandes cartes, avec leur initiale
+ * dans un rond de couleur (maquette C4-Prenom, §6.7) ; sinon on en tape un.
  * Si la liste ne se charge pas, seul le champ reste : l'app reste utilisable.
  */
 import { useEffect, useState, type FormEvent } from 'react'
@@ -11,6 +12,7 @@ import { classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { IconChevronLeft } from '../ui/icons'
 import { validateEmployeeName } from './employee'
+import { initialOf, nameTone } from './nameTone'
 
 interface NameScreenProps {
   onChosen: (name: string) => void
@@ -66,8 +68,11 @@ export default function NameScreen({ onChosen, onSessionExpired, onCancel }: Nam
       {names !== null && names.length > 0 && (
         <div className="choices">
           {names.map((name) => (
-            <button key={name} type="button" onClick={() => choose(name)}>
-              {name}
+            <button key={name} type="button" className="name-card" onClick={() => choose(name)}>
+              <span className={`name-initial tone-${nameTone(name)}`} aria-hidden="true">
+                {initialOf(name)}
+              </span>
+              <span className="name-label">{name}</span>
             </button>
           ))}
         </div>
