@@ -3,7 +3,7 @@
 Gestion du stock de boissons d'un bureau de tabac par scan de code-barres, depuis un iPhone (app web installable, sans App Store).
 
 - **Cahier des charges** : [docs/superpowers/specs/2026-10-19-scandrinks-design.md](docs/superpowers/specs/2026-10-19-scandrinks-design.md)
-- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, inventaire de la bascule le 28/10/2026 au soir ; jalon 5 (la fin de journée) en ligne, première fin de journée le 29/10/2026 ; jalon 6 (suppression et photo de la canette) en ligne depuis le 28/10/2026 ; jalon 7 (le design « Vitrine ») en préparation, spec validée le 28/10/2026. Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md), [jalon 5](docs/superpowers/plans/2026-10-22-jalon-5-fin-de-journee.md), [jalon 6](docs/superpowers/plans/2026-10-27-jalon-6-suppression-et-photo-canette.md).
+- **Statut** : jalons 1 (le cœur de l'app), 2 (le pilotage) et 3 (le suivi) en service ; jalon 4 (la mise en service) en ligne, inventaire de la bascule le 28/10/2026 au soir ; jalon 5 (la fin de journée) en ligne, première fin de journée le 29/10/2026 ; jalon 6 (suppression et photo de la canette) en ligne depuis le 28/10/2026 ; jalon 7 (le design « Vitrine ») en préversion, à essayer sur iPhone ([docs/jalon-7-test.md](docs/jalon-7-test.md)). Plans : [jalon 0](docs/superpowers/plans/2026-10-19-jalon-0-test-scan.md), [jalon 1](docs/superpowers/plans/2026-10-19-jalon-1-coeur.md), [jalon 2](docs/superpowers/plans/2026-10-20-jalon-2-pilotage.md), [jalon 3](docs/superpowers/plans/2026-10-20-jalon-3-suivi.md), [refonte visuelle et images](docs/superpowers/plans/2026-10-21-refonte-visuelle-et-images.md), [jalon 4](docs/superpowers/plans/2026-10-21-jalon-4-mise-en-service.md), [jalon 5](docs/superpowers/plans/2026-10-22-jalon-5-fin-de-journee.md), [jalon 6](docs/superpowers/plans/2026-10-27-jalon-6-suppression-et-photo-canette.md), [jalon 7](docs/superpowers/plans/2026-10-28-jalon-7-design-vitrine.md).
 - **Installation** : uniquement depuis https://scandrinks.pages.dev (Safari, Partager → « Sur l'écran d'accueil »). Les préversions des branches servent aux tests, dans Safari, sans les installer.
 
 ## Jalon 1 — le cœur
@@ -67,6 +67,20 @@ Ce jalon apporte :
 - une fin de journée qui contient un produit supprimé entre-temps sur un autre téléphone : refusée une fois, puis la liste est relue sans lui.
 
 La mise en place dans la base (un fichier lancé par le porteur du projet dans l'éditeur SQL de Supabase) et le protocole de test sur iPhone sont dans [docs/jalon-6-test.md](docs/jalon-6-test.md).
+
+## Jalon 7 — le design « Vitrine »
+
+Un nouveau design, choisi le 28/10/2026 parmi trois pistes inspirées de Yuka et Foodvisor : les produits en grandes photos, des cartes blanches aux coins arrondis sur un fond blanc cassé, des couleurs franches pour les états, le vert ScanDrinks en accent. Jour et nuit (spec §6.7). Rien ne change dans la base, ni dans les fonctions, les onglets, les mots ou la place de « Valider ».
+
+Ce jalon apporte :
+- la charte « Vitrine » (`src/theme/tokens.css`) et la police Plus Jakarta Sans, livrée avec l'app (`src/theme/fonts/`, licence SIL OFL 1.1), sans Google Fonts ;
+- le Scanner avec la caméra en haut, l'en-tête et les modes posés dessus, et un panneau blanc en bas ;
+- le Stock en grille de photos, avec ce qu'il faut racheter sur chaque tuile et le bouton « Archivés » ; la fiche produit avec sa grande photo ;
+- À racheter, Ventes et Historique en cartes, avec la photo de chaque produit (l'Historique compris) ;
+- la connexion avec sa mosaïque de dessins de boissons, les prénoms en cartes avec leur initiale, les Réglages en cartes ;
+- la vidéo tuto refaite au nouveau design (même script, mêmes chapitres) ; la feuille A4 ne change pas.
+
+Les tests : la charte (couleurs du §6.7, contrastes jour et nuit, voile de la caméra, police), l'état des tuiles et la couleur des prénoms en tests unitaires ; le scénario de bout en bout W vérifie, de jour et de nuit, à 390 et à 320 px, que rien ne déborde et que « Valider » reste visible. Le protocole d'essai sur iPhone est dans [docs/jalon-7-test.md](docs/jalon-7-test.md).
 
 ## Développement
 
