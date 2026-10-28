@@ -103,6 +103,23 @@ async function assertInlineNumbers(scope, labels) {
 }
 const FICHE_NUMBERS = ['Pack Metro (unités)', "Seuil d'alerte (unités)", 'Stock idéal (unités)']
 
+// Ce qui déborde à cette largeur de fenêtre : la page, plus large que l'écran ; une ligne de liste, une tuile, un bouton de
+// mode ou d'un sélecteur, plus larges qu'eux-mêmes ; et les boutons visibles de moins de 44 px de haut (zones tactiles,
+// spec §6.7).
+const overflows = (page, width) =>
+  page.evaluate(
+    (viewport) => [
+      ...(document.documentElement.scrollWidth > viewport ? [`page : ${document.documentElement.scrollWidth} px`] : []),
+      ...[...document.querySelectorAll('.row, .product-row, .segmented button')]
+        .filter((element) => element.scrollWidth > element.clientWidth)
+        .map((element) => `déborde : ${element.textContent}`),
+      ...[...document.querySelectorAll('button')]
+        .filter((button) => button.checkVisibility() && button.getBoundingClientRect().height < 44)
+        .map((button) => `moins de 44 px : ${button.textContent || button.getAttribute('aria-label')}`),
+    ],
+    width,
+  )
+
 // Total et écart d'un comptage d'inventaire.
 async function waitForCount(scope, total, gap) {
   await scope.locator('.count-total').filter({ hasText: exactly(total) }).waitFor()
@@ -636,33 +653,21 @@ async function scenarioStock(browser) {
     const { context, page } = await openApp(browser, { catalogue: 'pilotage', longNames: true })
     await page.setViewportSize({ width: 320, height: 640 })
     const tab = (name) => page.getByRole('button', { name, exact: true })
-    // Ce qui déborde : la page, plus large que l'écran, une ligne de liste ou un bouton de mode, plus larges qu'eux-mêmes ;
-    // et les boutons visibles de moins de 44 px de haut (zones tactiles, spec §6.7).
-    const overflows = () =>
-      page.evaluate(() => [
-        ...(document.documentElement.scrollWidth > 320 ? [`page : ${document.documentElement.scrollWidth} px`] : []),
-        ...[...document.querySelectorAll('.row, .product-row, .modes .mode')]
-          .filter((element) => element.scrollWidth > element.clientWidth)
-          .map((element) => `déborde : ${element.textContent}`),
-        ...[...document.querySelectorAll('button')]
-          .filter((button) => button.checkVisibility() && button.getBoundingClientRect().height < 44)
-          .map((button) => `moins de 44 px : ${button.textContent || button.getAttribute('aria-label')}`),
-      ])
     await signIn(page)
     await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
     await confirmCard(page).getByRole('heading', { name: 'Coca-Cola 33 cl — édition limitée, format familial' }).waitFor()
-    assert.deepEqual(await overflows(), [], 'Scanner')
+    assert.deepEqual(await overflows(page, 320), [], 'Scanner')
     // Le mode choisi passe en gras : « Inventaire = » doit tenir aussi.
     await page.getByRole('button', { name: 'Inventaire =' }).click()
-    assert.deepEqual(await overflows(), [], 'Scanner en Inventaire')
+    assert.deepEqual(await overflows(page, 320), [], 'Scanner en Inventaire')
     await page.getByRole('button', { name: 'Entrée +' }).click()
     await tab('À racheter (3)').click()
     await page.getByRole('list', { name: 'À racheter' }).waitFor()
-    assert.deepEqual(await overflows(), [], 'À racheter')
+    assert.deepEqual(await overflows(page, 320), [], 'À racheter')
     await tab('Stock').click()
     const list = page.getByRole('list', { name: 'Produits' })
     await list.waitFor()
-    assert.deepEqual(await overflows(), [], 'Stock')
+    assert.deepEqual(await overflows(page, 320), [], 'Stock')
     // Un nom très long tient en deux lignes sur sa tuile, puis « … » (spec §6.7).
     const tooTall = await list.locator('.product-name').evaluateAll((names) =>
       names
@@ -672,10 +677,10 @@ async function scenarioStock(browser) {
     assert.deepEqual(tooTall, [], 'noms sur deux lignes au plus')
     await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
     await page.getByRole('region', { name: 'Fiche produit' }).locator('.movement-line').first().waitFor()
-    assert.deepEqual(await overflows(), [], 'fiche produit')
+    assert.deepEqual(await overflows(page, 320), [], 'fiche produit')
     await tab('Historique').click()
     await page.getByRole('list', { name: 'Historique' }).waitFor()
-    assert.deepEqual(await overflows(), [], 'Historique')
+    assert.deepEqual(await overflows(page, 320), [], 'Historique')
     await context.close()
   }
   console.log('Scénario K (stock et fiche produit) : OK')
@@ -2146,6 +2151,71 @@ async function scenarioDelete(browser) {
   console.log('Scénario U (suppression) : OK')
 }
 
+// Le design « Vitrine » (spec §6.7, §8 jalon 7) : de jour et de nuit, à 390 et à 320 px de large, rien ne déborde sur les
+// écrans principaux, avec des noms de produits très longs ; la police Plus Jakarta Sans est servie avec l'app.
+async function scenarioDesign(browser) {
+  for (const colorScheme of ['light', 'dark']) {
+    for (const [width, height] of [
+      [390, 844],
+      [320, 640],
+    ]) {
+      const label = `${colorScheme === 'dark' ? 'nuit' : 'jour'}, ${width} px`
+      const { context, page } = await openApp(browser, { catalogue: 'pilotage', longNames: true })
+      await page.emulateMedia({ colorScheme })
+      await page.setViewportSize({ width, height })
+      const tab = (name) => page.getByRole('button', { name, exact: true })
+      await signIn(page)
+      await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
+      assert.deepEqual(await overflows(page, width), [], `Scanner (${label})`)
+      // Le geste le plus fréquent : scanner puis « Valider », sans faire défiler, même sur un petit iPhone.
+      const validateBox = await confirmCard(page).getByRole('button', { name: 'Valider' }).boundingBox()
+      const tabBarBox = await page.locator('.tab-bar').boundingBox()
+      assert.ok(
+        validateBox.y + validateBox.height <= tabBarBox.y,
+        `« Valider » au-dessus de la barre d'onglets (${label}) : bas à ${validateBox.y + validateBox.height}, barre à ${tabBarBox.y}`,
+      )
+      await tab('À racheter (3)').click()
+      await page.getByRole('list', { name: 'À racheter' }).waitFor()
+      assert.deepEqual(await overflows(page, width), [], `À racheter (${label})`)
+      await tab('Stock').click()
+      const list = page.getByRole('list', { name: 'Produits' })
+      await list.waitFor()
+      assert.deepEqual(await overflows(page, width), [], `Stock (${label})`)
+      await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
+      await page.getByRole('region', { name: 'Fiche produit' }).locator('.movement-line').first().waitFor()
+      assert.deepEqual(await overflows(page, width), [], `fiche produit (${label})`)
+      await tab('Ventes').click()
+      await page.getByRole('heading', { name: 'Fin de journée' }).waitFor()
+      assert.deepEqual(await overflows(page, width), [], `Ventes (${label})`)
+      await tab('Historique').click()
+      await page.getByRole('list', { name: 'Historique' }).waitFor()
+      assert.deepEqual(await overflows(page, width), [], `Historique (${label})`)
+      await page.getByRole('button', { name: 'Réglages' }).click()
+      await page.getByRole('heading', { name: 'Réglages' }).waitFor()
+      assert.deepEqual(await overflows(page, width), [], `Réglages (${label})`)
+
+      if (colorScheme === 'light' && width === 390) {
+        // La police est servie avec l'app (pas de Google Fonts), chargée, et c'est elle que la page utilise.
+        await page.evaluate(() => document.fonts.ready)
+        const fontUrls = await page.evaluate(() =>
+          performance
+            .getEntriesByType('resource')
+            .map((entry) => entry.name)
+            .filter((name) => name.endsWith('.woff2')),
+        )
+        assert.equal(fontUrls.length, 1, `un seul fichier de police : ${JSON.stringify(fontUrls)}`)
+        assert.equal(new URL(fontUrls[0]).origin, new URL(BASE).origin, "la police vient de l'app")
+        assert.equal((await page.request.get(fontUrls[0])).status(), 200)
+        assert.ok(await page.evaluate(() => document.fonts.check('600 17px "Plus Jakarta Sans"')), 'police chargée')
+        assert.match(await page.evaluate(() => getComputedStyle(document.body).fontFamily), /^"Plus Jakarta Sans"/)
+      }
+      await context.close()
+    }
+  }
+  console.log('Scénario W (design) : OK')
+}
+
+
 // V. La photo de la canette à la création depuis un pack (§4.2, §4.7, jalon 6) : un cadre par code, une image qui ne sert
 // que pour son code, les deux envois après la création, puis une photo qui n'arrive pas. La caméra est celle du tournage
 // de la vidéo (un canvas) : elle montre le code voulu au moment voulu.
@@ -2268,6 +2338,7 @@ try {
     ['T', scenarioSales],
     ['U', scenarioDelete],
     ['V', scenarioUnitPhoto],
+    ['W', scenarioDesign],
   ]
   for (const [letter, scenario] of scenarios) {
     if (!only || only.includes(letter)) await scenario(browser)

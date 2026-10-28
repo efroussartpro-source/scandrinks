@@ -3,7 +3,8 @@
  *
  * Outil de mise au point, sans assertion. Lance la version e2e (dist-e2e)
  * avec la base simulée et la fausse caméra du test de bout en bout, puis
- * enregistre <dossier>/<jour|nuit>/<nom>.png en 390 × 844 (échelle 2).
+ * enregistre <dossier>/<jour|nuit>/<nom>.png en 390 × 844, et
+ * <dossier>/<jour-320|nuit-320>/<nom>.png en 320 × 640 (échelle 2).
  *
  * Usage : npm run screens (dossier dist-screens/), ou node e2e/screens.mjs <dossier> après un build e2e.
  */
@@ -32,7 +33,8 @@ const SHOTS = [
   { name: 'connexion', fake: {}, go: async (page) => page.getByRole('button', { name: 'Se connecter' }).waitFor() },
   {
     name: 'prenom',
-    fake: {},
+    // Quatre prénoms déjà utilisés : les quatre teintes des cartes.
+    fake: { employees: ['Hugo', 'Karim', 'Léa', 'Sam'] },
     go: async (page) => {
       await page.getByLabel('Mot de passe').fill(GOOD_PASSWORD)
       await page.getByRole('button', { name: 'Se connecter' }).click()
@@ -126,6 +128,15 @@ const SHOTS = [
       await signIn(page)
       await page.getByRole('button', { name: 'Historique', exact: true }).click()
       await page.locator('.history-line').first().waitFor()
+    },
+  },
+  {
+    name: 'historique-images',
+    fake: { catalogue: 'images' },
+    go: async (page) => {
+      await signIn(page)
+      await page.getByRole('button', { name: 'Historique', exact: true }).click()
+      await page.getByRole('list', { name: 'Historique' }).locator('img.thumb').first().waitFor()
     },
   },
   {
@@ -247,10 +258,15 @@ try {
   browser = await chromium.launch({
     args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${y4m}`],
   })
-  for (const [theme, colorScheme] of [['jour', 'light'], ['nuit', 'dark']]) {
+  const sizes = [
+    ['', { width: 390, height: 844 }],
+    ['-320', { width: 320, height: 640 }],
+  ]
+  for (const [suffix, viewport] of sizes) for (const [name, colorScheme] of [['jour', 'light'], ['nuit', 'dark']]) {
+    const theme = `${name}${suffix}`
     mkdirSync(join(OUT, theme), { recursive: true })
     for (const shot of SHOTS) {
-      const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme })
+      const context = await browser.newContext({ viewport, deviceScaleFactor: 2, colorScheme })
       const page = await context.newPage()
       const fake = await installFakeSupabase(page, shot.fake)
       await page.goto(`${BASE}/`)

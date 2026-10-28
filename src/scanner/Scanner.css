@@ -442,3 +442,15 @@
   font-weight: 600;
   color: var(--text-3);
 }
+
+/* Petit iPhone (écran de moins de 700 px de haut) : une caméra et une photo un peu plus basses, pour que « Valider »
+   reste au-dessus de la barre d'onglets sans faire défiler. */
+@media (max-height: 700px) {
+  .scanner[data-size='half'] {
+    --viewfinder: 40dvh;
+  }
+
+  .confirm-head {
+    height: 96px;
+  }
+}

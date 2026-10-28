@@ -447,6 +447,15 @@ button.back {
   font-weight: 800;
 }
 
+/* Écran étroit (320 px) : « Automatique » tient dans son segment. */
+@media (max-width: 359px) {
+  .segmented button {
+    padding: 0 2px;
+    font-size: 14px;
+    letter-spacing: -0.2px;
+  }
+}
+
 /* Formulaires : le libellé au-dessus, l'aide en petit dessous. */
 .form {
   display: flex;
