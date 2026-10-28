@@ -200,7 +200,7 @@ button.back {
 .toggle {
   flex: none;
   min-height: 46px;
-  padding: 0 14px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -472,12 +472,14 @@ button.back {
   pointer-events: none;
 }
 
+/* 16 px (le minimum sans zoom d'iOS) : « Rechercher un produit » tient à côté du bouton « Archivés ». */
 .search input {
   width: 100%;
   min-height: 46px;
-  padding: 0 14px 0 40px;
+  padding: 0 10px 0 38px;
+  text-overflow: ellipsis;
   font: inherit;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--text);
   border: 1px solid var(--separator);
   border-radius: 14px;

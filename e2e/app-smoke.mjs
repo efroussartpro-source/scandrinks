@@ -548,6 +548,8 @@ async function scenarioStock(browser) {
   assert.equal(await sheet.locator('.sheet-head .thumb-empty-label').textContent(), 'Pas de photo')
   assert.equal(await sheet.locator('.sheet-restock').textContent(), '2 packs à racheter')
   await sheet.locator('.sheet-stock-value').filter({ hasText: exactly('10') }).waitFor()
+  // À racheter, le stock reste noir (la pastille orange le dit) ; seul un stock négatif passe en rouge.
+  assert.equal(await sheet.locator('.sheet-stock-value').evaluate((value) => getComputedStyle(value).color), 'rgb(23, 26, 24)')
   assert.equal(await sheet.locator('.sheet-stock-packs').count(), 0, "moins d'un pack : pas de packs")
   assert.deepEqual(await sheetFigures(sheet), [['Pack Metro', '24'], ['Seuil', '24'], ['Stock idéal', '48']])
   const codes = sheet.getByRole('list', { name: 'Codes' })

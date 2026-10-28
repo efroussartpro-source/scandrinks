@@ -218,7 +218,7 @@ export default function ProductSheet({
           {product.stock < 0 && <span className="check-badge">Stock à vérifier</span>}
         </div>
         <span className="sheet-stock-line">
-          <span className={low ? 'sheet-stock-value stock-low' : 'sheet-stock-value'}>{formatUnits(product.stock)}</span>
+          <span className={product.stock < 0 ? 'sheet-stock-value stock-negative' : 'sheet-stock-value'}>{formatUnits(product.stock)}</span>
           <span className="sheet-stock-unit">{Math.abs(product.stock) > 1 ? 'unités' : 'unité'}</span>
         </span>
         {packs !== null && <span className="sheet-stock-packs">{packs}</span>}

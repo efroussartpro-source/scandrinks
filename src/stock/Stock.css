@@ -85,6 +85,19 @@
   margin: 0 8px 8px 0;
 }
 
+/* Sans photo : l'icône et « Pas de photo » entre la pastille « À racheter » (en haut) et le stock (en bas à droite).
+   Sous 360 px de large, la tuile est trop étroite pour le texte : l'icône reste seule. */
+.tile-photo .thumb-empty {
+  justify-content: flex-start;
+  padding-top: 34px;
+}
+
+@media (max-width: 359px) {
+  .tile-photo .thumb-empty-label {
+    display: none;
+  }
+}
+
 .tile-text {
   grid-area: text;
   min-width: 0;
@@ -213,7 +226,8 @@
   line-height: 1.05;
 }
 
-.sheet-stock-value.stock-low {
+/* En rouge seulement s'il est négatif (« Stock à vérifier ») ; à racheter, la pastille orange suffit. */
+.sheet-stock-value.stock-negative {
   color: var(--red-text);
 }
 
