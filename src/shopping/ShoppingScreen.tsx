@@ -20,7 +20,6 @@ import { describeShoppingLine, shoppingList, shoppingParts, shoppingSummary } fr
 import Thumb from '../photos/Thumb'
 import { deletedMessage } from '../stock/deletion'
 import ProductSheet from '../stock/ProductSheet'
-import { IconChevronRight, IconTriangleAlert } from '../ui/icons'
 import './Shopping.css'
 
 interface ShoppingScreenProps {
@@ -78,35 +77,28 @@ export default function ShoppingScreen({ catalog, employee, onCatalogChanged, on
       {products !== null && lines.length === 0 && <p className="muted">Rien à racheter pour l'instant.</p>}
       {lines.length > 0 && (
         <>
-          <ul className="group shopping-list" aria-label="À racheter">
+          <ul className="shopping-list" aria-label="À racheter">
             {lines.map((line) => {
               const { rest, amount, note } = shoppingParts(line)
-              const outOfStock = line.product.stock <= 0
               return (
                 <li key={line.product.id}>
                   <button
                     type="button"
-                    className={outOfStock ? 'row out-of-stock' : 'row'}
+                    className="row shopping-card"
                     aria-label={describeShoppingLine(line)}
                     onClick={() => {
                       setDeleted(null)
                       setOpenId(line.product.id)
                     }}
                   >
-                    <Thumb path={line.product.photoPath} size={44} />
+                    <Thumb path={line.product.photoPath} size={76} />
                     <span className="row-text">
                       <span className="row-title">{line.product.name}</span>
-                      <span className="row-sub">
-                        {outOfStock && <IconTriangleAlert size={15} strokeWidth={2.2} />}
-                        <span>{rest}</span>
-                      </span>
+                      <span className={line.checkStock ? 'row-sub check-stock' : 'row-sub'}>{rest}</span>
                     </span>
                     <span className="buy">
                       <span className="buy-amount">{amount}</span>
                       <span className="buy-note">{note}</span>
-                    </span>
-                    <span className="chevron">
-                      <IconChevronRight size={18} />
                     </span>
                   </button>
                 </li>

@@ -312,13 +312,13 @@ export default function SalesScreen({ catalog, employee, keep, onCatalogChanged,
         <>
           {sales.length > 0 && (
             <>
-              <h2 className="section-label">Déjà saisi</h2>
+              <h2 className="section-title">Déjà saisi</h2>
               <ul className="group sales-done" aria-label="Déjà saisi">
                 {sales.map((sale) => {
                   const clock = formatClock(new Date(sale.createdAt))
                   return (
                     <li key={sale.id} className="sales-row">
-                      <Thumb path={photoOf.get(sale.productId) ?? null} size={44} />
+                      <Thumb path={photoOf.get(sale.productId) ?? null} size={52} />
                       <span className="row-text" aria-hidden="true">
                         <span className="product-name">{sale.productName}</span>
                         <span className="sales-meta">{`${sale.employee} · ${clock}`}</span>
@@ -333,7 +333,7 @@ export default function SalesScreen({ catalog, employee, keep, onCatalogChanged,
               </ul>
             </>
           )}
-          <h2 className="section-label">À saisir</h2>
+          <h2 className="section-title">À saisir</h2>
           {toEnter.length > 0 && (
             <label className="search">
               <span className="visually-hidden">Rechercher un produit</span>
@@ -351,7 +351,7 @@ export default function SalesScreen({ catalog, employee, keep, onCatalogChanged,
                 const invalid = parseSold(text).kind === 'invalid'
                 return (
                   <li key={product.id} className="sales-row">
-                    <Thumb path={product.photoPath} size={44} />
+                    <Thumb path={product.photoPath} size={52} />
                     <span className="product-name sales-name">{product.name}</span>
                     <input
                       className="sales-input"

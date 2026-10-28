@@ -154,7 +154,7 @@ export default function AppShell() {
           />
         )}
         {tab === 'history' && (
-          <HistoryScreen employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
+          <HistoryScreen catalog={catalog} employee={employee} onCatalogChanged={catalog.refresh} onSessionExpired={onSessionExpired} />
         )}
         <TabBar tab={tab} shoppingCount={shoppingCount} onChange={changeTab} />
       </div>

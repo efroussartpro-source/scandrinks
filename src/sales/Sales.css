@@ -1,26 +1,47 @@
-/* Fin de journée (§4.8) : le jour, « Déjà saisi », « À saisir » avec une case par produit, le total, puis « Valider ». */
+/* Fin de journée (§4.8, maquette C3-Ventes) : le jour dans un grand champ, « Déjà saisi » et « À saisir » en cartes avec les
+   photos et de grandes cases « vendus », le total dans un encadré, puis « Valider ». */
 .sales {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Le choix du jour, en carte sur le fond de l'écran ; 16 px au moins : en dessous, iOS zoome sur le champ touché. */
+/* Le choix du jour : un grand champ bordé, sa flèche à droite ; 16 px au moins : en dessous, iOS zoome sur le champ. */
+.sales-day {
+  position: relative;
+}
+
 .sales-day select {
-  min-height: 50px;
-  padding: 0 14px;
+  min-height: 52px;
+  padding: 0 44px 0 14px;
   font: inherit;
   font-size: 17px;
+  font-weight: 700;
   color: var(--text);
-  border: 2px solid transparent;
-  border-radius: 12px;
-  background: var(--card);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--field-border);
+  border-radius: 14px;
+  background: var(--field);
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .sales-day select:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.sales-day::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  bottom: 16px;
+  width: 20px;
+  height: 20px;
+  background: var(--text-2);
+  pointer-events: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .sales-error {
@@ -33,14 +54,25 @@
   margin: 0;
 }
 
-/* Une ligne par produit : l'image, le nom, puis la case « vendus » ou la quantité déjà saisie. */
+/* Une carte par liste, une ligne par produit : la photo, le nom, puis la case « vendus » ou la quantité déjà saisie. */
+.sales-done,
+.sales-entry,
+.sales-recap {
+  padding: 0 14px;
+}
+
 .sales-row {
-  min-height: 60px;
-  padding: 8px 10px 8px 12px;
+  min-height: 72px;
+  padding: 10px 0;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
+}
+
+.sales-row .product-name {
+  font-size: 16px;
+  font-weight: 700;
 }
 
 /* Deux lignes au plus, puis « … ». */
@@ -53,33 +85,39 @@
 }
 
 .sales-input {
-  width: 76px;
-  height: 44px;
+  width: 92px;
+  height: 48px;
   padding: 0 6px;
   font: inherit;
-  font-size: 17px;
+  font-size: 20px;
+  font-weight: 800;
   text-align: center;
   color: var(--text);
-  border: 2px solid transparent;
-  border-radius: 10px;
+  border: 1px solid var(--field-border);
+  border-radius: 14px;
   background: var(--field);
   outline: none;
 }
 
 .sales-input::placeholder {
   color: var(--text-2);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .sales-input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .sales-input[aria-invalid='true'] {
   border-color: var(--red-text);
+  box-shadow: 0 0 0 1px var(--red-text);
 }
 
 .sales-meta {
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-2);
 }
 
@@ -89,27 +127,35 @@
 }
 
 .sales-note {
-  margin-left: 16px;
+  margin: 0;
 }
 
+/* Le total dans un encadré. */
 .sales-total {
-  margin: 0 4px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* Récapitulatif : une ligne par produit, la quantité dans la couleur des sorties. */
 .sales-recap-title {
   margin: 0;
   font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
 }
 
 .sales-recap li {
-  padding: 12px 14px;
-  font-size: 17px;
+  padding: 14px 0;
+  font-size: 16px;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
 .sales-recap-amount {
-  font-weight: 700;
+  font-weight: 800;
 }

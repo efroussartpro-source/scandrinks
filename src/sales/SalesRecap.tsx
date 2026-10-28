@@ -41,7 +41,7 @@ export default function SalesRecap({ dayShort, lines, units, saving, error, onSa
       <button type="button" className="primary block" disabled={saving} onClick={onSave}>
         {saving ? 'Enregistrement…' : error ? 'Réessayer' : 'Enregistrer'}
       </button>
-      <button type="button" className="block" disabled={saving} onClick={onBack}>
+      <button type="button" className="plain block" disabled={saving} onClick={onBack}>
         Revenir
       </button>
     </>

@@ -984,6 +984,7 @@ async function scenarioHistory(browser) {
   assert.equal(await cancelled.getAttribute('class'), 'cancelled')
   assert.match(await cancelled.locator('.history-meta').textContent(), /— annulé par Sam$/)
   assert.equal(await cancelled.locator('.history-title').evaluate((element) => getComputedStyle(element).textDecorationLine), 'line-through')
+  assert.equal(await cancelled.locator('.thumb').count(), 1, 'une ligne annulée garde sa photo')
   assert.equal(await cancelled.getByRole('button').count(), 0, 'plus de bouton sur une ligne annulée')
   await tab('À racheter (2)').waitFor()
 
@@ -1533,6 +1534,12 @@ async function scenarioImages(browser) {
     const shopping = page.getByRole('list', { name: 'À racheter' })
     await waitForImage(shopping.getByRole('button', { name: /^Coca-Cola 33 cl/ }).locator('img.thumb'))
     await shopping.getByRole('button', { name: /^Lipton Pêche 50 cl/ }).locator('.thumb-empty').waitFor()
+
+    // 4 bis. L'Historique (spec §4.7, §6.7) : la photo du produit en tête de chaque ligne, l'icône sans image.
+    await tab('Historique').click()
+    const history = page.getByRole('list', { name: 'Historique' })
+    await waitForImage(history.getByRole('listitem').filter({ hasText: 'Coca-Cola 33 cl' }).first().locator('img.thumb'))
+    await history.getByRole('listitem').filter({ hasText: 'Évian 50 cl' }).first().locator('.thumb-empty').waitFor()
 
     // 5. Tous les codes scannés sont connus : aucune question à Open Food Facts.
     assert.deepEqual(offRequests, [])

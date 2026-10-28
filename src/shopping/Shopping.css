@@ -1,4 +1,4 @@
-/* Liste À racheter (maquettes A-racheter, N-racheter) : le titre et le résumé, puis une liste groupée ; les ruptures en rouge. */
+/* Liste À racheter (maquette C3-Racheter) : le titre et le résumé, puis une carte par produit. */
 .shopping {
   display: flex;
   flex-direction: column;
@@ -21,25 +21,41 @@
   margin: 0;
 }
 
-.shopping-list .row {
-  padding: 10px 10px 10px 12px;
-}
-
-.shopping-list .row-sub {
+/* Une carte par produit (maquette C3-Racheter) : sa photo, le nom et le reste ; la quantité à prendre en gros, en orange,
+   à droite. */
+.shopping-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
-  align-items: center;
-  gap: 5px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.shopping-list .row-sub svg {
-  flex: none;
+.shopping-list .shopping-card {
+  gap: 14px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--shadow);
 }
 
-.shopping-list .out-of-stock .row-sub {
+.shopping-card .row-title {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.shopping-card .row-sub {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shopping-card .row-sub.check-stock {
   color: var(--red-text);
+  font-weight: 700;
 }
 
-/* Ce qu'il faut prendre chez Metro : la quantité dans une pastille verte, le pack dessous. */
 .buy {
   flex: none;
   display: flex;
@@ -49,17 +65,16 @@
 }
 
 .buy-amount {
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--green-pale);
-  color: var(--green-text);
-  font-size: 17px;
+  color: var(--orange-text);
+  font-size: 22px;
   font-weight: 800;
+  letter-spacing: -0.4px;
   white-space: nowrap;
 }
 
 .buy-note {
   font-size: 13px;
+  font-weight: 600;
   color: var(--text-2);
   white-space: nowrap;
 }

@@ -3,9 +3,11 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.5, RG-9)
  *
- * Chaque ligne montre le produit et la quantité dans la couleur du type, puis
- * le type, le moment et le prénom (maquette J-historique) ; VoiceOver lit la
- * phrase entière. Par pages de 50, avec « Voir plus ». La première page est relue à
+ * Chaque ligne montre la photo du produit, le produit et la quantité dans la
+ * couleur du type, puis le type, le moment et le prénom (maquette
+ * C3-Historique) ; VoiceOver lit la phrase entière. La photo vient du
+ * catalogue : un produit qu'il ne contient pas (supprimé, ou catalogue pas
+ * encore lu) montre l'icône de boisson. Par pages de 50, avec « Voir plus ». La première page est relue à
  * l'ouverture de l'onglet et au retour dans l'app : la liste repart alors du
  * haut. Une réponse arrivée après une relecture plus récente est ignorée, et
  * une page suivante ne s'ajoute que si elle suit la liste affichée.
@@ -13,20 +15,23 @@
  * auteur : si un autre téléphone a annulé juste avant, c'est son prénom qui
  * s'affiche.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Catalog } from '../app/useCatalog'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
 import { historyLine, historyParts, type HistoryMovement } from '../domain/movements'
+import Thumb from '../photos/Thumb'
 import { appendHistoryPage, markCancelled, type HistoryState } from './historyList'
 import './History.css'
 
 interface HistoryScreenProps {
+  catalog: Catalog
   employee: string
   onCatalogChanged: () => void
   onSessionExpired: () => void
 }
 
-export default function HistoryScreen({ employee, onCatalogChanged, onSessionExpired }: HistoryScreenProps) {
+export default function HistoryScreen({ catalog, employee, onCatalogChanged, onSessionExpired }: HistoryScreenProps) {
   const [history, setHistory] = useState<HistoryState | null>(null)
   // Première page illisible, ou échec de « Voir plus » ou d'une annulation.
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -112,6 +117,7 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
   const movements = history?.movements ?? null
   const next = history?.next ?? null
   const now = new Date()
+  const photoOf = useMemo(() => new Map((catalog.products ?? []).map((product) => [product.id, product.photoPath])), [catalog.products])
 
   return (
     <section className="history" aria-labelledby="history-title">
@@ -134,25 +140,28 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
             const cancelled = movement.cancelledAt !== null
             return (
               <li key={movement.id} className={cancelled ? 'cancelled' : undefined}>
-                <span className="history-visual" aria-hidden="true">
-                  <span className="history-top">
-                    <span className="history-title">{title}</span>
-                    <span className={`history-amount kind-${movement.kind}`}>{amount}</span>
+                <Thumb path={photoOf.get(movement.productId) ?? null} size={50} />
+                <span className="history-body">
+                  <span className="history-visual" aria-hidden="true">
+                    <span className="history-top">
+                      <span className="history-title">{title}</span>
+                      <span className={`history-amount kind-${movement.kind}`}>{amount}</span>
+                    </span>
+                    <span className="history-meta">{meta}</span>
                   </span>
-                  <span className="history-meta">{meta}</span>
+                  <span className="visually-hidden history-line">{line}</span>
+                  {!cancelled && (
+                    <button
+                      type="button"
+                      className="link"
+                      aria-label={`Annuler : ${line}`}
+                      disabled={cancelling}
+                      onClick={() => void cancel(movement, line)}
+                    >
+                      Annuler
+                    </button>
+                  )}
                 </span>
-                <span className="visually-hidden history-line">{line}</span>
-                {!cancelled && (
-                  <button
-                    type="button"
-                    className="link"
-                    aria-label={`Annuler : ${line}`}
-                    disabled={cancelling}
-                    onClick={() => void cancel(movement, line)}
-                  >
-                    Annuler
-                  </button>
-                )}
               </li>
             )
           })}
@@ -164,7 +173,7 @@ export default function HistoryScreen({ employee, onCatalogChanged, onSessionExp
         </p>
       )}
       {next !== null && (
-        <button type="button" className="block" disabled={loadingMore} onClick={loadMore}>
+        <button type="button" className="plain block" disabled={loadingMore} onClick={loadMore}>
           {loadingMore ? 'Chargement…' : 'Voir plus'}
         </button>
       )}
