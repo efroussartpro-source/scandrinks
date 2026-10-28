@@ -15,6 +15,7 @@ import { parseCount } from '../domain/inventory'
 import CountFields from '../inventory/CountFields'
 import { PHOTO_NOT_SAVED_MESSAGE } from '../photos/photos'
 import Thumb from '../photos/Thumb'
+import { IconCheck } from '../ui/icons'
 import type { ConfirmState } from './scanFlow'
 
 interface CountCardProps {
@@ -36,11 +37,11 @@ export default function CountCard({ state, onValidate, onClose }: CountCardProps
 
   return (
     <section className="card confirm" data-mode="inventory" aria-label="Fiche de confirmation">
-      <div className="confirm-head">
-        <Thumb path={target.photoPath} size={64} />
-        <div className="confirm-text">
-          <h2 className="card-title">{target.product.name}</h2>
-        </div>
+      <div className="count-head">
+        <span className="count-photo tile-plate">
+          <Thumb path={target.photoPath} fill />
+        </span>
+        <h2 className="card-title">{target.product.name}</h2>
       </div>
       {target.photoWarning && <p className="message message-warning">{PHOTO_NOT_SAVED_MESSAGE}</p>}
       <CountFields
@@ -60,10 +61,16 @@ export default function CountCard({ state, onValidate, onClose }: CountCardProps
         </p>
       )}
       <div className="card-actions">
-        <button type="button" className="primary" disabled={status === 'saving' || (status === 'idle' && !parsed.ok)} onClick={validate}>
+        <button
+          type="button"
+          className="primary with-icon"
+          disabled={status === 'saving' || (status === 'idle' && !parsed.ok)}
+          onClick={validate}
+        >
+          {status === 'idle' && <IconCheck size={20} strokeWidth={2.6} />}
           {status === 'saving' ? 'Enregistrement…' : status === 'failed' ? 'Réessayer' : 'Valider'}
         </button>
-        <button type="button" disabled={status === 'saving'} onClick={onClose}>
+        <button type="button" className="plain" disabled={status === 'saving'} onClick={onClose}>
           Annuler
         </button>
       </div>

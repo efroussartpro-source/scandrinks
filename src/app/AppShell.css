@@ -19,7 +19,14 @@
 
 /* Place pour la barre d'onglets, fixée en bas. */
 .app {
+  position: relative;
   padding-bottom: 76px;
+}
+
+/* Scanner : le panneau du bas va lui-même jusqu'à la barre d'onglets (Scanner.css). */
+.app[data-tab='scanner'] {
+  padding-bottom: 0;
+  margin-bottom: calc(-1 * max(16px, env(safe-area-inset-bottom)));
 }
 
 h1 {
@@ -65,6 +72,27 @@ h1 {
   align-items: center;
   gap: 10px;
   min-height: 44px;
+}
+
+/* Sur le Scanner, l'en-tête est posé sur la caméra, sur son voile sombre (Scanner.css) : texte blanc, pastilles
+   sombres. */
+.app[data-tab='scanner'] .app-header {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.app[data-tab='scanner'] .brand {
+  color: var(--on-color);
+}
+
+.app[data-tab='scanner'] .employee,
+.app[data-tab='scanner'] .app-header .icon-button {
+  border-color: transparent;
+  background: var(--overlay);
+  color: var(--on-color);
 }
 
 .brand-tile {
@@ -150,6 +178,18 @@ button.link.danger {
 
 button:disabled {
   opacity: 0.5;
+}
+
+/* Bouton avec une icône devant son nom. */
+button.with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+button.block.with-icon {
+  display: flex;
 }
 
 .block {
@@ -267,6 +307,13 @@ button.back {
 .card-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+/* Fin d'un long formulaire (« Nouveau produit ») : l'action pleine, puis « Annuler » dessous (maquette C2-Nouveau). */
+.form-actions {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
@@ -445,6 +492,41 @@ button.back {
   color: var(--text-2);
   -webkit-text-fill-color: var(--text-2);
   opacity: 1;
+}
+
+/* Un nombre d'une fiche (spec §6.7) : le libellé et l'aide à gauche, la case à droite, une ligne fine entre deux. */
+.field-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  grid-template-areas:
+    'label input'
+    'help input'
+    'error error';
+  align-items: start;
+  column-gap: 14px;
+  row-gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--separator);
+}
+
+.field-inline > label {
+  grid-area: label;
+}
+
+.field-inline > input {
+  grid-area: input;
+  width: 84px;
+  padding: 0 8px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.field-inline > .field-help {
+  grid-area: help;
+}
+
+.field-inline > .field-error {
+  grid-area: error;
 }
 
 .field-help {

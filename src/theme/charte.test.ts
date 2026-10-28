@@ -114,7 +114,7 @@ test.each([
 const TEXT_PAIRS: Array<[string, string]> = [
   ['text', 'bg'], ['text', 'card'], ['text', 'field'], ['text', 'green-pale'], ['text', 'track'],
   ['text-2', 'card'], ['text-2', 'bg'], ['text-2', 'green-pale'], ['text-2', 'tab-bar'], ['text-2', 'field'],
-  ['text-3', 'track'],
+  ['text-3', 'track'], ['text-3', 'green-pale'],
   ['green-text', 'card'], ['green-text', 'bg'], ['green-text', 'green-pale'], ['green-text', 'track'], ['green-text', 'tab-bar'],
   ['green-text', 'field'],
   ['orange-text', 'card'], ['orange-text', 'track'], ['orange-text', 'orange-pale'],

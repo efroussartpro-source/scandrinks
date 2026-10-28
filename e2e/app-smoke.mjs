@@ -94,6 +94,15 @@ async function waitForSaved(page, title, detail) {
   await notice.locator('.notice-detail').filter({ hasText: exactly(detail) }).waitFor()
 }
 
+// Les nombres d'une fiche (spec §6.7) : chacun a son aide à gauche et sa case à droite (classe field-inline).
+async function assertInlineNumbers(scope, labels) {
+  for (const label of labels) {
+    const inline = await scope.getByLabel(label, { exact: true }).evaluate((input) => input.closest('.field')?.classList.contains('field-inline') ?? false)
+    assert.ok(inline, `« ${label} » : l'aide à gauche, la case à droite`)
+  }
+}
+const FICHE_NUMBERS = ['Pack Metro (unités)', "Seuil d'alerte (unités)", 'Stock idéal (unités)']
+
 // Total et écart d'un comptage d'inventaire.
 async function waitForCount(scope, total, gap) {
   await scope.locator('.count-total').filter({ hasText: exactly(total) }).waitFor()
@@ -150,14 +159,16 @@ async function scenarioMain(browser) {
   await waitForConfirmLine(card, 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
   await card.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
   assert.equal(await card.getAttribute('data-mode'), 'in')
-  // Le sélecteur de mode est au-dessus de la caméra.
-  assert.ok(
-    await page.evaluate(() =>
-      Boolean(document.querySelector('[role="group"][aria-label="Mode"]').compareDocumentPosition(document.querySelector('.viewfinder')) &
-        Node.DOCUMENT_POSITION_FOLLOWING),
-    ),
-    'le sélecteur de mode précède le viseur',
-  )
+  // La caméra en haut (spec §6.7) : l'en-tête et le sélecteur de mode sont posés dessus ; la fiche ouverte, elle se
+  // réduit de moitié. « Valider » reste large, à gauche d'« Annuler ».
+  assert.ok(await page.evaluate(() => Boolean(document.querySelector('.viewfinder [role="group"][aria-label="Mode"]'))), 'le sélecteur de mode est dans le viseur')
+  assert.equal(await page.locator('.viewfinder').getAttribute('data-size'), 'half')
+  const headerBox = await page.locator('.app-header').boundingBox()
+  const viewfinderBox = await page.locator('.viewfinder').boundingBox()
+  assert.ok(headerBox.y < viewfinderBox.y + viewfinderBox.height, "l'en-tête est posé sur la caméra")
+  const validateBox = await card.getByRole('button', { name: 'Valider' }).boundingBox()
+  const cancelBox = await card.getByRole('button', { name: 'Annuler' }).boundingBox()
+  assert.ok(validateBox.x < cancelBox.x && validateBox.width > cancelBox.width, '« Valider » large, à gauche d\'« Annuler »')
 
   // 4. La fiche suit le mode, en couleur et par le signe : la variation en grand et « Valider » prennent sa couleur.
   const colors = async () => ({
@@ -198,6 +209,8 @@ async function scenarioMain(browser) {
   // 5. Valider : un seul mouvement, avec les bons paramètres.
   await card.getByRole('button', { name: 'Valider' }).click()
   await waitForSaved(page, '+24 Coca-Cola 33 cl', 'Stock : 48 (2 packs)')
+  // De retour au scan, la caméra reprend toute sa taille.
+  assert.equal(await page.locator('.viewfinder').getAttribute('data-size'), 'full')
   const records = recordCalls(fake)
   assert.equal(records.length, 1, 'un seul record_movement')
   assert.match(records[0].body.p_id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'identifiant généré par le téléphone')
@@ -275,6 +288,7 @@ async function scenarioNewProduct(browser) {
   await page.getByText('Open Food Facts : Coca-Cola 330 ml').waitFor()
   await page.getByRole('button', { name: 'Nouveau produit' }).click()
   assert.equal(await page.getByLabel('Nom').inputValue(), 'Coca-Cola 330 ml')
+  await assertInlineNumbers(page, ['Ce code vaut (unités)', ...FICHE_NUMBERS])
   const helps = [
     await fieldHelp(page.getByLabel('Nom')),
     await fieldHelp(page.getByRole('button', { name: 'Scanner une canette du pack' })),
@@ -440,15 +454,17 @@ async function scenarioInventory(browser) {
     await card.getByLabel('Packs de 24').fill('2')
     await card.getByLabel('Unités en plus').fill('5')
     await waitForCount(card, '= 53 (2 packs + 5)', 'écart : +29')
-    // La fiche d'Inventaire est longue : la caméra se réduit, et « Valider » est bleu.
+    // La fiche d'Inventaire est longue : la caméra se réduit (small), et « Valider » est bleu.
     const viewfinderHeight = () => page.locator('.viewfinder').evaluate((el) => el.getBoundingClientRect().height)
-    assert.ok((await viewfinderHeight()) <= 150, 'caméra réduite pendant le comptage')
+    assert.equal(await page.locator('.viewfinder').getAttribute('data-size'), 'small')
+    const countingHeight = await viewfinderHeight()
     assert.equal(await card.getByRole('button', { name: 'Valider' }).evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(29, 78, 216)')
     await card.getByRole('button', { name: 'Valider' }).click()
     await waitForSaved(page, 'Inventaire : 53 comptés (+29) Coca-Cola 33 cl', 'Stock : 53 (2 packs + 5)')
     // De retour au scan (le code n'est pas relu pendant 2 s), la caméra reprend sa taille.
+    assert.equal(await page.locator('.viewfinder').getAttribute('data-size'), 'full')
     const scanningHeight = await viewfinderHeight()
-    assert.ok(scanningHeight > 150 && scanningHeight <= 300, `caméra de retour à sa taille : ${scanningHeight}`)
+    assert.ok(scanningHeight > countingHeight, `caméra de retour à sa taille : ${countingHeight} puis ${scanningHeight}`)
     const inventories = fake.calls.filter((call) => call.fn === 'record_inventory')
     assert.equal(inventories.length, 1, 'un seul record_inventory')
     assert.match(inventories[0].body.p_id, UUID, 'identifiant généré par le téléphone')
@@ -673,6 +689,7 @@ async function scenarioSheetEdits(browser) {
   // 1. Modifier : champs pré-remplis, le seuil ne suit pas le pack, RG-7 vérifiée avant l'envoi.
   await sheet.getByRole('button', { name: 'Modifier', exact: true }).click()
   const edit = page.getByRole('region', { name: 'Modifier le produit' })
+  await assertInlineNumbers(edit, FICHE_NUMBERS)
   const editValues = async () => [
     await edit.getByLabel('Nom').inputValue(),
     await edit.getByLabel('Pack Metro (unités)').inputValue(),
@@ -756,6 +773,7 @@ async function scenarioSheetEdits(browser) {
   await sheet.getByRole('button', { name: 'Retour' }).click()
   await page.getByRole('region', { name: 'Stock', exact: true }).getByRole('button', { name: 'Nouveau produit' }).click()
   const create = page.getByRole('region', { name: 'Nouveau produit' })
+  await assertInlineNumbers(create, FICHE_NUMBERS)
   const helps = [
     await fieldHelp(create.getByLabel('Nom')),
     await fieldHelp(create.getByLabel('Pack Metro (unités)')),
@@ -852,7 +870,18 @@ async function scenarioReaderAndCamera(browser) {
       }),
       'la consigne est dans le viseur',
     )
-    await page.getByRole('button', { name: 'Démarrer la caméra' }).waitFor()
+    // Le message et « Démarrer la caméra » sont dans le panneau, sous la caméra, et rien ne les recouvre.
+    const start = page.getByRole('button', { name: 'Démarrer la caméra' })
+    await start.waitFor()
+    assert.ok(await start.evaluate((button) => Boolean(button.closest('.panel'))), '« Démarrer la caméra » est dans le panneau')
+    assert.ok(
+      await start.evaluate((button) => {
+        const box = button.getBoundingClientRect()
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+        return hit === button || button.contains(hit)
+      }),
+      '« Démarrer la caméra » est visible et rien ne le recouvre',
+    )
     await context.close()
   }
   // App en arrière-plan puis de retour : la caméra s'arrête puis repart seule.

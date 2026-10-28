@@ -10,6 +10,7 @@
  */
 import { describeInventory } from '../domain/inventory'
 import { formatDelta, formatStock } from '../domain/stock'
+import { IconCheck } from '../ui/icons'
 import { NOT_A_PRODUCT_MESSAGE, type Notice as FlowNotice } from './scanFlow'
 
 interface NoticeProps {
@@ -23,7 +24,10 @@ export default function Notice({ notice, undoing, onUndo }: NoticeProps) {
     case 'saved': {
       const what = notice.counted === null ? formatDelta(notice.delta) : describeInventory(notice.counted, notice.delta)
       return (
-        <div role="status" className="message message-ok notice">
+        <div role="status" className="message message-ok notice notice-saved">
+          <span className="notice-badge" aria-hidden="true">
+            <IconCheck size={18} strokeWidth={2.8} />
+          </span>
           <span className="notice-text">
             <span className="notice-title">
               {what} {notice.productName}

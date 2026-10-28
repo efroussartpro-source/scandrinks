@@ -7,10 +7,12 @@
  * l'étape obtenue et affiche le résultat. La caméra tourne en continu tant
  * que l'écran est actif, même pendant qu'une fiche est affichée : le scan
  * suivant est prêt aussitôt. Sur un autre onglet ou dans les Réglages, elle
- * s'arrête, mais l'écran reste monté : la fiche en cours est gardée. Le
- * sélecteur de mode est au-dessus de la caméra, qui se réduit quand une
- * fiche longue s'ouvre (maquettes docs/maquettes/Main, J-message,
- * J-inventaire et J-nouveau).
+ * s'arrête, mais l'écran reste monté : la fiche en cours est gardée.
+ * Design « Vitrine » (§6.7, maquettes C2) : la caméra occupe le haut de
+ * l'écran, l'en-tête et le sélecteur de mode sont posés dessus, sur le voile
+ * sombre ; tout ce qui suit un scan s'ouvre dans le panneau blanc du bas. La
+ * caméra est pleine au scan, à moitié pour une fiche courte, petite pour une
+ * fiche à remplir (data-size).
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { classifyApiError, type ApiErrorKind } from '../data/apiErrors'
@@ -25,6 +27,7 @@ import { frameToJpeg } from '../photos/jpeg'
 import { scannerErrorMessage } from '../scan/scannerErrors'
 import { useBarcodeScanner } from '../scan/useBarcodeScanner'
 import { useScreenWakeLock } from '../scan/useScreenWakeLock'
+import { IconBarcode, IconKeyboard, IconPlus } from '../ui/icons'
 import ArchivedCard from './ArchivedCard'
 import ConfirmCard from './ConfirmCard'
 import CountCard from './CountCard'
@@ -217,7 +220,8 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
                 }}
               />
             )}
-            <button type="button" className="plain block" onClick={() => dispatch({ type: 'open_manual' })}>
+            <button type="button" className="plain block with-icon" onClick={() => dispatch({ type: 'open_manual' })}>
+              <IconKeyboard size={20} />
               Saisie manuelle
             </button>
           </>
@@ -248,14 +252,20 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
       case 'unknown': {
         const name = offName(flow.code)
         return (
-          <section className="card" aria-label="Code inconnu">
-            <h2 className="card-title">Code inconnu : {flow.code}</h2>
-            {name !== null && <p>Open Food Facts : {name}</p>}
+          <section className="card unknown-card" aria-label="Code inconnu">
+            <div className="unknown-head">
+              <span className="unknown-icon tile-plate" aria-hidden="true">
+                <IconBarcode size={28} />
+              </span>
+              <h2 className="card-title">Code inconnu : {flow.code}</h2>
+            </div>
+            {name !== null && <p className="off-name">Open Food Facts : {name}</p>}
             {offResults[flow.code] === undefined && <p className="muted">Recherche du nom…</p>}
-            <button type="button" className="primary" onClick={() => dispatch({ type: 'choose_new_product' })}>
+            <button type="button" className="primary block with-icon" onClick={() => dispatch({ type: 'choose_new_product' })}>
+              <IconPlus size={20} strokeWidth={2.4} />
               Nouveau produit
             </button>
-            <button type="button" onClick={() => dispatch({ type: 'choose_attach' })}>
+            <button type="button" className="plain block" onClick={() => dispatch({ type: 'choose_attach' })}>
               Ajouter à un produit existant
             </button>
             <button type="button" className="link" onClick={close}>
@@ -294,48 +304,55 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
     }
   }
 
-  // Une fiche longue laisse la place à ses champs : la caméra se réduit (§6.7).
-  const compact =
-    flow.step === 'new_product' || flow.step === 'attach' || flow.step === 'manual' || (flow.step === 'confirm' && mode === 'inventory')
+  // Taille de la caméra (§6.7) : pleine au scan ; à moitié pour une fiche courte ; petite pour une fiche à remplir,
+  // qui laisse ainsi la place à ses champs.
+  const size =
+    flow.step === 'scanning'
+      ? 'full'
+      : flow.step === 'new_product' || flow.step === 'attach' || flow.step === 'manual' || (flow.step === 'confirm' && mode === 'inventory')
+        ? 'small'
+        : 'half'
 
   return (
-    <section className="scanner">
-      <div className="segmented modes" role="group" aria-label="Mode">
-        <button type="button" className="mode mode-in" aria-pressed={mode === 'in'} disabled={modeLocked} onClick={() => changeMode('in')}>
-          Entrée +
-        </button>
-        <button type="button" className="mode mode-out" aria-pressed={mode === 'out'} disabled={modeLocked} onClick={() => changeMode('out')}>
-          Sortie −
-        </button>
-        <button
-          type="button"
-          className="mode mode-inv"
-          aria-pressed={mode === 'inventory'}
-          disabled={modeLocked}
-          onClick={() => changeMode('inventory')}
-        >
-          Inventaire =
-        </button>
-      </div>
-      <div className="viewfinder" data-compact={compact || undefined}>
+    <section className="scanner" data-size={size}>
+      <div className="viewfinder" data-size={size}>
         <video ref={videoRef} playsInline muted autoPlay aria-label="Image de la caméra" />
+        <div className="segmented modes" role="group" aria-label="Mode">
+          <button type="button" className="mode mode-in" aria-pressed={mode === 'in'} disabled={modeLocked} onClick={() => changeMode('in')}>
+            Entrée +
+          </button>
+          <button type="button" className="mode mode-out" aria-pressed={mode === 'out'} disabled={modeLocked} onClick={() => changeMode('out')}>
+            Sortie −
+          </button>
+          <button
+            type="button"
+            className="mode mode-inv"
+            aria-pressed={mode === 'inventory'}
+            disabled={modeLocked}
+            onClick={() => changeMode('inventory')}
+          >
+            Inventaire =
+          </button>
+        </div>
         <span className="corner corner-tl" aria-hidden="true" />
         <span className="corner corner-tr" aria-hidden="true" />
         <span className="corner corner-bl" aria-hidden="true" />
         <span className="corner corner-br" aria-hidden="true" />
         {flow.step === 'scanning' && <p className="aim-hint">Vise le code-barres du pack ou de la bouteille.</p>}
       </div>
-      {scanner.status === 'error' && scanner.errorKind && (
-        <div className="camera-problem">
-          <p role="alert" className="message message-error">
-            {scannerErrorMessage(scanner.errorKind)}
-          </p>
-          <button type="button" onClick={() => void startCamera()}>
-            Démarrer la caméra
-          </button>
-        </div>
-      )}
-      <div className="panel">{renderPanel()}</div>
+      <div className="panel">
+        {scanner.status === 'error' && scanner.errorKind && (
+          <div className="camera-problem">
+            <p role="alert" className="message message-error">
+              {scannerErrorMessage(scanner.errorKind)}
+            </p>
+            <button type="button" onClick={() => void startCamera()}>
+              Démarrer la caméra
+            </button>
+          </div>
+        )}
+        {renderPanel()}
+      </div>
     </section>
   )
 }

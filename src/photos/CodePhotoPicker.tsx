@@ -100,62 +100,62 @@ export default function CodePhotoPicker({
   const busy = disabled || taking
   const offImage = offImageUrl !== null && failedOffImage !== offImageUrl ? offImageUrl : null
 
+  // La photo en grand sur sa plaque, puis ce qui sera gardé et les gestes (maquette C2-Nouveau).
+  let plate
   let content
   if (teamPhoto !== null) {
+    plate = <Thumb src={preview} fill />
     content = (
       <>
-        <Thumb src={preview} size={72} />
-        <span className="photo-picker-text">
-          <span className="photo-picker-title">Photo prise</span>
-          <span className="photo-picker-help">{texts.taken}</span>
-          <span className="photo-picker-actions">
-            <button type="button" className="link" disabled={busy} onClick={() => void take()}>
-              Reprendre
-            </button>
-            <button type="button" className="link" disabled={busy} onClick={() => onTeamPhoto(null)}>
-              Retirer
-            </button>
-          </span>
+        <span className="photo-picker-title">Photo prise</span>
+        <span className="photo-picker-help">{texts.taken}</span>
+        <span className="photo-picker-actions">
+          <button type="button" className="link" disabled={busy} onClick={() => void take()}>
+            Reprendre
+          </button>
+          <button type="button" className="link" disabled={busy} onClick={() => onTeamPhoto(null)}>
+            Retirer
+          </button>
         </span>
       </>
     )
   } else if (offImage !== null) {
+    plate = (
+      <Thumb
+        src={offImage}
+        fill
+        onError={() => {
+          setFailedOffImage(offImage)
+          onOffImageError?.()
+        }}
+      />
+    )
     content = (
       <>
-        <Thumb
-          src={offImage}
-          size={72}
-          onError={() => {
-            setFailedOffImage(offImage)
-            onOffImageError?.()
-          }}
-        />
-        <span className="photo-picker-text">
-          <span className="photo-picker-title">Image trouvée</span>
-          <span className="photo-picker-help">{texts.found}</span>
-          <span className="photo-picker-actions">
-            <button type="button" className="link" disabled={busy} onClick={() => void take()}>
-              <IconCamera size={18} />
-              Prendre ma photo à la place
-            </button>
-          </span>
+        <span className="photo-picker-title">Image trouvée</span>
+        <span className="photo-picker-help">{texts.found}</span>
+        <span className="photo-picker-actions">
+          <button type="button" className="link with-icon" disabled={busy} onClick={() => void take()}>
+            <IconCamera size={18} />
+            Prendre ma photo à la place
+          </button>
         </span>
       </>
     )
   } else {
+    plate = (
+      <span className="thumb thumb-fill thumb-empty" aria-hidden="true">
+        <IconCamera size={36} strokeWidth={1.8} />
+      </span>
+    )
     content = (
       <>
-        <span className="thumb thumb-empty" aria-hidden="true" style={{ width: 72, height: 72, borderRadius: 12 }}>
-          <IconCamera size={30} strokeWidth={1.8} />
-        </span>
-        <span className="photo-picker-text">
-          <span className="photo-picker-title">{texts.title}</span>
-          <span className="photo-picker-help">{texts.help}</span>
-          <button type="button" className="photo-take" disabled={busy} onClick={() => void take()}>
-            <IconCamera size={18} />
-            Prendre la photo
-          </button>
-        </span>
+        <span className="photo-picker-title">{texts.title}</span>
+        <span className="photo-picker-help">{texts.help}</span>
+        <button type="button" className="photo-take with-icon" disabled={busy} onClick={() => void take()}>
+          <IconCamera size={18} />
+          Prendre la photo
+        </button>
       </>
     )
   }
@@ -163,7 +163,8 @@ export default function CodePhotoPicker({
   return (
     <>
       <div className="photo-picker" role="group" aria-label={texts.group} data-empty={(teamPhoto === null && offImage === null) || undefined}>
-        {content}
+        <span className="photo-picker-plate tile-plate">{plate}</span>
+        <span className="photo-picker-text">{content}</span>
       </div>
       {cameraError && <p className="field-error">{CAMERA_NOT_READY_MESSAGE}</p>}
     </>

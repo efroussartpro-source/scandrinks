@@ -1,23 +1,78 @@
-/* Écran Scanner (§4.2, §6.7) : le sélecteur de mode, la caméra dans un cadre arrondi, puis la fiche ou les messages. */
+/* Écran Scanner (§4.2, §6.7, maquettes C2) : la caméra occupe le haut de l'écran, bord à bord ; l'en-tête
+   (AppShell.css) et le sélecteur de mode sont posés dessus, sur le voile sombre ; le panneau blanc du bas porte tout ce
+   qui suit un scan. La caméra est pleine au scan, à moitié pour une fiche courte, petite pour une fiche à remplir. */
 .scanner {
+  /* Le rembourrage de la page (styles.css) : la caméra et le panneau vont jusqu'aux bords de l'écran. */
+  --pad-top: max(16px, env(safe-area-inset-top));
+  --pad-right: max(16px, env(safe-area-inset-right));
+  --pad-left: max(16px, env(safe-area-inset-left));
+  --tab-bar-height: calc(57px + max(8px, env(safe-area-inset-bottom)));
+  --viewfinder: 64dvh;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-/* Sélecteur de mode : chaque mode a sa couleur ; le mode choisi en est plein. */
-.modes {
+.scanner[data-size='half'] {
+  --viewfinder: 46dvh;
+}
+
+.scanner[data-size='small'] {
+  --viewfinder: max(30dvh, 220px);
+}
+
+/* Toute l'image analysée reste visible (contain) : l'employé voit le code réellement lu. */
+.viewfinder {
+  position: relative;
+  height: var(--viewfinder);
+  min-height: 220px;
+  margin: calc(-1 * var(--pad-top)) calc(-1 * var(--pad-right)) 0 calc(-1 * var(--pad-left));
+  overflow: hidden;
+  background: var(--camera);
+}
+
+.viewfinder video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Le voile sombre du haut : l'en-tête posé dessus reste lisible devant une scène claire (un frigo blanc). */
+.viewfinder::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--pad-top) + 74px);
+  background: linear-gradient(var(--overlay) calc(100% - 24px), transparent);
+  pointer-events: none;
+}
+
+/* Sélecteur de mode, posé sur la caméra sous l'en-tête : le mode choisi est plein de sa couleur. */
+.viewfinder .modes {
+  position: absolute;
+  z-index: 2;
+  top: calc(var(--pad-top) + 56px);
+  left: var(--pad-left);
+  right: var(--pad-right);
   gap: 4px;
   padding: 4px;
-  border-radius: 13px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--overlay);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .modes .mode {
   min-height: 44px;
   padding: 0 4px;
-  border-radius: 10px;
+  border-radius: 12px;
+  color: var(--on-color);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Écran étroit (iPhone SE ou mini en affichage agrandi, 320 px) : « Inventaire = » tient dans son segment. */
@@ -29,21 +84,14 @@
   }
 }
 
-.modes .mode-in {
-  color: var(--green-text);
-}
-
-.modes .mode-out {
-  color: var(--orange-text);
-}
-
-.modes .mode-inv {
-  color: var(--blue-text);
-}
-
 .modes .mode[aria-pressed='true'] {
   color: var(--on-color);
-  font-weight: 700;
+  font-weight: 800;
+}
+
+/* Pendant un envoi, les autres modes sont grisés ; celui de la fiche reste plein. */
+.modes .mode[aria-pressed='true']:disabled {
+  opacity: 1;
 }
 
 .modes .mode-in[aria-pressed='true'] {
@@ -58,30 +106,10 @@
   background: var(--blue);
 }
 
-/* Toute l'image analysée reste visible (contain) : l'employé voit le code réellement lu. La caméra se réduit
-   quand une fiche longue s'ouvre (data-compact), pour laisser la place aux champs. */
-.viewfinder {
-  position: relative;
-  height: min(300px, 38vh);
-  border-radius: 18px;
-  overflow: hidden;
-  background: var(--camera);
-}
-
-.viewfinder[data-compact] {
-  height: min(150px, 20vh);
-}
-
-.viewfinder video {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* Les quatre coins du viseur. */
+/* Les quatre coins du viseur, entre le sélecteur de mode et le panneau. */
 .corner {
   position: absolute;
+  z-index: 1;
   width: 34px;
   height: 34px;
   border: 0 solid var(--on-color);
@@ -89,79 +117,105 @@
 }
 
 .corner-tl {
-  left: 24px;
-  top: 24px;
+  left: calc(var(--pad-left) + 8px);
+  top: calc(var(--pad-top) + 124px);
   border-left-width: 4px;
   border-top-width: 4px;
   border-top-left-radius: 12px;
 }
 
 .corner-tr {
-  right: 24px;
-  top: 24px;
+  right: calc(var(--pad-right) + 8px);
+  top: calc(var(--pad-top) + 124px);
   border-right-width: 4px;
   border-top-width: 4px;
   border-top-right-radius: 12px;
 }
 
+/* En bas, au-dessus de la consigne (caméra pleine) ou du panneau (fiche ouverte). */
 .corner-bl {
-  left: 24px;
-  bottom: 24px;
+  left: calc(var(--pad-left) + 8px);
+  bottom: 112px;
   border-left-width: 4px;
   border-bottom-width: 4px;
   border-bottom-left-radius: 12px;
 }
 
 .corner-br {
-  right: 24px;
-  bottom: 24px;
+  right: calc(var(--pad-right) + 8px);
+  bottom: 112px;
   border-right-width: 4px;
   border-bottom-width: 4px;
   border-bottom-right-radius: 12px;
 }
 
-.viewfinder[data-compact] .corner {
+.viewfinder[data-size='half'] .corner-bl,
+.viewfinder[data-size='half'] .corner-br {
+  bottom: 52px;
+}
+
+.viewfinder[data-size='small'] .corner {
   width: 24px;
   height: 24px;
 }
 
-.viewfinder[data-compact] .corner-tl,
-.viewfinder[data-compact] .corner-bl {
-  left: 14px;
+.viewfinder[data-size='small'] .corner-tl,
+.viewfinder[data-size='small'] .corner-tr {
+  top: calc(var(--pad-top) + 116px);
 }
 
-.viewfinder[data-compact] .corner-tr,
-.viewfinder[data-compact] .corner-br {
-  right: 14px;
+.viewfinder[data-size='small'] .corner-bl,
+.viewfinder[data-size='small'] .corner-br {
+  bottom: 40px;
 }
 
-.viewfinder[data-compact] .corner-tl,
-.viewfinder[data-compact] .corner-tr {
-  top: 14px;
-}
-
-.viewfinder[data-compact] .corner-bl,
-.viewfinder[data-compact] .corner-br {
-  bottom: 14px;
-}
-
-/* Consigne posée en bas de la caméra, au-dessus des coins, pendant le scan (maquette J-message).
-   Trop longue pour une ligne, elle passe sur deux, dans une largeur qui les garde à peu près égales. */
+/* Consigne dans une pastille sombre, en bas de la caméra, au-dessus du panneau (maquette C2-Attente). Trop longue
+   pour une ligne, elle passe sur deux, dans une largeur qui les garde à peu près égales. */
 .aim-hint {
   position: absolute;
+  z-index: 1;
   left: 50%;
-  bottom: 70px;
+  bottom: 48px;
   transform: translateX(-50%);
   width: max-content;
-  max-width: min(240px, calc(100% - 32px));
+  max-width: min(300px, calc(100% - 32px));
   margin: 0;
-  padding: 7px 14px;
+  padding: 10px 14px;
   border-radius: 16px;
   background: var(--overlay);
   color: var(--on-color);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
+}
+
+/* Le panneau du bas : blanc, arrondi en haut, il remonte sur la caméra et va jusqu'à la barre d'onglets (au moins
+   jusqu'en bas de l'écran ; plus long, la page défile). */
+.panel {
+  position: relative;
+  z-index: 2;
+  min-height: calc(100dvh - var(--viewfinder) + 28px);
+  margin: -28px calc(-1 * var(--pad-right)) 0 calc(-1 * var(--pad-left));
+  padding: 18px max(20px, env(safe-area-inset-right)) calc(16px + var(--tab-bar-height)) max(20px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 28px 28px 0 0;
+  background: var(--card);
+}
+
+/* Dans le panneau, une fiche n'a plus de carte à elle : le panneau en est une. */
+.panel > .card {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.panel .card-title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
 }
 
 .camera-problem {
@@ -170,13 +224,34 @@
   gap: 8px;
 }
 
-.panel {
+/* Code inconnu (maquette C2-Inconnu) : le texte d'aujourd'hui, le code passe à la ligne si besoin ; le nom proposé par
+   Open Food Facts dans un encadré. */
+.unknown-head {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
 }
 
-/* Fiche de confirmation : le nom et « Pack de 24 », puis la variation en grand ; tout prend la couleur du mode. */
+.unknown-icon {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--plate-text);
+}
+
+.off-name {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--bg);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Fiche de confirmation (maquette C2-Sortie) : la photo en grand sur sa plaque, la quantité dans une carte à droite,
+   puis le nom et « Pack de 24 » ; tout prend la couleur du mode. */
 .confirm[data-mode='out'] {
   --accent: var(--orange);
   --accent-text: var(--orange-text);
@@ -190,68 +265,119 @@
 }
 
 .confirm-head {
+  flex: none;
+  height: 124px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 14px;
+  border-radius: 20px;
+}
+
+.confirm-photo {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+/* La carte de la quantité suit le thème : de nuit, sombre sur la plaque claire. */
+.confirm-amount {
+  flex: none;
+  min-width: 92px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.confirm-delta {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1.2px;
+  color: var(--accent-text);
+}
+
+.confirm-unit {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.confirm-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.confirm-what {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* Inventaire (maquette C2-Inventaire) : une petite plaque et le nom, puis les deux cases du comptage. */
+.count-head {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.confirm-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.confirm-what {
-  font-size: 15px;
-  color: var(--text-2);
-}
-
-.confirm-delta {
+.count-photo {
   flex: none;
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--accent-text);
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
 }
 
+/* Quantité : une piste bordée ; « − » et « + » sur la couleur pâle du mode. */
 .quantity {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .stepper {
+  min-height: 48px;
+  padding: 3px;
   display: flex;
   align-items: center;
-  border-radius: 12px;
-  background: var(--field);
+  gap: 4px;
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  background: var(--card);
 }
 
 .stepper button {
-  width: 48px;
-  min-height: 44px;
+  width: 44px;
+  min-height: 40px;
   padding: 0;
-  background: transparent;
+  border-radius: 12px;
+  background: var(--accent-pale);
   color: var(--accent-text);
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 /* 16 px au moins : en dessous, iOS zoome sur le champ touché. */
 .stepper input {
   width: 48px;
-  min-height: 44px;
+  min-height: 40px;
   padding: 0;
   font: inherit;
-  font-size: 19px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 800;
   text-align: center;
   color: var(--text);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
 }
 
@@ -259,7 +385,8 @@
   outline: 2px solid var(--accent);
 }
 
-/* Message après une action : ce qui est enregistré et le stock, « Annuler » à droite. */
+/* Message après une action (maquette C2-Attente) : une bande verte, la coche dans un rond, ce qui est enregistré et le
+   stock, « Annuler » à droite. */
 .notice {
   grid-template-columns: 20px minmax(0, 1fr) auto;
   align-items: center;
@@ -272,21 +399,47 @@
 .notice > button {
   grid-column: 3;
   grid-row: 1;
-  margin: -8px -8px -8px 0;
+  margin: -8px -6px -8px 0;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.notice-saved {
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  padding: 10px 12px;
+}
+
+.notice-saved::before {
+  display: none;
+}
+
+.notice .notice-badge {
+  grid-column: 1;
+  grid-row: 1;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--on-color);
 }
 
 .notice-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .notice-title {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .notice-detail {
-  font-size: 15px;
-  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
 }

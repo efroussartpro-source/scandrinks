@@ -3,10 +3,11 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.2, §6.7, §7)
  *
- * L'image du code lu ouvre la fiche (maquette I-confirm). Le mode est
- * rappelé en couleur et par le signe : « Pack de 24 » sous le nom, « +24 »
- * en très gros, et « Valider », dans la couleur du mode (maquette
- * docs/maquettes/Main.dc.html). Pendant l'envoi et après un
+ * La photo du code lu ouvre la fiche, en grand sur sa plaque, avec la
+ * quantité dans une carte à droite (maquette C2-Sortie). Le mode est
+ * rappelé en couleur et par le signe : « +24 » en très gros, « Pack de 24 »
+ * sous le nom, et « Valider », large, à gauche, dans la couleur du mode.
+ * Pendant l'envoi et après un
  * échec, la quantité ne change plus : ce qui est réessayé est exactement ce
  * qui était affiché. Une photo choisie à la création du code mais non
  * enregistrée est signalée sous l'en-tête ; « Valider » marche quand même.
@@ -18,6 +19,7 @@ import { parseIntInRange } from '../domain/productDraft'
 import { confirmParts, QUANTITY_MAX, QUANTITY_MIN, type MoveMode } from '../domain/stock'
 import { PHOTO_NOT_SAVED_MESSAGE } from '../photos/photos'
 import Thumb from '../photos/Thumb'
+import { IconCheck } from '../ui/icons'
 import type { ConfirmState } from './scanFlow'
 
 interface ConfirmCardProps {
@@ -32,6 +34,7 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
   const { target, quantity, status, errorKind } = state
   const locked = status !== 'idle'
   const { what, delta } = confirmParts(target.units, quantity, mode)
+  const units = target.units * quantity
   // Ce qui est tapé reste tel quel (le champ peut être vide un instant) ; seule une
   // valeur de 1 à 99 change la quantité. En quittant le champ, il reprend la quantité.
   const [text, setText] = useState(String(quantity))
@@ -46,13 +49,18 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
 
   return (
     <section className="card confirm" data-mode={mode} aria-label="Fiche de confirmation">
-      <div className="confirm-head">
-        <Thumb path={target.photoPath} size={64} />
-        <div className="confirm-text">
-          <h2 className="card-title">{target.product.name}</h2>
-          <span className="confirm-what">{what}</span>
-        </div>
-        <span className="confirm-delta">{delta}</span>
+      <div className="confirm-head tile-plate">
+        <span className="confirm-photo">
+          <Thumb path={target.photoPath} fill emptyLabel />
+        </span>
+        <span className="confirm-amount">
+          <span className="confirm-delta">{delta}</span>
+          <span className="confirm-unit">{units > 1 ? 'unités' : 'unité'}</span>
+        </span>
+      </div>
+      <div className="confirm-text">
+        <h2 className="card-title">{target.product.name}</h2>
+        <span className="confirm-what">{what}</span>
       </div>
       {target.photoWarning && <p className="message message-warning">{PHOTO_NOT_SAVED_MESSAGE}</p>}
       <div className="quantity">
@@ -82,10 +90,11 @@ export default function ConfirmCard({ state, mode, onQuantity, onValidate, onClo
         </p>
       )}
       <div className="card-actions">
-        <button type="button" className="primary" disabled={status === 'saving'} onClick={onValidate}>
+        <button type="button" className="primary with-icon" disabled={status === 'saving'} onClick={onValidate}>
+          {status === 'idle' && <IconCheck size={20} strokeWidth={2.6} />}
           {status === 'saving' ? 'Enregistrement…' : status === 'failed' ? 'Réessayer' : 'Valider'}
         </button>
-        <button type="button" disabled={status === 'saving'} onClick={onClose}>
+        <button type="button" className="plain" disabled={status === 'saving'} onClick={onClose}>
           Annuler
         </button>
       </div>

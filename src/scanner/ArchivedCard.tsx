@@ -30,7 +30,7 @@ export default function ArchivedCard({ state, onReactivate, onClose }: ArchivedC
         <button type="button" className="primary" disabled={status === 'saving'} onClick={onReactivate}>
           {status === 'saving' ? 'Réactivation…' : status === 'failed' ? 'Réessayer' : 'Réactiver'}
         </button>
-        <button type="button" disabled={status === 'saving'} onClick={onClose}>
+        <button type="button" className="plain" disabled={status === 'saving'} onClick={onClose}>
           Annuler
         </button>
       </div>

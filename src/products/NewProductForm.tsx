@@ -266,6 +266,7 @@ export default function NewProductForm(props: NewProductFormProps) {
         {NUMBER_FIELDS.map(({ field, label, help }) => (
           <HelpField
             key={field}
+            inline
             label={label}
             help={help}
             error={errors[field]}
@@ -283,8 +284,8 @@ export default function NewProductForm(props: NewProductFormProps) {
             {formError}
           </p>
         )}
-        <div className="card-actions">
-          <button type="button" className="primary" disabled={submitting} onClick={() => void create()}>
+        <div className="form-actions">
+          <button type="button" className="primary block" disabled={submitting} onClick={() => void create()}>
             {sendingPhotos > 1
               ? 'Envoi des photos…'
               : sendingPhotos === 1
@@ -295,7 +296,7 @@ export default function NewProductForm(props: NewProductFormProps) {
                     ? 'Réessayer'
                     : 'Créer le produit'}
           </button>
-          <button type="button" disabled={submitting} onClick={onCancel}>
+          <button type="button" className="plain block" disabled={submitting} onClick={onCancel}>
             Annuler
           </button>
         </div>

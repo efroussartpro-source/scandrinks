@@ -28,23 +28,26 @@
   font-weight: 700;
 }
 
-/* Photo d'un code dans un formulaire (maquettes I-photo, I-off) : l'aperçu, ce qui sera gardé, puis les gestes. */
+/* Photo d'un code dans un formulaire (maquette C2-Nouveau) : la photo en grand sur sa plaque, puis ce qui sera gardé et
+   les gestes. */
 .photo-picker {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px;
-  border-radius: 14px;
-  background: var(--field);
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* Sans image : un emplacement en pointillés. */
-.photo-picker[data-empty] {
-  border: 1px dashed var(--bar-border);
+.photo-picker-plate {
+  flex: none;
+  height: 176px;
+  border-radius: 20px;
+}
+
+/* Sans image : la plaque bordée de pointillés, l'appareil photo au milieu. */
+.photo-picker[data-empty] .photo-picker-plate {
+  border: 1px dashed var(--field-border);
 }
 
 .photo-picker-text {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -53,12 +56,13 @@
 }
 
 .photo-picker-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .photo-picker-help {
   font-size: 13px;
+  font-weight: 600;
   line-height: 1.35;
   color: var(--text-2);
 }
@@ -66,14 +70,11 @@
 .photo-picker-actions {
   display: flex;
   flex-wrap: wrap;
-  margin-left: -8px;
+  gap: 16px;
 }
 
-.photo-picker-actions button,
-.photo-take {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.photo-picker-actions button {
+  padding: 0;
   font-size: 15px;
 }
 
@@ -81,7 +82,8 @@
   min-height: 44px;
   margin-top: 4px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 14px;
+  font-size: 15px;
 }
 
 /* Vignette touchable d'un code (fiche produit) : la toucher change sa photo. */

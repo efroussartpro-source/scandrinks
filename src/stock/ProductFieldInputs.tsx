@@ -43,6 +43,7 @@ export default function ProductFieldInputs({ values, errors, disabled, onChange 
       {NUMBER_FIELDS.map(({ field, label, help }) => (
         <HelpField
           key={field}
+          inline
           label={label}
           help={help}
           error={errors[field]}

@@ -9,13 +9,17 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
+/* Deux grandes cases, le nombre en gros au centre (maquette C2-Inventaire). */
 .count-inputs input {
   min-width: 0;
-  font-size: 22px;
-  font-weight: 700;
+  min-height: 62px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
 }
 
 .count-help {
