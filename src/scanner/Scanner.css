@@ -334,7 +334,7 @@
   border-radius: 18px;
 }
 
-/* Quantité : une piste bordée ; « − » et « + » sur la couleur pâle du mode. */
+/* Quantité : une piste bordée ; « − » et « + » sur la couleur pâle du mode, 44 px de haut (zones tactiles). */
 .quantity {
   display: flex;
   align-items: center;
@@ -345,7 +345,6 @@
 }
 
 .stepper {
-  min-height: 48px;
   padding: 3px;
   display: flex;
   align-items: center;
@@ -357,7 +356,7 @@
 
 .stepper button {
   width: 44px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0;
   border-radius: 12px;
   background: var(--accent-pale);
@@ -369,7 +368,7 @@
 /* 16 px au moins : en dessous, iOS zoome sur le champ touché. */
 .stepper input {
   width: 48px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0;
   font: inherit;
   font-size: 20px;
