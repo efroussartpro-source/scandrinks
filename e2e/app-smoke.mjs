@@ -1373,6 +1373,8 @@ async function scenarioAppearance(browser) {
   assert.equal(await scannerTab.evaluate((tab) => getComputedStyle(tab).color), 'rgb(31, 111, 63)')
   await page.getByRole('button', { name: 'Stock', exact: true }).click()
   assert.equal(await page.locator('.employee').evaluate((pill) => getComputedStyle(pill).backgroundColor), 'rgb(221, 240, 228)')
+  // Le nom des onglets en 11 px à toutes les largeurs (spec §6.7).
+  assert.equal(await page.locator('.tab-bar .tab-label', { hasText: 'Stock' }).evaluate((label) => getComputedStyle(label).fontSize), '11px')
   await scannerTab.click()
 
   // 2. « Sombre » : la nuit, la barre d'état noire, « Se déconnecter » en rouge de nuit.
@@ -1458,6 +1460,8 @@ async function scenarioImages(browser) {
     const list = page.getByRole('list', { name: 'Produits' })
     const productRow = (name) => list.getByRole('button', { name: new RegExp(`^${name}`) })
     await waitForImage(productRow('Coca-Cola 33 cl').locator('img.thumb'))
+    // L'image est toujours entière, posée sur sa plaque (spec §6.7) : jamais recadrée.
+    assert.equal(await productRow('Coca-Cola 33 cl').locator('img.thumb').evaluate((image) => getComputedStyle(image).objectFit), 'contain')
     await productRow('Évian 50 cl').locator('.thumb-empty').waitFor()
     await productRow('Lipton Pêche 50 cl').locator('.thumb-empty').waitFor()
     assert.deepEqual(signedPaths(fake).slice(signsBefore), [['codes/3502110123091/22222222-2222-4222-8222-222222222222.jpg']])

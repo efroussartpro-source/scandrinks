@@ -1,17 +1,31 @@
-/* Vignettes des images (maquettes I-confirm, I-stock, I-fiche) : un carré arrondi, l'image recadrée au centre. */
+/* Photos (spec §6.7) : toujours entières, jamais coupées, sur la plaque claire, de jour comme de nuit (les images
+   d'Open Food Facts ont un fond blanc). Un carré arrondi, ou toute la place d'une plaque (thumb-fill). */
 .thumb {
   flex: none;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   background: var(--plate);
 }
 
-/* Sans image : l'icône grise du produit sur le fond de la vignette. */
+.thumb-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+/* Sans image : une icône de boisson sur la plaque, et « Pas de photo » sur une grande plaque. */
 .thumb-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   color: var(--plate-text);
+}
+
+.thumb-empty-label {
+  font-size: 12px;
+  font-weight: 700;
 }
 
 /* Photo d'un code dans un formulaire (maquettes I-photo, I-off) : l'aperçu, ce qui sera gardé, puis les gestes. */

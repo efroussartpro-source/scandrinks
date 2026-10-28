@@ -215,3 +215,39 @@ export const IconInfo = makeIcon(
     <path d="M12 8h.01" />
   </>,
 )
+
+export const IconCupSoda = makeIcon(
+  'IconCupSoda',
+  <>
+    <path d="m6 8 1.75 12.28a2 2 0 0 0 2 1.72h4.54a2 2 0 0 0 2-1.72L18 8" />
+    <path d="M5 8h14" />
+    <path d="M7 15a6.47 6.47 0 0 1 5 0 6.47 6.47 0 0 0 5 0" />
+    <path d="m12 8 1-6h2" />
+  </>,
+)
+
+export const IconArchive = makeIcon(
+  'IconArchive',
+  <>
+    <rect width="20" height="5" x="2" y="3" rx="1" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 12h4" />
+  </>,
+)
+
+export const IconKeyboard = makeIcon(
+  'IconKeyboard',
+  <>
+    <path d="M10 8h.01" />
+    <path d="M12 12h.01" />
+    <path d="M14 8h.01" />
+    <path d="M16 12h.01" />
+    <path d="M18 8h.01" />
+    <path d="M6 8h.01" />
+    <path d="M7 16h10" />
+    <path d="M8 12h.01" />
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+  </>,
+)
+
+export const IconCheck = makeIcon('IconCheck', <path d="M20 6 9 17l-5-5" />)

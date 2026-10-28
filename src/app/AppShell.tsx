@@ -119,7 +119,7 @@ export default function AppShell() {
 
   return (
     <>
-      <div className="app" hidden={overlay !== null}>
+      <div className="app" data-tab={tab} hidden={overlay !== null}>
         <header className="app-header">
           <span className="brand-tile" aria-hidden="true">
             <IconBarcode size={18} strokeWidth={2.2} />

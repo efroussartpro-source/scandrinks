@@ -4,9 +4,10 @@
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4)
  *
  * Scanner, À racheter (avec le nombre de produits à racheter), Stock, Ventes
- * (la fin de journée) et Historique, chacun avec son icône. Les cinq tiennent
- * sur une ligne dès 320 px de large (nom en 11 px sous 360 px) ; le nombre se
- * pose sur le coin de l'icône, sans prendre la place du nom.
+ * (la fin de journée) et Historique, chacun avec son icône ; l'onglet ouvert
+ * a son icône dans une pastille vert pâle (§6.7). Les cinq tiennent sur une
+ * ligne dès 320 px de large (nom en 11 px) ; le nombre se pose sur le coin de
+ * l'icône, sans prendre la place du nom.
  */
 import type { ComponentType } from 'react'
 import { IconHistory, IconPackage, IconReceiptText, IconScanBarcode, IconShoppingCart, type IconProps } from '../ui/icons'
@@ -41,7 +42,7 @@ export default function TabBar({ tab, shoppingCount, onChange }: TabBarProps) {
             onClick={() => onChange(id)}
           >
             <span className="tab-icon">
-              <Icon size={26} strokeWidth={tab === id ? 2 : 1.8} />
+              <Icon size={22} strokeWidth={tab === id ? 2.2 : 1.9} />
               {count !== null && (
                 <span className="badge" aria-hidden="true">
                   {count}
