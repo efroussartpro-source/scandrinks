@@ -90,8 +90,11 @@ async function startRecorder(context, page, origin) {
   const framesDir = join(RAW_DIR, 'frames')
   mkdirSync(framesDir, { recursive: true })
   const frames = []
+  // Une image encore en route quand la capture s'arrête est ignorée : le film est déjà monté, son dossier effacé.
+  let stopping = false
   const cdp = await context.newCDPSession(page)
   cdp.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    if (stopping) return
     const file = join(framesDir, `${String(frames.length).padStart(6, '0')}.jpg`)
     writeFileSync(file, Buffer.from(data, 'base64'))
     frames.push({ file, t: metadata.timestamp * 1000 - origin })
@@ -101,6 +104,7 @@ async function startRecorder(context, page, origin) {
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: 780, maxHeight: 1688, everyNthFrame: 2 })
   return {
     async stop(end) {
+      stopping = true
       await cdp.send('Page.stopScreencast')
       if (frames.length === 0) throw new Error('Aucune image capturée pendant le tournage')
       const lines = ['ffconcat version 1.0']
