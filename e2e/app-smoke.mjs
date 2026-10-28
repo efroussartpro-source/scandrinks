@@ -160,9 +160,11 @@ async function scenarioMain(browser) {
   await page.getByLabel('Mot de passe').fill(GOOD_PASSWORD)
   await page.getByRole('button', { name: 'Se connecter' }).click()
   await page.getByRole('heading', { name: 'Qui es-tu ?' }).waitFor()
-  // Les prénoms déjà utilisés, en cartes avec leur initiale (décorative : le nom du bouton reste le prénom).
-  assert.equal(await page.locator('.choices button').count(), 2)
+  // Les prénoms déjà utilisés, en cartes avec leur initiale (décorative : le nom du bouton reste le prénom). La liste
+  // arrive après le titre : on attend la carte de Sam avant de compter.
   const sam = page.getByRole('button', { name: 'Sam', exact: true })
+  await sam.waitFor()
+  assert.equal(await page.locator('.choices button').count(), 2)
   assert.equal(await sam.locator('.name-initial').textContent(), 'S')
   assert.equal(await sam.locator('.name-initial').getAttribute('aria-hidden'), 'true')
   await sam.click()
