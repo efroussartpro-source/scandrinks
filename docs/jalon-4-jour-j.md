@@ -5,7 +5,7 @@
 
 > **Changement du 22/10/2026 (jalon 5, la fin de journée).** Le stock couvre maintenant toute la boutique : les livraisons s'ajoutent par scan, et chaque soir l'équipe saisit les ventes du jour dans l'onglet « Ventes ». L'inventaire du premier jour se fait donc le soir, à la fermeture, et compte aussi les frigos et les rayons.
 >
-> **Reporté au 23/10/2026 au soir :** à la fermeture, la remise à zéro, puis tout de suite l'inventaire. Les nouvelles règles et la fin de journée commencent le 24/10.
+> **Reporté au 28/10/2026 au soir :** à la fermeture, l'inventaire. La base repart vide avant : les 3 produits d'essai sont supprimés dans l'app pendant l'essai du jalon 6 (`docs/jalon-6-test.md`), ce qui remplace la remise à zéro par le script. Les nouvelles règles et la fin de journée commencent le 29/10.
 
 **Ce qu'il te faut :** ton ordinateur ou ton iPhone, pour le tableau de bord Supabase et GitHub ; le mot de passe du tabac ; la feuille A4 de la réserve.
 
@@ -70,11 +70,11 @@ Sur ton iPhone, dans l'app installée :
 
 ## La semaine d'essai
 
-Les règles depuis le 24/10/2026 :
+Les règles depuis le 29/10/2026 :
 - [ ] Chaque livraison Metro est scannée en « Entrée + ».
 - [ ] Un pack porté au frigo ne se scanne plus : il reste dans la boutique.
 - [ ] « Sortie − » sert seulement à la casse, au périmé et aux boissons offertes.
-- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour. Jamais les ventes du 23/10 ni d'avant : l'inventaire du 23/10 au soir les compte déjà, et l'app ne propose pas ces jours.
+- [ ] Chaque soir, à la fermeture, la fin de journée : onglet « Ventes », les boissons vendues lues sur la caisse (« Lecture jour »), puis « Valider » et « Enregistrer ». Un soir oublié se rattrape dans les 7 jours, en choisissant le jour. Jamais les ventes du 28/10 ni d'avant : l'inventaire du 28/10 au soir les compte déjà, et l'app ne propose pas ces jours.
 - [ ] Un comptage (« Inventaire = », « Corriger le stock ») se fait boutique fermée : le soir après la fin de journée, ou le matin avant l'ouverture. En journée, il retirerait deux fois les ventes du matin.
 - [ ] Avant chaque passage chez Metro, regarde « À racheter » le matin avant l'ouverture, ou le soir après la fin de journée : en journée, l'app compte encore les boissons vendues depuis le matin.
 - [ ] Tiens un carnet de bord : la date, l'iPhone, ce qui s'est passé, et une capture d'écran si possible.

@@ -595,11 +595,11 @@ Le guide d'une page prévu devient deux supports : une **vidéo tuto** et une **
 
 ### Bascule vers la fin de journée (jalon 5)
 
-Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. Reportée d'un jour : le 22/10 au soir, la remise à zéro n'avait pas eu lieu (choix du porteur du projet).
+Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. Reportée au 23/10, puis au 28/10 au soir : la remise à zéro et l'inventaire n'avaient pas eu lieu (choix du porteur du projet ; la base n'avait pas bougé depuis le 22/10).
 
-- **Le 23/10/2026 au soir, boutique fermée** : la remise à zéro, puis tout de suite l'inventaire de toute la boutique (réserve, frigos et rayons), avec les deux règles de l'inventaire.
-- **À partir du 24/10** : on scanne les livraisons (« Entrée + ») ; un pack porté au frigo ne se scanne plus ; « Sortie − » sert à la casse, au périmé et aux boissons offertes.
-- **Chaque soir** : la fin de journée (§4.8). Tant que l'onglet n'est pas en service, on note les jours ; on les rattrape ensuite (7 jours au plus), avec l'historique jour par jour de la caisse. Le premier jour de ventes est le 24/10 : l'onglet ne propose pas les jours d'avant, que l'inventaire du 23/10 au soir compte déjà.
+- **Le 28/10/2026 au soir, boutique fermée** : l'inventaire de toute la boutique (réserve, frigos et rayons), avec les deux règles de l'inventaire. La base repart vide : le porteur du projet supprime dans l'app les 3 produits d'essai, pendant l'essai du jalon 6 (§9, « Mise en service (jalon 6) »), ce qui revient à la remise à zéro.
+- **À partir du 29/10** : on scanne les livraisons (« Entrée + ») ; un pack porté au frigo ne se scanne plus ; « Sortie − » sert à la casse, au périmé et aux boissons offertes.
+- **Chaque soir** : la fin de journée (§4.8). Tant que l'onglet n'est pas en service, on note les jours ; on les rattrape ensuite (7 jours au plus), avec l'historique jour par jour de la caisse. Le premier jour de ventes est le 29/10 : l'onglet ne propose pas les jours d'avant, que l'inventaire du 28/10 au soir compte déjà.
 - **Les comptages** (« Inventaire = », « Corriger le stock ») se font boutique fermée : le soir après la fin de journée, ou le matin avant l'ouverture. En journée, les ventes du matin seraient retirées deux fois : par le comptage, puis par la fin de journée du soir.
 - **Après l'inventaire** : relever les seuils et les stocks idéaux, qui comptent maintenant le frigo et les rayons.
 - **La feuille A4 et la vidéo tuto** suivent : « Je sors un pack de la réserve » devient « En fin de journée », et le chapitre 3 de la vidéo montre la fin de journée.
@@ -609,7 +609,7 @@ Décidée le 22/10/2026, jour J du jalon 4, à la demande du porteur du projet. 
 Décidée le 27/10/2026, à la demande du porteur du projet.
 
 1. **La base.** La migration du jalon 6 contient des effacements, dans le corps de `private.erase_product`. Le connecteur Supabase risque alors d'attendre une confirmation qui ne parvient pas au porteur du projet (leçon du 20/10). Le porteur du projet colle donc le fichier dans l'éditeur SQL de Supabase et le lance, guidé pas à pas. Claude vérifie ensuite, en lecture seule, que les deux fonctions et leurs droits sont identiques au fichier, puis inscrit la ligne d'historique de la migration (un ajout, comme le 20/10). L'app en ligne n'est pas touchée : elle n'appelle pas les nouvelles fonctions.
-2. **La préversion**, sur l'iPhone du porteur du projet : un produit d'essai créé avec un pack et une canette, leurs deux photos, puis sa suppression. L'essai se nettoie ainsi tout seul.
+2. **La préversion**, sur l'iPhone du porteur du projet : un produit d'essai créé avec un pack et une canette, leurs deux photos, puis sa suppression. L'essai se nettoie ainsi tout seul. Le porteur du projet y supprime aussi les 3 produits d'essai restants (20 au 22/10) : la base repart vide pour l'inventaire du 28/10 au soir, et Claude le vérifie en lecture seule.
 3. **La publication**, sur son « go ».
 
 La vidéo tuto et la feuille A4 ne changent pas : la photo de la canette est facultative, et la suppression est rare.
@@ -714,6 +714,7 @@ La vidéo tuto et la feuille A4 ne changent pas : la photo de la canette est fac
 | 27/10/2026 | Une seule porte pour effacer : `delete_product`, qui appelle `private.erase_product` (`security definer`, schéma non exposé) : ses mouvements puis le produit verrouillés, dans l'ordre de `cancel_movement`, puis ses mouvements, ses codes et la fiche effacés ; aucun droit de suppression directe sur les produits ni les mouvements ; les images restent dans le stockage | Une ligne d'historique ne s'efface jamais seule ; un mouvement envoyé au même moment passe avant ou il est refusé ; même règle que pour une image remplacée |
 | 27/10/2026 | Migration du jalon 6 lancée par le porteur du projet dans l'éditeur SQL ; Claude vérifie ensuite en lecture seule et inscrit la ligne d'historique | Elle contient des effacements : le connecteur Supabase attend une confirmation qui ne parvient pas au porteur du projet (leçon du 20/10) |
 | 27/10/2026 | Un enregistrement qui vise un produit supprimé entre-temps est « refusé », jamais « base injoignable » ; une fin de journée refusée relit la liste | Le message dit vrai ; la ligne disparue ne bloque pas la saisie suivante |
+| 28/10/2026 | Bascule reportée au 28/10 au soir ; premier jour de ventes : le 29/10 (`VITE_FIRST_SALES_DAY`) ; la remise à zéro se fait en supprimant dans l'app les 3 produits d'essai, pendant l'essai du jalon 6 | La base n'avait pas bougé depuis le 22/10 ; choix du porteur du projet. Supprimer les produits efface exactement ce qu'efface le script (mouvements, codes, produits), sans éditeur SQL |
 | 27/10/2026 | Photo de la canette à la création, quand on scanne une canette du pack ; le premier cadre devient « Photo du pack » ; l'image du produit suit toujours le §4.7 (celle du code du pack Metro, sinon la première disponible) ; vidéo et feuille A4 inchangées | Demande du porteur du projet. Remplace la décision du 22/10 (« la canette scannée pour le nom ne donne pas d'image à la création ») : l'image de la canette va au code de la canette, jamais au pack. La photo est facultative : pas de nouveau tournage ni de nouvelle feuille à imprimer |
 
 ## 12. Glossaire

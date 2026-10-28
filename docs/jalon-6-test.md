@@ -45,6 +45,11 @@ Ouvre la préversion dans Safari, connecte-toi, puis choisis ton prénom. Reste 
   - Le produit n'est plus dans le Stock, ni dans « Archivés ». Dans l'Historique, la ligne de l'entrée d'essai a disparu.
   - Dans « Scanner », le pack est de nouveau « Code inconnu » : touche « Annuler ».
 - [ ] **11. Le mode sombre.** Réglages › « Apparence » › « Sombre » : la fiche produit et ses deux boutons rouges se lisent bien. Remets ensuite ton réglage habituel.
+- [ ] **12. La base vide pour l'inventaire de ce soir.** Elle remplace la remise à zéro : personne n'utilise l'app avant l'inventaire, il n'y a donc rien à perdre.
+  - Dans « Stock », supprime un par un les produits qui restent : les 3 produits d'essai du 20 au 22/10. Pour chacun : la fiche › « Supprimer le produit » › « OK ».
+  - Regarde aussi « Archivés » : il doit être vide.
+  - Le Stock affiche « Aucun produit pour l'instant. ». Écris-moi « Base vide » : je vérifie, en lecture seule, qu'il ne reste ni produit, ni code, ni mouvement, et que le compte du tabac est toujours là.
+- [ ] **13. Le premier jour de ventes.** Touche « Ventes » : jusqu'au 28/10 compris, l'écran dit « La fin de journée commence le 29/10. ». C'est normal : l'inventaire de ce soir compte déjà les ventes d'avant.
 
 ## Si quelque chose cloche
 
@@ -54,4 +59,8 @@ Ouvre la préversion dans Safari, connecte-toi, puis choisis ton prénom. Reste 
 
 ## Ce que tu me renvoies
 
-« OK », ou ce qui ne va pas, avec le numéro de l'étape et une capture d'écran. Après ton « go », je publie la nouvelle version.
+« OK », ou ce qui ne va pas, avec le numéro de l'étape et une capture d'écran. Après ton « go », je publie la nouvelle version, avant l'inventaire de ce soir.
+
+## Ce soir, boutique fermée : l'inventaire
+
+Avec l'app habituelle (https://scandrinks.pages.dev), comme prévu dans `docs/jalon-4-jour-j.md` : « Scanner » › « Inventaire = », un scan par produit, la fiche créée si besoin, avec la photo du pack et celle de la canette, puis le comptage. Un produit = une seule personne, et ni entrée ni sortie pendant l'inventaire. Ensuite, relève les seuils et les stocks idéaux. La première fin de journée a lieu demain soir, le 29/10.

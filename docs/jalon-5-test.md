@@ -14,9 +14,9 @@ Ton iPhone et le mot de passe du tabac.
 ## A. Dès maintenant : les cinq onglets
 
 - [ ] **1. Les cinq onglets.** Ouvre la préversion dans Safari, connecte-toi, puis choisis ton prénom. En bas, cinq onglets : « Scanner », « À racheter », « Stock », « Ventes » et « Historique ».
-- [ ] **2. Avant le premier jour de ventes.** Touche « Ventes » : le titre est « Fin de journée », et jusqu'au 23/10 compris, l'écran dit « La fin de journée commence le 24/10. ». C'est normal : l'inventaire du 23/10 au soir compte déjà les ventes d'avant.
+- [ ] **2. Avant le premier jour de ventes.** Touche « Ventes » : le titre est « Fin de journée », et jusqu'au 28/10 compris, l'écran dit « La fin de journée commence le 29/10. ». C'est normal : l'inventaire du 28/10 au soir compte déjà les ventes d'avant.
 
-## B. À partir du 24/10 : une vente d'essai
+## B. À partir du 29/10 : une vente d'essai
 
 À faire avant la première vraie fin de journée, dans l'app publiée (ou la préversion).
 
