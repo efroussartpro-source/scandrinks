@@ -73,18 +73,23 @@ Le téléphone reste ensuite connecté.
 
 ```
 +--------------------------------+
-| [logo] ScanDrinks    (Sam)  ⚙  |
+| [logo] ScanDrinks    (Sam)  ⚙  |  posés sur la caméra
 | [ ENTRÉE + | SORTIE − | INV = ]|
+|                                |
+|           [ caméra ]           |
+|                                |
+| +----------------------------+ |  panneau du bas
+| | [ photo du produit ]  +24  | |
+| | Coca-Cola 33 cl            | |
+| | Pack de 24                 | |
+| | Quantité       [−]  1  [+] | |
+| | [     VALIDER     ] Annuler| |
 | +----------------------------+ |
-| |         [ caméra ]         | |
-| +----------------------------+ |
-| [image] Coca-Cola 33 cl   +24  |
-|         Pack de 24             |
-| Quantité         [−]  1  [+]   |
-| [      VALIDER      ] Annuler  |
 +--------------------------------+
 | Scanner  À racheter  Stock  Ventes  Historique |
 ```
+
+Depuis le jalon 7 (design « Vitrine », §6.7), la caméra occupe le haut de l'écran, avec l'en-tête et les modes posés dessus. Ce qui suit un scan s'ouvre dans un panneau, en bas.
 
 **Modes.** Trois modes, chacun avec sa couleur :
 
@@ -122,18 +127,21 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 ### 4.3 À racheter
 
 - La liste montre les produits dont le stock est inférieur ou égal au seuil (RG-5).
-- Chaque ligne donne l'image du produit, le nom, le stock restant et **le nombre de packs à prendre**, mis en avant dans une pastille. Exemple : « Coca-Cola 33 cl — reste 10 — 2 packs de 24 ».
+- Chaque ligne donne l'image du produit, le nom, le stock restant et **le nombre de packs à prendre**, mis en avant : en gros et en orange, à droite (jalon 7). Exemple : « Coca-Cola 33 cl — reste 10 — 2 packs de 24 ».
 - Les produits en rupture (stock ≤ 0) viennent en premier, les autres suivent par ordre alphabétique.
 - Un badge sur l'onglet indique le nombre de produits à racheter.
 - Une ligne disparaît dès qu'une entrée fait repasser le stock au-dessus du seuil.
 
 ### 4.4 Stock et fiche produit
 
-- La liste montre tous les produits actifs par ordre alphabétique : l'image du produit, le nom, son état ou ses packs (« 2 packs + 5 ») et le stock en gros à droite. Un produit est en rouge si son stock est inférieur ou égal au seuil (il figure alors dans À racheter) ou négatif. Un champ de recherche est placé en haut.
-- Le filtre « Archivés » affiche les produits archivés, que l'on peut réactiver ou supprimer depuis leur fiche.
+- Les produits actifs s'affichent par ordre alphabétique, en grille de deux colonnes (jalon 7). Chaque tuile montre :
+  - la photo du produit, avec son stock dans une pastille posée dessus, rouge si le stock est négatif ;
+  - la pastille « À racheter » quand le stock est inférieur ou égal au seuil (le produit figure alors dans À racheter) ;
+  - le nom, puis l'état : ce qu'il faut racheter (« 2 packs à racheter », en orange), « Stock à vérifier » (en rouge) pour un stock négatif, ou sinon ses packs (« 2 packs + 5 »).
+- Un champ de recherche est placé en haut, avec le bouton « Archivés ». Appuyé, il affiche les produits archivés, que l'on peut réactiver ou supprimer depuis leur fiche ; touché de nouveau, il revient aux produits actifs.
 - La fiche produit contient, de haut en bas :
-  - « Retour », puis l'image et le nom du produit ;
-  - le stock en très gros, avec le pack Metro, le seuil et le stock idéal ;
+  - « Retour », puis la grande photo du produit (avec « À racheter » s'il y a lieu) et son nom ;
+  - le stock en très gros, ce qu'il faut racheter s'il y a lieu, puis le pack Metro, le seuil et le stock idéal ;
   - deux boutons : « Corriger le stock » et « Modifier » ;
   - les codes, chacun avec son image, ses unités et la provenance de l'image ; « Modifier » et « Retirer » en liens sur la ligne ; « Ajouter un code » en fin de liste ;
   - les 20 derniers mouvements, le type en couleur ;
@@ -158,7 +166,7 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
   - « lun. 14:32 — Sam — Entrée +24 — Coca-Cola 33 cl » ;
   - « Inventaire : 53 comptés (−3) » ;
   - « jeu. 19:42 — Sam — Vente −2 (ventes du 22/10) — Coca-Cola 50 cl », pour une fin de journée (§4.8).
-- À l'écran, chaque ligne tient sur deux lignes : le produit et la quantité en couleur (orange pour une sortie ou une vente, vert pour une entrée, bleu pour un inventaire), puis le type, la date et le prénom.
+- À l'écran, chaque ligne commence par la photo du produit (jalon 7), puis tient sur deux lignes : le produit et la quantité en couleur (orange pour une sortie ou une vente, vert pour une entrée, bleu pour un inventaire), puis le type, la date et le prénom.
 - Toute ligne active peut être annulée, après confirmation, par le lien « Annuler » de la ligne. Une ligne annulée reste visible, barrée, avec la mention « annulé par [prénom] ».
 
 ### 4.6 Réglages
@@ -179,8 +187,9 @@ Chaque téléphone garde le dernier mode choisi. La fiche de confirmation rappel
 - **Affichage :**
   - après un scan, sur la fiche de confirmation : l'image du code scanné ;
   - dans la fiche produit : l'image du produit en haut, et celle de chaque code ;
-  - dans Stock et À racheter : l'image du produit.
-- L'image du produit est celle du code dont les unités valent le pack Metro, sinon la première image disponible. Sans image, une icône grise la remplace.
+  - dans Stock et À racheter : l'image du produit ;
+  - dans l'Historique (jalon 7) et les Ventes : l'image du produit, en petit.
+- L'image du produit est celle du code dont les unités valent le pack Metro, sinon la première image disponible. Sans image, une icône de boisson la remplace, avec « Pas de photo » sur les grandes images (jalon 7).
 - Les images montrent les produits, jamais les personnes.
 - Les images d'un produit supprimé restent dans le stockage, sans servir (RG-15).
 
@@ -255,6 +264,7 @@ déploiement automatique depuis GitHub
   - Cloudflare Pages ne répond pas aux demandes partielles (en-tête `Range`, mesuré le 21/10/2026), dont un iPhone a besoin pour lire un fichier MP4. Une vidéo HLS n'en a pas besoin.
   - Lecteur natif de l'iPhone (`<video playsinline>`) ; rien n'est chargé avant le toucher de lecture.
 - **Erreur d'affichage imprévue** : un filet de sécurité remplace l'écran par un message et « Recharger », au lieu d'une page blanche (§7).
+- **Police** (jalon 7) : Plus Jakarta Sans, sous licence libre SIL OFL 1.1, livrée avec l'app au format WOFF2. Rien n'est chargé chez Google. Si elle ne se charge pas, la police du système prend le relais.
 - Conventions de code (comme ScamScanner) : identifiants en anglais ; commentaires, documentation et interface en français.
 
 ### 6.3 Données (PostgreSQL, Supabase)
@@ -357,61 +367,128 @@ Limites connues :
 - Le délai maximal est de 3 secondes. En cas d'échec ou de réponse vide, le nom reste à saisir.
 - Le nom proposé reste modifiable, car les données sont parfois fausses : la Cristaline 1,5 L y est enregistrée sous le nom « isabelle ».
 
-### 6.7 Charte visuelle (refonte du 21/10/2026)
+### 6.7 Charte visuelle (design « Vitrine », jalon 7)
 
-Style « comme une app iPhone » : fond gris clair, cartes blanches, listes groupées, onglets avec icônes, et le vert ScanDrinks en accent. Maquettes de référence : https://claude.ai/artifact/K9LaQSBEFJ44is1kVoCb8a, page « Style A — tous les écrans ».
+Style « vitrine » :
+- les produits en grandes photos ;
+- des cartes blanches aux coins arrondis, sur un fond blanc cassé ;
+- des couleurs franches pour les états ;
+- le vert ScanDrinks en accent.
+
+Ce style remplace, au jalon 7, le style « comme une app iPhone » de la refonte du 21/10/2026. Le porteur du projet l'a choisi le 28/10/2026 parmi trois pistes (« Frais », « Doux », « Vitrine »), inspirées des apps Yuka et Foodvisor.
+
+Maquettes de référence : https://claude.ai/artifact/ArT4JB78R8D87EER7u6ibT, sections « C · Partie 1 » à « C · Partie 4 », avec des copies dans `docs/maquettes/vitrine/`. Les dessins de canettes y tiennent la place des vraies photos.
 
 **Apparence.** Deux thèmes, jour et nuit, avec les mêmes écrans et les mêmes places. Le choix se fait dans Réglages › Apparence (§4.6) ; « Automatique » suit le réglage de l'iPhone.
 
 **Couleurs.**
 
-| Rôle | Jour | Nuit |
-|---|---|---|
-| Fond | `#F2F2F7` | `#000000` |
-| Cartes et listes | `#FFFFFF` | `#1C1C1E` |
-| Champs | `#F2F2F7` | `#2C2C2E` |
-| Pistes (sélecteurs, recherche) | `#E3E3E8` | `#2C2C2E` |
-| Séparateurs | `#E5E5EA` | `#38383A` |
-| Texte | `#1C1C1E` | `#FFFFFF` |
-| Texte secondaire | `#6C6C70` | `#98989F` |
-| Vert (boutons pleins) | `#1F6F3F` | `#26804A` |
-| Vert (textes, icônes) | `#1F6F3F` | `#4CD07D` |
-| Vert pâle (boutons teintés, pastilles) | `#E7F1EB` | `#1E3326` |
-| Orange Sortie (bouton plein / texte) | `#B45309` / `#A34A07` | `#A9520B` / `#FFA94D` |
-| Bleu Inventaire (bouton plein / texte) | `#1D4ED8` / `#1D4ED8` | `#2F5FE0` / `#7FB2FF` |
-| Rouge (textes) / rouge pâle (fonds) | `#C0392B` / `#FDECEA` | `#FF6961` / `#3A1D1B` |
-| Pastille de l'onglet À racheter | `#D70015` | `#D70015` |
-| Barre d'onglets | `#F9F9F9` | `#121214` |
+| Rôle | Variable | Jour | Nuit |
+|---|---|---|---|
+| Fond | `bg` | `#F7F7F5` | `#0F1110` |
+| Cartes, tuiles, champs, pistes | `card`, `field`, `track` | `#FFFFFF` | `#1A1D1B` |
+| Bords et séparateurs | `separator` | `#E5E6E1` | `#2B2F2C` |
+| Bord des champs | `field-border` | `#D3D5CF` | `#3A3F3B` |
+| Texte | `text` | `#171A18` | `#F2F3F1` |
+| Texte secondaire | `text-2` | `#5C625E` | `#A3A9A5` |
+| Texte des pistes | `text-3` | `#3B403D` | `#D5D8D6` |
+| Choix rempli (sélecteurs, puces) / son texte | `chip` / `on-chip` | `#171A18` / `#FFFFFF` | `#F2F3F1` / `#171A18` |
+| Vert (boutons pleins) | `green` | `#1F6F3F` | `#26804A` |
+| Vert (textes, icônes) | `green-text` | `#1F6F3F` | `#4CD07D` |
+| Vert pâle (onglet actif, boutons teintés, prénom) | `green-pale` | `#DDF0E4` | `#1E3326` |
+| Orange Sortie et À racheter (bouton plein / texte / pâle) | `orange` / `orange-text` / `orange-pale` | `#B45309` / `#A34A07` / `#FFEEDB` | `#A9520B` / `#FFA94D` / `#3A2614` |
+| Bleu Inventaire (bouton plein / texte / pâle) | `blue` / `blue-text` / `blue-pale` | `#1D4ED8` / `#1D4ED8` / `#EEF2FD` | `#2F5FE0` / `#7FB2FF` / `#17233D` |
+| Rouge (pastille pleine / texte / pâle) | `red` / `red-text` / `red-pale` | `#C0392B` / `#C0392B` / `#FDECEA` | `#C0392B` / `#FF6961` / `#3A1D1B` |
+| Pastille de l'onglet À racheter | `badge` | `#D70015` | `#D70015` |
+| Barre d'onglets / son bord | `tab-bar` / `bar-border` | `#FFFFFF` / `#E5E6E1` | `#151816` / `#2B2F2C` |
+| Plaque des photos / son texte | `plate` / `plate-text` | `#F1F2EE` / `#5C625E` | `#DCDDD8` / `#4A504C` |
+| Pastille « À racheter » sur une photo / son texte | `photo-badge` / `photo-badge-text` | `#FFFFFF` / `#A34A07` | `#FFFFFF` / `#A34A07` |
+| Pastille du stock sur une photo | `stock-chip` | `#171A18` | `#171A18` |
+| Tuiles d'icônes des Réglages | `tile-indigo` / `tile-gray` | `#5856D6` / `#6C716E` | `#5E5CE6` / `#636366` |
+| Texte sur une couleur | `on-color` | `#FFFFFF` | `#FFFFFF` |
+| Caméra / voile posé dessus | `camera` / `overlay` | `#000000` / noir à 60 % | `#000000` / noir à 60 % |
 
-**Contrastes.** Dans les deux thèmes, un texte atteint au moins 4,5:1 sur son fond, et un élément d'interface 3:1. Un test unitaire le vérifie sur les couleurs de la charte.
+**Contrastes.**
+- Dans les deux thèmes, un texte atteint au moins 4,5:1 sur son fond, et un élément d'interface 3:1. Un test unitaire le vérifie sur les couleurs de la charte. Le plus faible est à 4,76:1 de jour et à 4,92:1 de nuit (mesure du 28/10/2026).
+- Les pastilles posées sur une photo gardent leurs couleurs de nuit, car la plaque reste claire.
 
 **Typographie.**
-- La police du système : San Francisco sur iPhone.
-- Grand titre en 32 px (800), titre de carte en 20 px (700).
-- Texte en 17 px, texte secondaire en 15 px, note en 13 px, libellé d'onglet en 12 px (11 px sous 360 px de large, pour que les cinq onglets tiennent).
-- Grands nombres en 34 à 40 px (800). Champs de saisie en 17 px.
+- Plus Jakarta Sans, livrée avec l'app (§6.2) ; la police du système en secours.
+- Grand titre en 32 px (800), titre de fiche en 27 px (800), titre de section en 20 px (800).
+- Texte et champs de saisie en 17 px, nom sur une tuile en 15 px (700), note en 13 px, libellé d'onglet en 11 px partout (au lieu de 12 px).
+- Grands nombres de 40 à 60 px (800).
 
 **Formes.**
-- Cartes et listes arrondies (14 à 18 px), boutons et champs aussi (12 à 14 px), pastilles rondes.
+- Arrondis :
+  - tuiles : 20 px ;
+  - cartes : 20 à 22 px ;
+  - panneau du bas : 28 px, en haut ;
+  - boutons : 16 px ;
+  - champs : 14 px ;
+  - pastilles et puces : rondes.
 - Zones tactiles de 44 px au moins.
+- De jour, une ombre douce sous les cartes ; de nuit, un bord fin à la place.
 
 **Icônes.** Des icônes au trait, dessinées dans le code (SVG), reprises de la bibliothèque libre Lucide, sous licence ISC, mentionnée dans le code. Aucune dépendance.
 
+**Photos.**
+- Toujours sur la plaque claire et entières, jamais coupées, de jour comme de nuit : les images d'Open Food Facts ont un fond blanc.
+- Sans photo : une icône de boisson, avec « Pas de photo » quand l'image fait au moins 100 px de haut (tuiles du Stock, fiche produit, Scanner).
+- Les dessins de boissons de l'écran de connexion sont livrés avec l'app : avant la connexion, les vrais produits ne sont pas lisibles.
+
 **Composants.**
-- **En-tête :** le logo, « ScanDrinks », le prénom dans une pastille, puis la roue dentée.
-- **Barre d'onglets :** une icône et un nom par onglet ; l'onglet actif en vert ; la pastille rouge du nombre de produits à racheter.
-- **Sélecteur de mode :** trois segments, dont l'actif est rempli de sa couleur (vert, orange, bleu).
-- **Boutons :** principal (plein), teinté (fond pâle), lien (texte seul) et destructif (rouge). « Valider » prend la couleur du mode.
-- **Cartes et listes groupées :** des séparateurs fins, et un chevron pour ouvrir une ligne.
-- **Champs :** le libellé au-dessus, l'aide en petit dessous.
+- **En-tête :** le logo, « ScanDrinks », le prénom dans une pastille vert pâle, puis la roue dentée. Sur le Scanner, il est posé sur la caméra, sur le voile sombre.
+- **Titre d'écran :** en grand ; l'action de l'écran à droite (« Nouveau produit » sur le Stock).
+- **Barre d'onglets :** une icône et un nom par onglet ; l'onglet actif dans une pastille vert pâle ; la pastille rouge du nombre de produits à racheter.
+- **Sélecteur de mode :** posé sur la caméra, sur le voile sombre. Le mode choisi est rempli de sa couleur (vert, orange, bleu). Quand une fiche est ouverte, les deux autres sont grisés.
+- **Panneau du bas (Scanner) :** blanc, arrondi en haut. Il porte tout ce qui suit un scan (§4.2). Quand il a des champs à remplir, la caméra se réduit.
+- **Tuile produit (Stock) :**
+  - la photo, avec la pastille « À racheter » en haut à gauche et le stock en bas à droite (pastille sombre, rouge si négatif) ;
+  - puis le nom, sur deux lignes au plus, et l'état.
+- **Cartes et listes :** blanches, avec des séparateurs fins et la photo du produit en début de ligne.
+- **Boutons :**
+  - principal (plein), teinté (vert pâle), secondaire (blanc avec un bord), lien (texte seul) et destructif (texte rouge) ;
+  - « Valider » prend la couleur du mode ; il reste large, à gauche, et « Annuler » reste à droite.
+- **Champs :**
+  - le libellé au-dessus, l'aide en petit dessous ;
+  - un bord fin, vert quand le champ est actif (bleu en Inventaire) ;
+  - dans « Nouveau produit », chaque nombre a son aide à gauche et sa case à droite.
 - **Messages :** une bande teintée avec une icône.
-- **Images :** une vignette arrondie ; une icône grise quand il n'y a pas d'image.
+
+**Écrans** (les maquettes font foi) :
+- **Stock :** une grille de deux colonnes, qui montre 6 tuiles sur un iPhone de 390 px de large.
+- **Fiche produit :**
+  - la grande photo, puis le stock en très gros ;
+  - Pack Metro, Seuil et Stock idéal dans trois cases ;
+  - les codes avec leur photo ;
+  - « Archiver » et « Supprimer » dans une carte à part.
+- **Scanner :**
+  - la caméra en haut, en plein écran quand rien n'est ouvert ;
+  - la consigne dans une pastille sombre ;
+  - la confirmation avec la photo en grand et la quantité dans la couleur du mode ;
+  - « Code inconnu : 2000000000091 » garde son texte d'aujourd'hui (la maquette le coupe en deux lignes), et le code peut passer à la ligne.
+- **À racheter :** une carte par produit ; la quantité à acheter en gros, en orange, à droite.
+- **Ventes :**
+  - le jour dans un grand champ ;
+  - « Déjà saisi » et « À saisir » en cartes, avec les photos et de grandes cases « vendus » ;
+  - le total dans un encadré.
+- **Historique :** la photo du produit en début de ligne, la quantité en couleur.
+- **Connexion :** une mosaïque de dessins de boissons, le logo, puis la carte du formulaire.
+- **Qui es-tu ? :** les prénoms en grandes cartes, avec l'initiale dans un rond de couleur. La couleur vient du prénom, toujours la même pour un prénom, parmi quatre teintes pâles : vert, orange, bleu et rouge.
+- **Réglages :** les lignes en cartes, et « Se déconnecter » à part.
+- **Tutoriel :** la vidéo dans une grande carte arrondie.
+
+**Ce qui ne change pas.** Les fonctions, les règles, la base de données, l'ordre des onglets, les couleurs des modes, la place de « Valider », et les textes de l'app. Seuls changements visibles :
+1. Stock : le bouton « Archivés » remplace le sélecteur « Actifs / Archivés ».
+2. Stock et fiche produit : ce qu'il faut racheter (« 2 packs à racheter ») ; « Pas de photo » à la place d'une grande photo absente.
+3. Historique : la photo du produit.
+4. Connexion : la mosaïque de dessins de boissons.
+5. Qui es-tu ? : les prénoms en cartes, avec leur initiale.
 
 **Mise en page.**
-- Une seule colonne.
+- Une seule colonne, sauf la grille du Stock.
 - « Retour » en haut des écrans secondaires.
-- Les actions rares (archiver, se déconnecter) en bas, en rouge.
-- La caméra du Scanner se réduit quand une fiche longue s'ouvre, pour laisser la place aux champs.
+- Les actions rares (archiver, supprimer, se déconnecter) en bas, en rouge, à part.
 
 ## 7. Gestion des erreurs
 
@@ -462,6 +539,12 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 - **Jalon 6** :
   - `delete_product`, en tests SQL : les droits, l'identifiant vide, l'effacement du produit, de ses codes et de tous ses mouvements (annulés et ventes compris), les autres produits intacts, un code de nouveau libre, l'appel rejoué ; et une suppression en même temps qu'un scan, qu'un code ajouté ou qu'une annulation, dans les deux ordres (deux sessions PostgreSQL simultanées, en local) ;
   - dans les tests de bout en bout : la confirmation refusée puis acceptée, le message de la liste, le produit absent de partout, un produit supprimé ailleurs pendant une fin de journée ; la photo de la canette (image d'Open Food Facts, photo de l'équipe, une autre canette scannée, un envoi qui échoue).
+- **Jalon 7** :
+  - la charte, par un test unitaire : les couleurs du tableau du §6.7, jour et nuit, leurs contrastes, et aucune couleur écrite hors de la charte ;
+  - les règles pures, par des tests unitaires : l'état d'une tuile (« 2 packs à racheter », « Stock à vérifier » ou les packs), l'initiale d'un prénom et sa couleur ;
+  - dans les tests de bout en bout : les scénarios existants, avec les mêmes noms de boutons et de champs ; en plus, la grille du Stock et son bouton « Archivés », la photo dans l'Historique, la police servie avec l'app ;
+  - des captures de chaque écran, de jour et de nuit, à 390 et à 320 px de large, sans rien qui déborde, relues avant la préversion ;
+  - la vidéo tuto, refaite par son script, qui vérifie chaque écran avant le geste suivant.
 - **Recette en boutique** avec le porteur du projet, le jour J et pendant la semaine d'essai (§9, « Mise en service »), à partir d'une liste à cocher :
   - scans de vrais packs Metro et création de 3 fiches ;
   - une sortie et un inventaire ;
@@ -496,6 +579,7 @@ Style « comme une app iPhone » : fond gris clair, cartes blanches, listes grou
 | 4. La mise en service | Refonte visuelle (style iPhone, jour et nuit) et images des codes ; vidéo tuto (bouton « Tutoriel » et QR code), feuille A4 de la réserve, quatre corrections ; puis le jour J : remise à zéro, installation sur les iPhones de l'équipe, inventaire du premier jour. | Une semaine d'utilisation par l'équipe (détail ci-dessous). |
 | 5. La fin de journée | Onglet « Ventes » : les ventes du jour, lues sur la caisse, saisies chaque soir ; le stock couvre toute la boutique ; feuille A4 et vidéo mises à jour. | Une semaine de fins de journée, puis le recomptage de 5 produits : les écarts s'expliquent. |
 | 6. Suppression et photo de la canette | « Supprimer le produit », avec un message de confirmation ; la photo de la canette à la création depuis un pack. | Sur l'iPhone, dans la préversion : un produit d'essai créé avec un pack et une canette, leurs deux photos, puis sa suppression. |
+| 7. Le design « Vitrine » | Nouveau design de tous les écrans, de jour et de nuit (§6.7) ; police livrée avec l'app ; vidéo tuto refaite. | Sur l'iPhone, dans la préversion : chaque écran, de jour et de nuit, puis une journée type (scans, fin de journée). |
 
 Le rythme visé est d'une ou deux séances de travail par jalon. Le vrai délai dépend surtout des moments disponibles pour tester en boutique.
 
@@ -614,6 +698,15 @@ Décidée le 27/10/2026, à la demande du porteur du projet.
 
 La vidéo tuto et la feuille A4 ne changent pas : la photo de la canette est facultative, et la suppression est rare.
 
+### Mise en service (jalon 7)
+
+Décidée le 28/10/2026, à la demande du porteur du projet. Les travaux commencent après l'inventaire du 28/10 au soir : rien ne change ce soir-là.
+
+1. **La base** ne change pas : aucune migration.
+2. **La préversion**, sur l'iPhone du porteur du projet : chaque écran, de jour et de nuit, puis une journée type (scans, fin de journée). Pendant ce temps, l'équipe garde l'app habituelle.
+3. **La vidéo tuto** est refaite par son script, avec les mêmes chapitres et des données fictives. La feuille A4 ne montre aucun écran, et ses mots restent justes : elle ne change pas.
+4. **La publication**, sur le « go » du porteur du projet.
+
 ## 10. Risques et parades
 
 | Risque | Probabilité | Impact | Parade |
@@ -635,6 +728,9 @@ La vidéo tuto et la feuille A4 ne changent pas : la photo de la canette est fac
 | Une quantité mal recopiée de la caisse | Moyenne | Faible | Récapitulatif avant d'enregistrer, total à comparer avec la caisse ; annulation dans l'Historique, puis nouvelle saisie. |
 | Une boisson quitte la boutique sans passer en caisse (offerte, cassée) | Moyenne | Faible | « Sortie − » ; le recomptage montre l'écart. |
 | Un produit supprimé par erreur | Faible | Moyen | Le message de confirmation dit tout ce qui sera effacé ; « Archiver » reste pour mettre de côté. Sans retour possible : on recrée la fiche au scan suivant, puis on recompte en « Inventaire ». |
+| L'équipe perd ses repères avec le nouveau design | Moyenne | Faible | Mêmes onglets, mêmes mots, « Valider » au même endroit, mêmes couleurs des modes ; vidéo tuto refaite. |
+| La grille du Stock montre moins de produits que l'ancienne liste | Forte | Faible | Tuiles basses (6 produits par écran) et recherche en haut. |
+| La police ne se charge pas | Faible | Faible | La police du système prend le relais : l'app reste lisible. |
 
 ## 11. Journal des décisions
 
@@ -716,6 +812,13 @@ La vidéo tuto et la feuille A4 ne changent pas : la photo de la canette est fac
 | 27/10/2026 | Un enregistrement qui vise un produit supprimé entre-temps est « refusé », jamais « base injoignable » ; une fin de journée refusée relit la liste | Le message dit vrai ; la ligne disparue ne bloque pas la saisie suivante |
 | 28/10/2026 | Bascule reportée au 28/10 au soir ; premier jour de ventes : le 29/10 (`VITE_FIRST_SALES_DAY`) ; la remise à zéro se fait en supprimant dans l'app les 3 produits d'essai, pendant l'essai du jalon 6 | La base n'avait pas bougé depuis le 22/10 ; choix du porteur du projet. Supprimer les produits efface exactement ce qu'efface le script (mouvements, codes, produits), sans éditeur SQL |
 | 27/10/2026 | Photo de la canette à la création, quand on scanne une canette du pack ; le premier cadre devient « Photo du pack » ; l'image du produit suit toujours le §4.7 (celle du code du pack Metro, sinon la première disponible) ; vidéo et feuille A4 inchangées | Demande du porteur du projet. Remplace la décision du 22/10 (« la canette scannée pour le nom ne donne pas d'image à la création ») : l'image de la canette va au code de la canette, jamais au pack. La photo est facultative : pas de nouveau tournage ni de nouvelle feuille à imprimer |
+| 28/10/2026 | Nouveau design « Vitrine », choisi parmi trois pistes (« Frais », « Doux », « Vitrine ») inspirées de Yuka et Foodvisor ; le vert ScanDrinks reste | Demande du porteur du projet : un design « beaucoup plus joli », avec des couleurs franches, de grandes photos, des cartes douces, ludique et chaleureux |
+| 28/10/2026 | Design validé en quatre parties : charte, Stock et fiche ; Scanner ; À racheter, Ventes et Historique ; connexion, prénom, Réglages et nuit | Accord du porteur du projet à chaque partie, sur les maquettes |
+| 28/10/2026 | Stock en grille de deux colonnes, avec des tuiles basses (6 produits par écran) ; « Archivés » devient un bouton à côté de la recherche | Les grandes photos, sans trop allonger la liste |
+| 28/10/2026 | « Valider » reste large à gauche et « Annuler » à droite ; les modes gardent leurs couleurs ; les textes de l'app ne changent pas, « Code inconnu : … » compris | L'équipe garde ses réflexes : inverser ferait annuler par erreur |
+| 28/10/2026 | Plus Jakarta Sans livrée avec l'app (WOFF2, licence OFL), sans Google Fonts | Rien n'est envoyé à Google, et la police ne dépend pas d'un autre site |
+| 28/10/2026 | Les photos restent sur une plaque claire, entières, de jour comme de nuit | Les images d'Open Food Facts ont un fond blanc |
+| 28/10/2026 | Mise en œuvre au jalon 7, après l'inventaire du 28/10 ; vidéo tuto refaite à la fin | Rien ne change le soir de l'inventaire |
 
 ## 12. Glossaire
 

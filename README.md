@@ -134,7 +134,7 @@ Ces fichiers ne contiennent que des valeurs publiques :
 - `public/tutoriel/` : la page de la vidéo (`index.html`) et la vidéo en HLS (`video/` : liste, segments et image d'attente), servies avec l'app.
 - `scripts/tutorial/` : la vidéo tuto. `storyboard.mjs` (chapitres et sous-titres), `record.mjs` (tournage), `edit.mjs` (montage), `check.mjs` (contrôle), avec leurs aides. Le MP4 et le tournage brut vont dans `dist-tutorial/`, ignoré par Git : le MP4 est remis au porteur du projet.
 - `scripts/sheet/` : la feuille A4. `sheet.html` (le texte), `print.mjs` (QR code et PDF), `check.mjs` (contrôle).
-- `docs/maquettes/` : les maquettes de la refonte, validées par le porteur du projet.
+- `docs/maquettes/` : les maquettes de la refonte, validées par le porteur du projet ; `docs/maquettes/vitrine/` : celles du design « Vitrine » (jalon 7), validées le 28/10/2026.
 
 ### Hébergement
 
