@@ -120,6 +120,21 @@ const overflows = (page, width) =>
     width,
   )
 
+// Tuiles du Stock dont « Pas de photo » passe sous une pastille posée sur la photo (« À racheter » ou le stock).
+const photoLabelsCovered = (page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll('.stock-grid .product-row')].flatMap((tile) => {
+      const label = tile.querySelector('.thumb-empty-label')
+      if (!label || !label.checkVisibility()) return []
+      const a = label.getBoundingClientRect()
+      const covered = [...tile.querySelectorAll('.photo-badge, .product-stock')].some((pill) => {
+        const b = pill.getBoundingClientRect()
+        return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+      })
+      return covered ? [`${tile.querySelector('.product-name').textContent} (stock ${tile.querySelector('.product-stock').textContent})`] : []
+    }),
+  )
+
 // Total et écart d'un comptage d'inventaire.
 async function waitForCount(scope, total, gap) {
   await scope.locator('.count-total').filter({ hasText: exactly(total) }).waitFor()
@@ -874,13 +889,16 @@ async function scenarioStalledDatabase(browser) {
 }
 
 async function scenarioReaderAndCamera(browser) {
-  // Lecteur indisponible : le wasm arrive sous un mauvais type.
+  // Lecteur lent : tant qu'il se charge, le Scanner est au scan, et la consigne est posée dans le viseur.
   {
     const { context, page } = await openApp(browser)
-    await page.route('**/*.wasm', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>x</title>' }))
+    let releaseReader
+    const readerHeld = new Promise((resolve) => (releaseReader = resolve))
+    await page.route('**/*.wasm', async (route) => {
+      await readerHeld
+      await route.continue()
+    })
     await signIn(page)
-    await page.getByRole('alert').filter({ hasText: "Le lecteur de codes-barres n'a pas pu se charger" }).waitFor({ timeout: SCAN_TIMEOUT })
-    // Sans lecteur, le Scanner reste au scan : la consigne est posée dans le viseur.
     await page.locator('.aim-hint').filter({ hasText: exactly('Vise le code-barres du pack ou de la bouteille.') }).waitFor()
     assert.ok(
       await page.evaluate(() => {
@@ -890,6 +908,19 @@ async function scenarioReaderAndCamera(browser) {
       }),
       'la consigne est dans le viseur',
     )
+    releaseReader()
+    await waitForConfirmLine(confirmCard(page), 'Pack de 24 → +24', { timeout: SCAN_TIMEOUT })
+    await context.close()
+  }
+  // Lecteur indisponible : le wasm arrive sous un mauvais type.
+  {
+    const { context, page } = await openApp(browser)
+    await page.route('**/*.wasm', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>x</title>' }))
+    await signIn(page)
+    await page.getByRole('alert').filter({ hasText: "Le lecteur de codes-barres n'a pas pu se charger" }).waitFor({ timeout: SCAN_TIMEOUT })
+    // Caméra en panne : elle se réduit, et ne dit plus de viser.
+    await page.locator('.viewfinder[data-size="small"]').waitFor()
+    assert.equal(await page.locator('.aim-hint').count(), 0, 'pas de consigne sur une caméra en panne')
     // Le message et « Démarrer la caméra » sont dans le panneau, sous la caméra, et rien ne les recouvre.
     const start = page.getByRole('button', { name: 'Démarrer la caméra' })
     await start.waitFor()
@@ -902,6 +933,41 @@ async function scenarioReaderAndCamera(browser) {
       }),
       '« Démarrer la caméra » est visible et rien ne le recouvre',
     )
+    await context.close()
+  }
+  // Caméra refusée sur un petit iPhone (iPhone SE, Safari) : le message le plus long ; « Démarrer la caméra » et
+  // « Saisie manuelle » restent au-dessus de la barre d'onglets, sans faire défiler.
+  {
+    const deny = () => {
+      navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission refusée', 'NotAllowedError'))
+    }
+    const { context, page } = await openApp(browser, undefined, { initScript: deny })
+    await page.setViewportSize({ width: 375, height: 647 })
+    await signIn(page)
+    await page.getByRole('alert').filter({ hasText: "L'accès à la caméra a été refusé." }).waitFor({ timeout: SCAN_TIMEOUT })
+    for (const [width, height] of [
+      [375, 647],
+      [390, 664],
+    ]) {
+      await page.setViewportSize({ width, height })
+      const tabBar = await page.locator('.tab-bar').boundingBox()
+      for (const name of ['Démarrer la caméra', 'Saisie manuelle']) {
+        const button = page.getByRole('button', { name })
+        const box = await button.boundingBox()
+        assert.ok(
+          box.y + box.height <= tabBar.y,
+          `« ${name} » au-dessus de la barre d'onglets (${width} × ${height}) : bas à ${box.y + box.height}, barre à ${tabBar.y}`,
+        )
+        assert.ok(
+          await button.evaluate((element) => {
+            const rect = element.getBoundingClientRect()
+            const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+            return hit === element || element.contains(hit)
+          }),
+          `« ${name} » est visible et rien ne le recouvre (${width} × ${height})`,
+        )
+      }
+    }
     await context.close()
   }
   // App en arrière-plan puis de retour : la caméra s'arrête puis repart seule.
@@ -2160,7 +2226,10 @@ async function scenarioDesign(browser) {
       [320, 640],
     ]) {
       const label = `${colorScheme === 'dark' ? 'nuit' : 'jour'}, ${width} px`
-      const { context, page } = await openApp(browser, { catalogue: 'pilotage', longNames: true })
+      const { context, page, fake } = await openApp(browser, { catalogue: 'pilotage', longNames: true })
+      // Les stocks les plus larges sur une tuile sans photo : trois chiffres, et deux chiffres sous zéro.
+      fake.addMovement({ productId: 'p-lipton', kind: 'in', delta: 84, employee: 'Léa' })
+      fake.addMovement({ productId: 'p-redbull', kind: 'out', delta: -12, employee: 'Léa' })
       await page.emulateMedia({ colorScheme })
       await page.setViewportSize({ width, height })
       const tab = (name) => page.getByRole('button', { name, exact: true })
@@ -2181,6 +2250,15 @@ async function scenarioDesign(browser) {
       const list = page.getByRole('list', { name: 'Produits' })
       await list.waitFor()
       assert.deepEqual(await overflows(page, width), [], `Stock (${label})`)
+      assert.deepEqual(await photoLabelsCovered(page), [], `« Pas de photo » sous une pastille (${label})`)
+      if (colorScheme === 'light' && width === 390) {
+        // Les largeurs d'iPhone entre les deux tailles du scénario : iPhone SE et mini (375 px), et 360 px.
+        for (const narrower of [360, 375]) {
+          await page.setViewportSize({ width: narrower, height })
+          assert.deepEqual(await photoLabelsCovered(page), [], `« Pas de photo » sous une pastille (jour, ${narrower} px)`)
+        }
+        await page.setViewportSize({ width, height })
+      }
       await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
       await page.getByRole('region', { name: 'Fiche produit' }).locator('.movement-line').first().waitFor()
       assert.deepEqual(await overflows(page, width), [], `fiche produit (${label})`)

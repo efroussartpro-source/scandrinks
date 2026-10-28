@@ -433,7 +433,7 @@ Maquettes de référence : https://claude.ai/artifact/ArT4JB78R8D87EER7u6ibT, se
 
 **Photos.**
 - Toujours sur la plaque claire et entières, jamais coupées, de jour comme de nuit : les images d'Open Food Facts ont un fond blanc.
-- Sans photo : une icône de boisson, avec « Pas de photo » quand l'image fait au moins 100 px de haut (tuiles du Stock, fiche produit, Scanner).
+- Sans photo : une icône de boisson, avec « Pas de photo » quand l'image fait au moins 100 px de haut (tuiles du Stock, fiche produit, Scanner). Sur une tuile, le texte est à côté de l'icône, au milieu de la photo : ni « À racheter » ni le stock ne le recouvrent.
 - Les dessins de boissons de l'écran de connexion sont livrés avec l'app : avant la connexion, les vrais produits ne sont pas lisibles.
 
 **Composants.**
@@ -465,6 +465,7 @@ Maquettes de référence : https://claude.ai/artifact/ArT4JB78R8D87EER7u6ibT, se
 - **Scanner :**
   - la caméra en haut, en plein écran quand rien n'est ouvert ;
   - la consigne dans une pastille sombre ;
+  - caméra refusée ou en panne : la caméra se réduit, sans consigne ; le message, « Démarrer la caméra » et « Saisie manuelle » restent au-dessus de la barre d'onglets, même sur un petit iPhone ;
   - la confirmation avec la photo en grand et la quantité dans la couleur du mode ;
   - « Code inconnu : 2000000000091 » garde son texte d'aujourd'hui (la maquette le coupe en deux lignes), et le code peut passer à la ligne.
 - **À racheter :** une carte par produit ; la quantité à acheter en gros, en orange, à droite.
@@ -819,6 +820,7 @@ Décidée le 28/10/2026, à la demande du porteur du projet. Les travaux commenc
 | 28/10/2026 | Plus Jakarta Sans livrée avec l'app (WOFF2, licence OFL), sans Google Fonts | Rien n'est envoyé à Google, et la police ne dépend pas d'un autre site |
 | 28/10/2026 | Les photos restent sur une plaque claire, entières, de jour comme de nuit | Les images d'Open Food Facts ont un fond blanc |
 | 28/10/2026 | Mise en œuvre au jalon 7, après l'inventaire du 28/10 ; vidéo tuto refaite à la fin | Rien ne change le soir de l'inventaire |
+| 28/10/2026 | Relecture finale du jalon 7 : la caméra en panne se réduit et ne dit plus de viser ; sur une tuile sans photo, « Pas de photo » passe à côté de l'icône | Sur un petit iPhone, « Démarrer la caméra » et « Saisie manuelle » passaient sous la barre d'onglets ; un stock de trois chiffres recouvrait « Pas de photo » |
 
 ## 12. Glossaire
 

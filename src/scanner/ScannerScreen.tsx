@@ -12,7 +12,7 @@
  * l'écran, l'en-tête et le sélecteur de mode sont posés dessus, sur le voile
  * sombre ; tout ce qui suit un scan s'ouvre dans le panneau blanc du bas. La
  * caméra est pleine au scan, à moitié pour une fiche courte, petite pour une
- * fiche à remplir (data-size).
+ * fiche à remplir ou quand elle est en panne (data-size).
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { classifyApiError, type ApiErrorKind } from '../data/apiErrors'
@@ -305,11 +305,17 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
   }
 
   // Taille de la caméra (§6.7) : pleine au scan ; à moitié pour une fiche courte ; petite pour une fiche à remplir,
-  // qui laisse ainsi la place à ses champs.
+  // qui laisse ainsi la place à ses champs. En panne, elle est petite aussi, et ne dit plus de viser : son message,
+  // « Démarrer la caméra » et « Saisie manuelle » restent au-dessus de la barre d'onglets, même sur un petit iPhone.
+  const cameraDown = scanner.status === 'error'
   const size =
-    flow.step === 'scanning'
+    flow.step === 'scanning' && !cameraDown
       ? 'full'
-      : flow.step === 'new_product' || flow.step === 'attach' || flow.step === 'manual' || (flow.step === 'confirm' && mode === 'inventory')
+      : cameraDown ||
+          flow.step === 'new_product' ||
+          flow.step === 'attach' ||
+          flow.step === 'manual' ||
+          (flow.step === 'confirm' && mode === 'inventory')
         ? 'small'
         : 'half'
 
@@ -338,7 +344,7 @@ export default function ScannerScreen({ employee, active, onSessionExpired, onCa
         <span className="corner corner-tr" aria-hidden="true" />
         <span className="corner corner-bl" aria-hidden="true" />
         <span className="corner corner-br" aria-hidden="true" />
-        {flow.step === 'scanning' && <p className="aim-hint">Vise le code-barres du pack ou de la bouteille.</p>}
+        {flow.step === 'scanning' && !cameraDown && <p className="aim-hint">Vise le code-barres du pack ou de la bouteille.</p>}
       </div>
       <div className="panel">
         {scanner.status === 'error' && scanner.errorKind && (

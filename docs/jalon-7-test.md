@@ -28,6 +28,7 @@ Ouvre la préversion dans Safari.
   - Les produits en grille de photos, deux par ligne. Sur la photo : « À racheter » en haut à gauche pour un produit au seuil, et le stock en bas à droite (en rouge s'il est négatif).
   - Sous le nom : ce qu'il faut racheter (« 2 packs à racheter »), « Stock à vérifier », ou les packs. Une boisson sans photo montre « Pas de photo ».
   - Touche « Archivés », à côté de la recherche : les produits archivés. Touche-le de nouveau : les autres reviennent.
+  - Combien de tuiles entières vois-tu au-dessus de la barre d'onglets ? Sur un iPhone de taille courante, la sixième passe un peu dessous (davantage dans Safari, où la page est plus courte). Si tu préfères six tuiles entières, avec des photos un peu plus petites, dis-le-moi.
 - [ ] **6. La fiche d'un produit.** Touche une tuile : la grande photo, le stock en très gros, Pack Metro, Seuil et Stock idéal dans trois cases, les codes avec leur photo, les derniers mouvements, puis « Archiver le produit » et « Supprimer le produit » dans une carte à part. Touche « Retour », sans rien changer.
 - [ ] **7. Ventes.** Le jour dans un grand champ, puis « À saisir » en cartes, avec les photos et de grandes cases « vendus ». Ne tape rien pour l'instant.
 - [ ] **8. L'Historique.** La photo du produit au début de chaque ligne.
@@ -51,7 +52,7 @@ Ouvre la préversion dans Safari.
 ## Si quelque chose cloche
 
 - Un texte coupé, qui déborde ou se lit mal (surtout de nuit) : note l'étape, et fais une capture d'écran.
-- La caméra ne démarre pas : le message et « Démarrer la caméra » sont dans le panneau blanc, sous la caméra. Touche « Démarrer la caméra ».
+- La caméra ne démarre pas : elle se réduit, et le message, « Démarrer la caméra » et « Saisie manuelle » sont dans le panneau blanc, dessous. Touche « Démarrer la caméra ».
 - La préversion montre encore l'ancien design : elle n'est pas à jour. Ferme l'onglet, rouvre le lien ; si ça continue, préviens-moi.
 
 ## Ce que tu me renvoies
