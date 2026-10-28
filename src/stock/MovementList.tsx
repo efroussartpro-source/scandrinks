@@ -3,11 +3,14 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, §4.5)
  *
- * Chaque ligne montre « Sortie −24 » dans la couleur du type, puis le moment
- * et le prénom (maquette J-fiche) ; VoiceOver lit la phrase entière. Une
- * ligne annulée reste visible, barrée, avec « annulé par … ».
+ * Chaque ligne montre la pastille du type (+, − ou =, dans sa couleur), puis
+ * « Sortie −24 » dans la couleur du type, le moment et le prénom (maquette
+ * C1-Fiche) ; VoiceOver lit la phrase entière. Une ligne annulée reste
+ * visible, barrée, avec « annulé par … ».
  */
 import { movementLine, movementParts, type Movement } from '../domain/movements'
+
+const MARK: Record<Movement['kind'], string> = { in: '+', out: '−', inventory: '=' }
 
 interface MovementListProps {
   movements: Movement[]
@@ -22,6 +25,9 @@ export default function MovementList({ movements }: MovementListProps) {
         const { title, meta } = movementParts(movement, now)
         return (
           <li key={movement.id} className={movement.cancelledAt !== null ? 'cancelled' : undefined}>
+            <span className={`movement-mark mark-${movement.kind}`} aria-hidden="true">
+              {MARK[movement.kind]}
+            </span>
             <span className="movement-visual" aria-hidden="true">
               <span className={`movement-title kind-${movement.kind}`}>{title}</span>
               <span className="movement-meta">{meta}</span>

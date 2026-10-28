@@ -3,10 +3,11 @@
  *
  * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, RG-4, RG-7, RG-8, RG-11)
  *
- * De haut en bas (maquette J-fiche) : « Retour », le nom, le stock en grand
- * avec les packs et les chiffres, les actions, les codes, les derniers
- * mouvements, puis « Archiver le produit » ou « Réactiver », et enfin
- * « Supprimer le produit ».
+ * De haut en bas (maquette C1-Fiche) : « Retour », la grande photo, le nom,
+ * le stock en très gros avec ce qu'il faut racheter, les packs et les trois
+ * chiffres, les actions, les codes avec leur photo, les derniers mouvements,
+ * puis « Archiver le produit » (ou « Réactiver ») et « Supprimer le produit »
+ * dans une carte à part.
  * Les codes et les 20 derniers mouvements sont relus à l'ouverture, quand le
  * stock change et après un changement de code. Depuis la fiche d'un produit
  * actif, on le modifie, on gère ses codes et on corrige son stock : chaque
@@ -25,7 +26,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Product, ProductDetail } from '../data/api'
 import { apiErrorMessage, classifyApiError } from '../data/apiErrors'
 import { api } from '../data/supabaseClient'
-import { isLow } from '../domain/restock'
+import { isLow, tileState } from '../domain/restock'
 import { formatPacks, formatStock, formatUnits } from '../domain/stock'
 import CorrectStockForm from '../inventory/CorrectStockForm'
 import Thumb from '../photos/Thumb'
@@ -197,6 +198,7 @@ export default function ProductSheet({
 
   const low = !product.archived && isLow(product)
   const packs = formatPacks(product.stock, product.packSize)
+  const state = tileState(product)
 
   return (
     <section className="product-sheet" aria-label="Fiche produit">
@@ -204,16 +206,21 @@ export default function ProductSheet({
         <IconChevronLeft size={22} strokeWidth={2.4} />
         Retour
       </button>
-      <div className="sheet-head">
-        <Thumb path={product.photoPath} size={76} />
-        <h1 className="sheet-title">{product.name}</h1>
+      <div className="sheet-head tile-plate" aria-hidden="true">
+        <Thumb path={product.photoPath} fill emptyLabel />
+        {low && <span className="photo-badge">À racheter</span>}
       </div>
+      <h1 className="sheet-title">{product.name}</h1>
       <section className="card sheet-stock" aria-label="Stock du produit">
         <div className="sheet-stock-top">
           <span className="sheet-stock-label">Stock</span>
+          {state?.tone === 'restock' && <span className="sheet-restock">{state.text}</span>}
           {product.stock < 0 && <span className="check-badge">Stock à vérifier</span>}
         </div>
-        <span className={low ? 'sheet-stock-value stock-low' : 'sheet-stock-value'}>{formatUnits(product.stock)}</span>
+        <span className="sheet-stock-line">
+          <span className={low ? 'sheet-stock-value stock-low' : 'sheet-stock-value'}>{formatUnits(product.stock)}</span>
+          <span className="sheet-stock-unit">{Math.abs(product.stock) > 1 ? 'unités' : 'unité'}</span>
+        </span>
         {packs !== null && <span className="sheet-stock-packs">{packs}</span>}
         <dl className="sheet-figures">
           <div>
@@ -261,7 +268,7 @@ export default function ProductSheet({
         </div>
       )}
 
-      <h2 className="section-label">Codes</h2>
+      <h2 className="section-title">Codes</h2>
       {detail === null ? (
         <p className="muted">Chargement…</p>
       ) : (
@@ -280,24 +287,28 @@ export default function ProductSheet({
         />
       )}
 
-      <h2 className="section-label">Derniers mouvements</h2>
+      <h2 className="section-title">Derniers mouvements</h2>
       {detail !== null && <MovementList movements={detail.movements} />}
 
-      {product.archived ? (
+      {product.archived && (
         <>
           <p className="message message-warning">Ce produit est archivé.</p>
           <button type="button" className="primary" disabled={busy} onClick={() => void changeArchived(false)}>
             Réactiver
           </button>
         </>
-      ) : (
-        <button type="button" className="danger block" disabled={busy} onClick={() => void changeArchived(true)}>
-          Archiver le produit
-        </button>
       )}
-      <button type="button" className="danger block" disabled={busy} onClick={() => void remove()}>
-        Supprimer le produit
-      </button>
+      {/* Les actions rares, en rouge, dans une carte à part (spec §6.7). */}
+      <div className="danger-group sheet-danger">
+        {!product.archived && (
+          <button type="button" disabled={busy} onClick={() => void changeArchived(true)}>
+            Archiver le produit
+          </button>
+        )}
+        <button type="button" disabled={busy} onClick={() => void remove()}>
+          Supprimer le produit
+        </button>
+      </div>
     </section>
   )
 }

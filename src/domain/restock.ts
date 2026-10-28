@@ -73,8 +73,24 @@ export function shoppingSummary(count: number, clock: string): string {
   return `${count} ${count > 1 ? 'produits' : 'produit'} · mis à jour à ${clock}`
 }
 
-// Sous le nom, dans la liste du Stock : « À racheter » pour un produit actif au seuil, sinon ses packs.
-export function listState(product: Product): string | null {
-  if (!product.archived && isLow(product)) return product.stock < 0 ? 'À racheter · stock à vérifier' : 'À racheter'
-  return formatPacks(product.stock, product.packSize)
+export interface TileState {
+  text: string
+  // restock : à racheter (orange) ; check : stock à vérifier (rouge) ; neutral : les packs (gris).
+  tone: 'restock' | 'check' | 'neutral'
+}
+
+// Sous le nom, sur une tuile du Stock (§4.4, §6.7) : ce qu'il faut racheter (« 2 packs à racheter », comme dans
+// À racheter), « Stock à vérifier » pour un stock négatif, sinon ses packs. Un produit archivé montre ses packs.
+export function tileState(product: Product): TileState | null {
+  const packs = (): TileState | null => {
+    const text = formatPacks(product.stock, product.packSize)
+    return text === null ? null : { text, tone: 'neutral' }
+  }
+  if (product.archived) return packs()
+  if (product.stock < 0) return { text: 'Stock à vérifier', tone: 'check' }
+  if (isLow(product)) {
+    const line = restockLine(product)
+    return { text: line.toBuy > 0 ? `${buyAmount(line)} à racheter` : 'À racheter', tone: 'restock' }
+  }
+  return packs()
 }

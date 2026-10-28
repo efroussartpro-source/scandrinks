@@ -515,13 +515,21 @@ async function scenarioStock(browser) {
   await signIn(page)
   await tab('Stock').click()
 
-  // 1. Liste triée à la française : le stock en unités, l'état dessous (à racheter, ou les packs), en rouge à racheter.
+  // 1. Grille triée à la française : le stock en unités sur la photo, l'état sous le nom (ce qu'il faut racheter,
+  // « Stock à vérifier », ou les packs).
   const list = page.getByRole('list', { name: 'Produits' })
   await list.waitFor()
   assert.deepEqual(await list.locator('.product-name').allTextContents(), ['Coca-Cola 33 cl', 'Évian 1,5 L', 'Lipton Pêche 50 cl', 'Red Bull 25 cl'])
   assert.deepEqual(await list.locator('.product-stock').allTextContents(), ['10', '4', '36', '−3'])
+  assert.deepEqual(await list.locator('.product-stock').evaluateAll((chips) => chips.map((chip) => chip.hasAttribute('data-negative'))),
+    [false, false, false, true])
   assert.deepEqual(await list.locator('.product-state').allTextContents(),
-    ['À racheter', 'À racheter', '3 packs', 'À racheter · stock à vérifier'])
+    ['2 packs à racheter', '8 unités à racheter', '3 packs', 'Stock à vérifier'])
+  assert.deepEqual(await list.locator('.product-state').evaluateAll((states) => states.map((state) => state.dataset.tone)),
+    ['restock', 'restock', 'neutral', 'check'])
+  // Les photos (spec §6.7) : « Pas de photo » sans image ; la pastille « À racheter » sur celle d'un produit au seuil.
+  assert.deepEqual(await list.locator('.thumb-empty-label').allTextContents(), Array(4).fill('Pas de photo'))
+  assert.deepEqual(await list.locator('.photo-badge').allTextContents(), ['À racheter', 'À racheter', 'À racheter'])
   await page.getByText(/^Mis à jour à \d{2}:\d{2}$/).waitFor()
   assert.deepEqual(await list.locator('.product-row').evaluateAll((rows) => rows.map((row) => row.classList.contains('stock-low'))),
     [true, true, false, true])
@@ -536,6 +544,9 @@ async function scenarioStock(browser) {
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
   const sheet = page.getByRole('region', { name: 'Fiche produit' })
   await sheet.getByRole('heading', { name: 'Coca-Cola 33 cl' }).waitFor()
+  // La grande photo (ici absente : « Pas de photo »), puis ce qu'il faut racheter.
+  assert.equal(await sheet.locator('.sheet-head .thumb-empty-label').textContent(), 'Pas de photo')
+  assert.equal(await sheet.locator('.sheet-restock').textContent(), '2 packs à racheter')
   await sheet.locator('.sheet-stock-value').filter({ hasText: exactly('10') }).waitFor()
   assert.equal(await sheet.locator('.sheet-stock-packs').count(), 0, "moins d'un pack : pas de packs")
   assert.deepEqual(await sheetFigures(sheet), [['Pack Metro', '24'], ['Seuil', '24'], ['Stock idéal', '48']])
@@ -561,8 +572,11 @@ async function scenarioStock(browser) {
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).waitFor({ state: 'detached' })
   await tab('À racheter (2)').waitFor()
 
-  // 5. Archivés, puis réactivation depuis la fiche.
-  await page.getByRole('button', { name: 'Archivés' }).click()
+  // 5. Archivés (un bouton à bascule), puis réactivation depuis la fiche.
+  const archivedToggle = page.getByRole('button', { name: 'Archivés' })
+  assert.equal(await archivedToggle.getAttribute('aria-pressed'), 'false')
+  await archivedToggle.click()
+  assert.equal(await archivedToggle.getAttribute('aria-pressed'), 'true')
   await list.getByRole('button', { name: /^Oasis Tropical 33 cl/ }).waitFor()
   assert.deepEqual(await list.locator('.product-name').allTextContents(), ['Coca-Cola 33 cl', 'Oasis Tropical 33 cl'])
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
@@ -574,7 +588,8 @@ async function scenarioStock(browser) {
     { p_product_id: 'p-coca', p_archived: false },
   ])
   await sheet.getByRole('button', { name: 'Retour' }).click()
-  await page.getByRole('button', { name: 'Actifs' }).click()
+  await archivedToggle.click()
+  assert.equal(await archivedToggle.getAttribute('aria-pressed'), 'false')
   await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).waitFor()
 
   // 6. Depuis À racheter, une ligne ouvre la fiche du produit.
@@ -593,7 +608,7 @@ async function scenarioStock(browser) {
     const overflows = () =>
       page.evaluate(() => [
         ...(document.documentElement.scrollWidth > 320 ? [`page : ${document.documentElement.scrollWidth} px`] : []),
-        ...[...document.querySelectorAll('.row, .modes .mode')]
+        ...[...document.querySelectorAll('.row, .product-row, .modes .mode')]
           .filter((element) => element.scrollWidth > element.clientWidth)
           .map((element) => `déborde : ${element.textContent}`),
         ...[...document.querySelectorAll('button')]
@@ -615,6 +630,13 @@ async function scenarioStock(browser) {
     const list = page.getByRole('list', { name: 'Produits' })
     await list.waitFor()
     assert.deepEqual(await overflows(), [], 'Stock')
+    // Un nom très long tient en deux lignes sur sa tuile, puis « … » (spec §6.7).
+    const tooTall = await list.locator('.product-name').evaluateAll((names) =>
+      names
+        .filter((name) => name.getBoundingClientRect().height > 2 * parseFloat(getComputedStyle(name).lineHeight) + 1)
+        .map((name) => name.textContent),
+    )
+    assert.deepEqual(tooTall, [], 'noms sur deux lignes au plus')
     await list.getByRole('button', { name: /^Coca-Cola 33 cl/ }).click()
     await page.getByRole('region', { name: 'Fiche produit' }).locator('.movement-line').first().waitFor()
     assert.deepEqual(await overflows(), [], 'fiche produit')
@@ -1463,6 +1485,7 @@ async function scenarioImages(browser) {
     // L'image est toujours entière, posée sur sa plaque (spec §6.7) : jamais recadrée.
     assert.equal(await productRow('Coca-Cola 33 cl').locator('img.thumb').evaluate((image) => getComputedStyle(image).objectFit), 'contain')
     await productRow('Évian 50 cl').locator('.thumb-empty').waitFor()
+    assert.equal(await productRow('Évian 50 cl').locator('.thumb-empty-label').textContent(), 'Pas de photo')
     await productRow('Lipton Pêche 50 cl').locator('.thumb-empty').waitFor()
     assert.deepEqual(signedPaths(fake).slice(signsBefore), [['codes/3502110123091/22222222-2222-4222-8222-222222222222.jpg']])
 
@@ -2001,7 +2024,7 @@ async function scenarioDelete(browser) {
     await deletedNotice(page, 'Oasis Tropical 33 cl').waitFor()
     await page.getByText('Aucun produit archivé.').waitFor()
     // Le message s'efface quand on ouvre une autre fiche.
-    await button(page, 'Actifs').click()
+    await button(page, 'Archivés').click()
     await productRow(page, 'Évian 1,5 L').click()
     await sheet(page).getByRole('heading', { name: 'Évian 1,5 L' }).waitFor()
     await sheet(page).getByRole('button', { name: 'Retour' }).click()

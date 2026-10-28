@@ -26,29 +26,105 @@
   margin: 0;
 }
 
-/* Une ligne par produit : son image, le nom et son état, le stock en grand à droite ; en rouge à racheter. */
-.stock-list .row {
-  padding: 9px 10px 9px 12px;
+/* La recherche, puis le bouton « Archivés ». */
+.stock-tools {
+  display: flex;
+  gap: 8px;
 }
 
+.stock-tools .search {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Grille du Stock (maquette C1-Stock) : deux colonnes de tuiles basses, six par écran sur un iPhone de 390 px. */
+.stock-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stock-grid li {
+  min-width: 0;
+}
+
+/* Une tuile : la photo en haut (la grille la place là, après le texte dans la page), puis le nom et l'état. */
+.product-row {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  grid-template-areas:
+    'photo'
+    'text';
+  grid-template-rows: 104px auto;
+  align-content: start;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-align: left;
+}
+
+.tile-photo {
+  grid-area: photo;
+  border-radius: 0;
+}
+
+/* Le stock, en bas à droite de la photo. */
+.product-stock {
+  grid-area: photo;
+  z-index: 1;
+  align-self: end;
+  justify-self: end;
+  margin: 0 8px 8px 0;
+}
+
+.tile-text {
+  grid-area: text;
+  min-width: 0;
+  padding: 9px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Nom d'un produit dans une liste (Ventes s'en sert aussi). */
 .product-name {
   font-size: 17px;
   font-weight: 600;
 }
 
-.product-state {
+/* Sur une tuile : sur deux lignes au plus, puis « … » ; la même hauteur sur toutes les tuiles. */
+.stock-grid .product-name {
+  height: 2.4em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stock-grid .product-state {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-2);
 }
 
-.product-stock {
-  flex: none;
-  font-size: 20px;
-  font-weight: 800;
+.stock-grid .product-state[data-tone='restock'] {
+  color: var(--orange-text);
 }
 
-.product-row.stock-low .product-state,
-.product-row.stock-low .product-stock {
+.stock-grid .product-state[data-tone='check'] {
   color: var(--red-text);
 }
 
@@ -56,35 +132,42 @@
   margin-left: 16px;
 }
 
-/* Fiche produit. */
+/* Fiche produit (maquette C1-Fiche). */
 .product-sheet {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+/* La grande photo, sur sa plaque, avec la pastille « À racheter ». */
 .sheet-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: -6px;
+  height: 220px;
+  flex: none;
+  border-radius: 24px;
+}
+
+.sheet-head .photo-badge {
+  top: 12px;
+  left: 12px;
+  height: 28px;
+  padding: 0 11px;
+  font-size: 13px;
 }
 
 .sheet-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 28px;
+  margin-top: 4px;
+  font-size: 27px;
+  letter-spacing: -0.7px;
 }
 
-/* Le stock en grand, les packs dessous, puis les trois chiffres du produit. */
+/* Le stock en très gros, ce qu'il faut racheter à droite, puis les packs et les trois chiffres du produit. */
 .sheet-stock {
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  gap: 4px;
 }
 
 .sheet-stock-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -92,58 +175,86 @@
 
 .sheet-stock-label {
   font-size: 15px;
+  font-weight: 700;
   color: var(--text-2);
 }
 
+.sheet-restock,
 .check-badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--red-pale);
-  color: var(--red-text);
+  min-height: 28px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 14px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.sheet-restock {
+  background: var(--orange-pale);
+  color: var(--orange-text);
+}
+
+.check-badge {
+  background: var(--red);
+  color: var(--on-color);
+}
+
+.sheet-stock-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .sheet-stock-value {
-  font-size: 40px;
+  font-size: 48px;
   font-weight: 800;
-  line-height: 1;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
 }
 
 .sheet-stock-value.stock-low {
   color: var(--red-text);
 }
 
+.sheet-stock-unit {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
 .sheet-stock-packs {
-  margin-top: -4px;
   font-size: 15px;
   color: var(--text-2);
 }
 
 .sheet-figures {
-  margin: 0;
+  margin: 10px 0 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--separator);
 }
 
 .sheet-figures div {
+  min-width: 0;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  border-radius: 14px;
+  background: var(--bg);
 }
 
 .sheet-figures dt {
   font-size: 13px;
   color: var(--text-2);
+  overflow-wrap: anywhere;
 }
 
 .sheet-figures dd {
   margin: 0;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 800;
 }
 
 /* Corriger le stock et Modifier, côte à côte sous le stock. */
@@ -154,89 +265,138 @@
 }
 
 .sheet-actions button {
+  min-height: 50px;
   padding: 0 8px;
-  font-size: 16px;
-  font-weight: 700;
 }
 
-.product-sheet > .danger {
-  margin-top: 8px;
+.sheet-danger {
+  margin-top: 12px;
 }
 
-/* Codes : le code, ce qu'il vaut dessous, les liens à droite ; la modification s'ouvre dans la ligne. */
+/* Codes : la photo du code, le numéro et ce qu'il vaut, puis « Modifier » et « Retirer » dessous ; la modification
+   s'ouvre sous la ligne. */
+.code-list {
+  padding: 0 16px;
+}
+
 .code-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'photo text'
+    'photo actions'
+    'edit edit';
+  column-gap: 14px;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px 6px 12px;
+  padding: 14px 0;
 }
 
 .code-row > .thumb,
 .code-row > .thumb-button {
-  margin-right: 8px;
+  grid-area: photo;
 }
 
-/* Le numéro ne se coupe jamais : quand la place manque, les liens passent dessous. */
 .code-row .row-text {
-  min-width: auto;
+  grid-area: text;
+  align-self: end;
 }
 
 .code-value {
-  font-size: 17px;
+  font-size: 16px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .code-meta {
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-2);
 }
 
 .code-actions {
+  grid-area: actions;
+  align-self: start;
   display: flex;
+  gap: 16px;
 }
 
 .code-actions button {
-  padding: 0 6px;
+  padding: 0;
   font-size: 15px;
 }
 
 .code-edit {
-  width: 100%;
-  padding: 4px 12px 10px 0;
+  grid-area: edit;
+  padding-top: 10px;
 }
 
 .code-empty {
-  padding: 12px 16px;
+  padding: 14px 0;
 }
 
-.add-row {
-  min-height: 48px;
+.add-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 50px;
+}
+
+/* Derniers mouvements : la pastille du type, « Sortie −24 » dans sa couleur, puis le moment et le prénom. */
+.movement-list {
   padding: 0 16px;
-  gap: 8px;
-  font-weight: 500;
+}
+
+.movement-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+}
+
+.movement-mark {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.mark-in {
+  background: var(--green-pale);
   color: var(--green-text);
 }
 
-/* Derniers mouvements : « Sortie −24 » dans la couleur du type, puis le moment et le prénom. */
-.movement-list li {
-  padding: 10px 16px;
+.mark-out {
+  background: var(--orange-pale);
+  color: var(--orange-text);
+}
+
+.mark-inventory {
+  background: var(--blue-pale);
+  color: var(--blue-text);
 }
 
 .movement-visual {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
 .movement-title {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .movement-meta {
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-2);
   overflow-wrap: anywhere;
 }
@@ -244,4 +404,8 @@
 .movement-list li.cancelled .movement-title {
   color: var(--text-2);
   text-decoration: line-through;
+}
+
+.movement-list li.cancelled .movement-mark {
+  opacity: 0.6;
 }

@@ -140,7 +140,7 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
         {barcodes.map((barcode) => (
           <li key={barcode.code} className="code-row">
             {readOnly ? (
-              <Thumb path={barcode.photoPath} size={48} />
+              <Thumb path={barcode.photoPath} size={68} />
             ) : (
               <button
                 type="button"
@@ -149,7 +149,7 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
                 disabled={busy}
                 onClick={() => choosePhoto(barcode.code)}
               >
-                <Thumb path={barcode.photoPath} size={48} />
+                <Thumb path={barcode.photoPath} size={68} />
               </button>
             )}
             <span className="row-text">
@@ -206,15 +206,13 @@ export default function CodeList({ product, barcodes, readOnly = false, onAdd, o
             )}
           </li>
         ))}
-        {onAdd && (
-          <li>
-            <button type="button" className="row add-row" onClick={onAdd}>
-              <IconPlus size={20} strokeWidth={2.4} />
-              Ajouter un code
-            </button>
-          </li>
-        )}
       </ul>
+      {onAdd && (
+        <button type="button" className="block add-code" onClick={onAdd}>
+          <IconPlus size={20} strokeWidth={2.4} />
+          Ajouter un code
+        </button>
+      )}
       {!readOnly && (
         <input
           ref={fileInput}

@@ -235,7 +235,6 @@ button.back {
   border-radius: 0;
   background: transparent;
   color: var(--red-text);
-  text-align: left;
 }
 
 .danger-group > * + * {

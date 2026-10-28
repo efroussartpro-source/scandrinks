@@ -1,13 +1,15 @@
 /**
- * StockScreen.tsx — Liste du stock (§4.4).
+ * StockScreen.tsx — Le Stock, en grille de photos (§4.4, design « Vitrine »).
  *
- * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, RG-1, RG-8, RG-11)
+ * Référence : docs/superpowers/specs/2026-10-19-scandrinks-design.md (§4.4, §6.7, RG-1, RG-8, RG-11)
  *
- * Les produits actifs par ordre alphabétique (maquette J-stock) : le stock
- * en unités à droite, et sous le nom « À racheter » ou les packs Metro ;
- * en rouge quand ils sont à racheter (stock au seuil ou en dessous, négatif
- * compris). Le filtre « Archivés » montre les produits archivés, que l'on
- * réactive depuis leur fiche. Une ligne ouvre la fiche du produit.
+ * Les produits actifs par ordre alphabétique, en tuiles sur deux colonnes
+ * (maquette C1-Stock) : la photo, avec la pastille « À racheter » pour un
+ * produit au seuil et le stock en unités dans une pastille sombre (rouge s'il
+ * est négatif) ; puis le nom, sur deux lignes au plus, et son état
+ * (tileState : ce qu'il faut racheter, « Stock à vérifier », ou les packs).
+ * Le bouton « Archivés », à côté de la recherche, montre les produits
+ * archivés, que l'on réactive depuis leur fiche. Une tuile ouvre la fiche.
  * Après une suppression (RG-15), la liste revient avec « X a été supprimé. »,
  * jusqu'à l'ouverture d'une fiche ou « Nouveau produit ».
  * « Nouveau produit » crée une fiche sans scan, puis l'ouvre sans attendre
@@ -19,11 +21,11 @@ import type { Catalog } from '../app/useCatalog'
 import type { Product } from '../data/api'
 import { apiErrorMessage } from '../data/apiErrors'
 import { formatClock } from '../domain/movements'
-import { isLow, listState } from '../domain/restock'
+import { isLow, tileState } from '../domain/restock'
 import { formatUnits } from '../domain/stock'
 import Thumb from '../photos/Thumb'
 import { filterProducts } from '../products/search'
-import { IconChevronRight, IconPlus, IconSearch } from '../ui/icons'
+import { IconArchive, IconPlus, IconSearch } from '../ui/icons'
 import { deletedMessage } from './deletion'
 import ProductCreateForm from './ProductCreateForm'
 import ProductSheet from './ProductSheet'
@@ -107,16 +109,14 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
           {deletedMessage(deleted)}
         </p>
       )}
-      <label className="search">
-        <span className="visually-hidden">Rechercher un produit</span>
-        <IconSearch size={18} />
-        <input type="search" placeholder="Rechercher un produit" value={query} onChange={(event) => setQuery(event.target.value)} />
-      </label>
-      <div className="segmented" role="group" aria-label="Filtre">
-        <button type="button" aria-pressed={!archived} onClick={() => setArchived(false)}>
-          Actifs
-        </button>
-        <button type="button" aria-pressed={archived} onClick={() => setArchived(true)}>
+      <div className="stock-tools">
+        <label className="search">
+          <span className="visually-hidden">Rechercher un produit</span>
+          <IconSearch size={18} />
+          <input type="search" placeholder="Rechercher un produit" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
+        <button type="button" className="toggle" aria-pressed={archived} onClick={() => setArchived(!archived)}>
+          <IconArchive size={18} />
           Archivés
         </button>
       </div>
@@ -134,27 +134,35 @@ export default function StockScreen({ catalog, employee, onCatalogChanged, onSes
       )}
       {inFilter.length > 0 && shown.length === 0 && <p className="muted">Aucun produit ne correspond.</p>}
       {shown.length > 0 && (
-        <ul className="group stock-list" aria-label="Produits">
+        <ul className="stock-list stock-grid" aria-label="Produits">
           {shown.map((product) => {
-            const state = listState(product)
+            const state = tileState(product)
+            const low = !product.archived && isLow(product)
+            // Le nom vient en premier : le nom de la tuile pour VoiceOver commence par lui. La grille pose la photo en haut.
             return (
               <li key={product.id}>
                 <button
                   type="button"
-                  className={!product.archived && isLow(product) ? 'row product-row stock-low' : 'row product-row'}
+                  className={low ? 'product-row stock-low' : 'product-row'}
                   onClick={() => {
                     setDeleted(null)
                     setOpenId(product.id)
                   }}
                 >
-                  <Thumb path={product.photoPath} size={44} />
-                  <span className="row-text">
+                  <span className="tile-text">
                     <span className="product-name">{product.name}</span>
-                    {state !== null && <span className="product-state">{state}</span>}
+                    {state !== null && (
+                      <span className="product-state" data-tone={state.tone}>
+                        {state.text}
+                      </span>
+                    )}
                   </span>
-                  <span className="product-stock">{formatUnits(product.stock)}</span>
-                  <span className="chevron">
-                    <IconChevronRight size={18} />
+                  <span className="product-stock stock-chip" data-negative={product.stock < 0 ? '' : undefined}>
+                    {formatUnits(product.stock)}
+                  </span>
+                  <span className="tile-photo tile-plate" aria-hidden="true">
+                    <Thumb path={product.photoPath} fill emptyLabel />
+                    {low && <span className="photo-badge">À racheter</span>}
                   </span>
                 </button>
               </li>
