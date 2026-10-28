@@ -56,6 +56,7 @@ Ouvre la préversion dans Safari, connecte-toi, puis choisis ton prénom. Reste 
 - « Base injoignable » au moment de supprimer : la partie A n'est sans doute pas faite. Préviens-moi.
 - « Pas de connexion. Réessaie quand le réseau revient. » : touche de nouveau « Supprimer le produit » quand le réseau revient. Le nouvel essai ne fait rien de plus que le premier.
 - « Photo non enregistrée : réessaie depuis la fiche du produit. » : le produit est bien créé. La photo se reprend depuis sa fiche, en touchant l'image du code.
+- À l'étape 13, « Ventes » propose déjà de saisir des ventes au lieu de dire « La fin de journée commence le 29/10. » : la préversion n'est pas à jour. N'enregistre rien et préviens-moi.
 
 ## Ce que tu me renvoies
 

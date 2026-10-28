@@ -139,3 +139,5 @@ Ces fichiers ne contiennent que des valeurs publiques :
 ### Hébergement
 
 Cloudflare Pages, avec la commande de build `npm run build`, le dossier de sortie `dist` et la branche de production `main`. Chaque autre branche a sa préversion, par exemple `https://jalon-1.scandrinks.pages.dev`.
+
+Une construction peut rester bloquée chez Cloudflare : état « active » depuis des heures, « Cancel deployment » refusé et pas de « Retry deployment » dans le menu (vu le 28/10/2026 après une panne de Cloudflare). La version en ligne reste alors la précédente. Un nouvel envoi sur la branche lance une autre construction.
