@@ -12,6 +12,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isConfigurationMissing, startupErrorMessage } from './startup'
 import { startAppearance } from './theme/appearance'
+import './theme/fonts.css'
 import './theme/tokens.css'
 import './styles.css'
 // Les composants communs avant les feuilles des écrans (chargées avec l'app), qui peuvent les préciser.

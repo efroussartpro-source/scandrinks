@@ -99,8 +99,8 @@ h1 {
   text-overflow: ellipsis;
   white-space: nowrap;
   border-radius: 999px;
-  background: var(--pill);
-  color: var(--text-3);
+  background: var(--green-pale);
+  color: var(--green-text);
   font-size: 15px;
   font-weight: 500;
 }
@@ -341,8 +341,8 @@ button.back {
 }
 
 .segmented button[aria-pressed='true'] {
-  background: var(--segment);
-  color: var(--text);
+  background: var(--chip);
+  color: var(--on-chip);
   font-weight: 600;
   box-shadow: var(--shadow);
 }

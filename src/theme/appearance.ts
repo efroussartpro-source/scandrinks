@@ -22,7 +22,7 @@ export const APPEARANCE_CHOICES: ReadonlyArray<{ value: Appearance; label: strin
 ]
 
 // Couleur de la barre d'état : le fond (--bg de tokens.css), de jour et de nuit.
-export const STATUS_BAR = { light: '#F2F2F7', dark: '#000000' } as const
+export const STATUS_BAR = { light: '#F7F7F5', dark: '#0F1110' } as const
 
 export function loadAppearance(storage?: Storage | null): Appearance {
   const stored = readStored(APPEARANCE_KEY, storage)

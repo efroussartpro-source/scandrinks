@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { STATUS_BAR } from './appearance'
+import fontsCss from './fonts.css?raw'
 import tokensCss from './tokens.css?raw'
 
 // Les déclarations « --nom: valeur; » d'un bloc de tokens.css.
@@ -69,43 +70,63 @@ test("la barre d'état prend le fond de chaque thème", () => {
 
 // Spec §6.7, tableau « Couleurs ».
 test.each([
-  ['bg', '#F2F2F7', '#000000'],
-  ['card', '#FFFFFF', '#1C1C1E'],
-  ['field', '#F2F2F7', '#2C2C2E'],
-  ['track', '#E3E3E8', '#2C2C2E'],
-  ['separator', '#E5E5EA', '#38383A'],
-  ['text', '#1C1C1E', '#FFFFFF'],
-  ['text-2', '#6C6C70', '#98989F'],
+  ['bg', '#F7F7F5', '#0F1110'],
+  ['card', '#FFFFFF', '#1A1D1B'],
+  ['field', '#FFFFFF', '#1A1D1B'],
+  ['track', '#FFFFFF', '#1A1D1B'],
+  ['separator', '#E5E6E1', '#2B2F2C'],
+  ['field-border', '#D3D5CF', '#3A3F3B'],
+  ['text', '#171A18', '#F2F3F1'],
+  ['text-2', '#5C625E', '#A3A9A5'],
+  ['text-3', '#3B403D', '#D5D8D6'],
+  ['chip', '#171A18', '#F2F3F1'],
+  ['on-chip', '#FFFFFF', '#171A18'],
   ['green', '#1F6F3F', '#26804A'],
   ['green-text', '#1F6F3F', '#4CD07D'],
-  ['green-pale', '#E7F1EB', '#1E3326'],
+  ['green-pale', '#DDF0E4', '#1E3326'],
   ['orange', '#B45309', '#A9520B'],
   ['orange-text', '#A34A07', '#FFA94D'],
+  ['orange-pale', '#FFEEDB', '#3A2614'],
   ['blue', '#1D4ED8', '#2F5FE0'],
   ['blue-text', '#1D4ED8', '#7FB2FF'],
+  ['blue-pale', '#EEF2FD', '#17233D'],
+  ['red', '#C0392B', '#C0392B'],
   ['red-text', '#C0392B', '#FF6961'],
   ['red-pale', '#FDECEA', '#3A1D1B'],
   ['badge', '#D70015', '#D70015'],
-  ['tab-bar', '#F9F9F9', '#121214'],
+  ['tab-bar', '#FFFFFF', '#151816'],
+  ['bar-border', '#E5E6E1', '#2B2F2C'],
+  ['plate', '#F1F2EE', '#DCDDD8'],
+  ['plate-text', '#5C625E', '#4A504C'],
+  ['photo-badge', '#FFFFFF', '#FFFFFF'],
+  ['photo-badge-text', '#A34A07', '#A34A07'],
+  ['stock-chip', '#171A18', '#171A18'],
+  ['tile-indigo', '#5856D6', '#5E5CE6'],
+  ['tile-gray', '#6C716E', '#636366'],
+  ['on-color', '#FFFFFF', '#FFFFFF'],
+  ['camera', '#000000', '#000000'],
+  ['overlay', 'rgba(0, 0, 0, 0.6)', 'rgba(0, 0, 0, 0.6)'],
 ])('couleur de la spec --%s : %s le jour, %s la nuit', (name, day, night) => {
   expect(tokens.light[name]).toBe(day)
   expect(tokens.dark[name]).toBe(night)
 })
 
 const TEXT_PAIRS: Array<[string, string]> = [
-  ['text', 'bg'], ['text', 'card'], ['text', 'field'], ['text', 'green-pale'], ['text', 'segment'],
+  ['text', 'bg'], ['text', 'card'], ['text', 'field'], ['text', 'green-pale'], ['text', 'track'],
   ['text-2', 'card'], ['text-2', 'bg'], ['text-2', 'green-pale'], ['text-2', 'tab-bar'], ['text-2', 'field'],
-  ['text-3', 'track'], ['text-3', 'pill'],
+  ['text-3', 'track'],
   ['green-text', 'card'], ['green-text', 'bg'], ['green-text', 'green-pale'], ['green-text', 'track'], ['green-text', 'tab-bar'],
   ['green-text', 'field'],
   ['orange-text', 'card'], ['orange-text', 'track'], ['orange-text', 'orange-pale'],
   ['blue-text', 'card'], ['blue-text', 'track'], ['blue-text', 'blue-pale'],
   ['red-text', 'card'], ['red-text', 'bg'], ['red-text', 'red-pale'],
   ['on-color', 'green'], ['on-color', 'orange'], ['on-color', 'blue'], ['on-color', 'badge'],
+  ['on-chip', 'chip'], ['plate-text', 'plate'], ['photo-badge-text', 'photo-badge'], ['on-color', 'red'], ['on-color', 'stock-chip'],
+  ['orange-text', 'bg'],
 ]
 
 const INTERFACE_PAIRS: Array<[string, string]> = [
-  ['text-2', 'thumb'],
+  ['stock-chip', 'plate'], ['chip', 'track'], ['chip', 'bg'], ['red', 'card'],
   ['on-color', 'tile-indigo'], ['on-color', 'tile-gray'], ['on-color', 'camera'],
   ['green', 'bg'], ['green', 'card'], ['orange', 'bg'], ['orange', 'card'], ['blue', 'bg'], ['blue', 'card'],
 ]
@@ -122,9 +143,28 @@ test.each(THEMES)("éléments d'interface : 3:1 au moins (%s)", (_theme, values)
   expect(tooLow).toEqual([])
 })
 
-// Sélecteur à segments : le segment choisi ressort, plus clair que sa piste, de jour comme de nuit (maquette N-reglages).
-test.each(THEMES)('le segment choisi est plus clair que sa piste (%s)', (_theme, values) => {
-  expect(luminance(values.segment)).toBeGreaterThan(luminance(values.track))
+// Sélecteurs et puces : le choix rempli ressort de sa piste, de jour comme de nuit (spec §6.7).
+test.each(THEMES)('le choix rempli ressort de sa piste (%s)', (_theme, values) => {
+  expect(contrast(values.chip, values.track)).toBeGreaterThanOrEqual(3)
+})
+
+// L'en-tête, les modes et la consigne du Scanner sont posés sur la caméra, sur ce voile : devant la scène la plus
+// claire (un frigo blanc), leur texte reste lisible.
+test.each(THEMES)('le texte posé sur la caméra reste lisible devant une scène blanche (%s)', (_theme, values) => {
+  const alpha = Number(/^rgba\(0, 0, 0, ([\d.]+)\)$/.exec(values.overlay)?.[1])
+  const channel = Math.round(255 * (1 - alpha)).toString(16).padStart(2, '0').toUpperCase()
+  const veiled = `#${channel.repeat(3)}`
+  expect(veiled).toBe('#666666')
+  expect(contrast(values['on-color'], veiled)).toBeGreaterThanOrEqual(4.5)
+})
+
+// La police Plus Jakarta Sans est livrée avec l'app (spec §6.2) : rien n'est demandé à un autre site.
+test("la police est livrée avec l'app", () => {
+  expect(fontsCss).toContain("font-family: 'Plus Jakarta Sans'")
+  expect(fontsCss).toContain('font-display: swap')
+  expect(fontsCss).toContain('font-weight: 200 800')
+  expect(fontsCss).toContain("url('./fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2')")
+  expect(Object.keys(import.meta.glob('./fonts/*.woff2'))).toEqual(['./fonts/plus-jakarta-sans-latin-wght-normal.woff2'])
 })
 
 // Une couleur écrite en dur resterait la même de nuit : l'écran deviendrait illisible.

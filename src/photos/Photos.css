@@ -3,7 +3,7 @@
   flex: none;
   display: block;
   object-fit: cover;
-  background: var(--thumb);
+  background: var(--plate);
 }
 
 /* Sans image : l'icône grise du produit sur le fond de la vignette. */
@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-2);
+  color: var(--plate-text);
 }
 
 /* Photo d'un code dans un formulaire (maquettes I-photo, I-off) : l'aperçu, ce qui sera gardé, puis les gestes. */

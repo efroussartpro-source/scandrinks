@@ -1,61 +1,71 @@
 /*
- * tokens.css — Les couleurs de ScanDrinks, de jour et de nuit (spec §6.7).
+ * tokens.css — Les couleurs de ScanDrinks, de jour et de nuit : le design « Vitrine » (spec §6.7, jalon 7).
  *
  * La seule source des couleurs : les autres feuilles n'utilisent que ces
  * variables (vérifié par charte.test.ts, avec les contrastes). Le jour est
  * dans le premier bloc. La nuit est écrite deux fois, à l'identique : pour
  * « Automatique » quand l'iPhone est en mode sombre, et pour « Sombre ».
  * « Clair » et « Sombre » posent data-theme sur <html> (theme/appearance.ts).
+ * La plaque des photos et les pastilles posées dessus restent claires la nuit :
+ * les images d'Open Food Facts ont un fond blanc. De jour, une ombre douce sous
+ * les cartes ; de nuit, un bord fin à la place.
  */
 
 :root {
   color-scheme: light;
-  --bg: #F2F2F7;
+  --bg: #F7F7F5;
   --card: #FFFFFF;
-  --field: #F2F2F7;
-  --track: #E3E3E8;
-  --segment: #FFFFFF;
-  --separator: #E5E5EA;
-  --text: #1C1C1E;
-  --text-2: #6C6C70;
-  --text-3: #3A3A3C;
-  --pill: #E5E5EA;
+  --field: #FFFFFF;
+  --track: #FFFFFF;
+  --separator: #E5E6E1;
+  --field-border: #D3D5CF;
+  --text: #171A18;
+  --text-2: #5C625E;
+  --text-3: #3B403D;
+  --chip: #171A18;
+  --on-chip: #FFFFFF;
   --green: #1F6F3F;
   --green-text: #1F6F3F;
-  --green-pale: #E7F1EB;
+  --green-pale: #DDF0E4;
   --orange: #B45309;
   --orange-text: #A34A07;
-  --orange-pale: #FCF0E6;
+  --orange-pale: #FFEEDB;
   --blue: #1D4ED8;
   --blue-text: #1D4ED8;
   --blue-pale: #EEF2FD;
+  --red: #C0392B;
   --red-text: #C0392B;
   --red-pale: #FDECEA;
   --badge: #D70015;
-  --tab-bar: #F9F9F9;
-  --bar-border: #D1D1D6;
-  --thumb: #ECECF0;
+  --tab-bar: #FFFFFF;
+  --bar-border: #E5E6E1;
+  --plate: #F1F2EE;
+  --plate-text: #5C625E;
+  --photo-badge: #FFFFFF;
+  --photo-badge-text: #A34A07;
+  --stock-chip: #171A18;
   --tile-indigo: #5856D6;
-  --tile-gray: #6C6C70;
+  --tile-gray: #6C716E;
   --on-color: #FFFFFF;
   --camera: #000000;
-  --overlay: rgba(0, 0, 0, 0.55);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(23, 26, 24, 0.06), 0 6px 16px rgba(23, 26, 24, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #000000;
-    --card: #1C1C1E;
-    --field: #2C2C2E;
-    --track: #2C2C2E;
-    --segment: #636366;
-    --separator: #38383A;
-    --text: #FFFFFF;
-    --text-2: #98989F;
-    --text-3: #EBEBF0;
-    --pill: #2C2C2E;
+    --bg: #0F1110;
+    --card: #1A1D1B;
+    --field: #1A1D1B;
+    --track: #1A1D1B;
+    --separator: #2B2F2C;
+    --field-border: #3A3F3B;
+    --text: #F2F3F1;
+    --text-2: #A3A9A5;
+    --text-3: #D5D8D6;
+    --chip: #F2F3F1;
+    --on-chip: #171A18;
     --green: #26804A;
     --green-text: #4CD07D;
     --green-pale: #1E3326;
@@ -65,33 +75,39 @@
     --blue: #2F5FE0;
     --blue-text: #7FB2FF;
     --blue-pale: #17233D;
+    --red: #C0392B;
     --red-text: #FF6961;
     --red-pale: #3A1D1B;
     --badge: #D70015;
-    --tab-bar: #121214;
-    --bar-border: #2C2C2E;
-    --thumb: #2C2C2E;
+    --tab-bar: #151816;
+    --bar-border: #2B2F2C;
+    --plate: #DCDDD8;
+    --plate-text: #4A504C;
+    --photo-badge: #FFFFFF;
+    --photo-badge-text: #A34A07;
+    --stock-chip: #171A18;
     --tile-indigo: #5E5CE6;
     --tile-gray: #636366;
     --on-color: #FFFFFF;
     --camera: #000000;
-    --overlay: rgba(0, 0, 0, 0.55);
-    --shadow: none;
+    --overlay: rgba(0, 0, 0, 0.6);
+    --shadow: 0 0 0 1px #2B2F2C;
   }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #000000;
-  --card: #1C1C1E;
-  --field: #2C2C2E;
-  --track: #2C2C2E;
-  --segment: #636366;
-  --separator: #38383A;
-  --text: #FFFFFF;
-  --text-2: #98989F;
-  --text-3: #EBEBF0;
-  --pill: #2C2C2E;
+  --bg: #0F1110;
+  --card: #1A1D1B;
+  --field: #1A1D1B;
+  --track: #1A1D1B;
+  --separator: #2B2F2C;
+  --field-border: #3A3F3B;
+  --text: #F2F3F1;
+  --text-2: #A3A9A5;
+  --text-3: #D5D8D6;
+  --chip: #F2F3F1;
+  --on-chip: #171A18;
   --green: #26804A;
   --green-text: #4CD07D;
   --green-pale: #1E3326;
@@ -101,16 +117,21 @@
   --blue: #2F5FE0;
   --blue-text: #7FB2FF;
   --blue-pale: #17233D;
+  --red: #C0392B;
   --red-text: #FF6961;
   --red-pale: #3A1D1B;
   --badge: #D70015;
-  --tab-bar: #121214;
-  --bar-border: #2C2C2E;
-  --thumb: #2C2C2E;
+  --tab-bar: #151816;
+  --bar-border: #2B2F2C;
+  --plate: #DCDDD8;
+  --plate-text: #4A504C;
+  --photo-badge: #FFFFFF;
+  --photo-badge-text: #A34A07;
+  --stock-chip: #171A18;
   --tile-indigo: #5E5CE6;
   --tile-gray: #636366;
   --on-color: #FFFFFF;
   --camera: #000000;
-  --overlay: rgba(0, 0, 0, 0.55);
-  --shadow: none;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: 0 0 0 1px #2B2F2C;
 }

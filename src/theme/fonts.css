@@ -1,0 +1,16 @@
+/*
+ * fonts.css — La police de ScanDrinks : Plus Jakarta Sans, livrée avec l'app (spec §6.2 et §6.7).
+ *
+ * Un seul fichier variable (graisses 200 à 800, caractères latins), servi avec
+ * l'app : rien n'est demandé à Google Fonts ni à un autre site. Tant qu'elle
+ * charge, puis si elle manque, la police du système prend le relais (styles.css).
+ * Source : paquet npm @fontsource-variable/plus-jakarta-sans 5.3.0, copié sans
+ * l'installer. Licence : SIL Open Font License 1.1 (fonts/OFL.txt).
+ */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');
+}

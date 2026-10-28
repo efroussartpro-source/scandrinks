@@ -1,7 +1,9 @@
-/* Styles de base : police système, couleurs de la charte (theme/tokens.css) et zones sûres de l'iPhone (encoche, barre d'accueil). */
+/* Styles de base : police Plus Jakarta Sans (theme/fonts.css, celle du système en secours), couleurs de la charte
+   (theme/tokens.css) et zones sûres de l'iPhone (encoche, barre d'accueil). */
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 17px;
+  font-weight: 600;
   color: var(--text);
   background: var(--bg);
   -webkit-text-size-adjust: 100%;

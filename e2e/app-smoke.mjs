@@ -1361,16 +1361,19 @@ async function scenarioAppearance(browser) {
       .catch(() => {})
     assert.deepEqual(await look(), expected)
   }
-  const DAY = { theme: null, background: 'rgb(242, 242, 247)', bar: '#F2F2F7' }
+  const DAY = { theme: null, background: 'rgb(247, 247, 245)', bar: '#F7F7F5' }
   const scannerTab = page.getByRole('button', { name: 'Scanner', exact: true })
   const appearance = page.getByRole('group', { name: 'Apparence' })
   const choice = (name) => appearance.getByRole('button', { name, exact: true })
   await signIn(page)
   await scannerTab.waitFor()
 
-  // 1. Le jour par défaut, avec l'onglet actif en vert.
+  // 1. Le jour par défaut, avec l'onglet actif en vert ; hors du Scanner, le prénom sur sa pastille vert pâle.
   assert.deepEqual(await look(), DAY)
   assert.equal(await scannerTab.evaluate((tab) => getComputedStyle(tab).color), 'rgb(31, 111, 63)')
+  await page.getByRole('button', { name: 'Stock', exact: true }).click()
+  assert.equal(await page.locator('.employee').evaluate((pill) => getComputedStyle(pill).backgroundColor), 'rgb(221, 240, 228)')
+  await scannerTab.click()
 
   // 2. « Sombre » : la nuit, la barre d'état noire, « Se déconnecter » en rouge de nuit.
   await page.getByRole('button', { name: 'Réglages' }).click()
@@ -1378,27 +1381,27 @@ async function scenarioAppearance(browser) {
   assert.equal(await choice('Automatique').getAttribute('aria-pressed'), 'true')
   await choice('Sombre').click()
   assert.equal(await choice('Sombre').getAttribute('aria-pressed'), 'true')
-  assert.deepEqual(await look(), { theme: 'dark', background: 'rgb(0, 0, 0)', bar: '#000000' })
+  assert.deepEqual(await look(), { theme: 'dark', background: 'rgb(15, 17, 16)', bar: '#0F1110' })
   assert.equal(await page.getByRole('button', { name: 'Se déconnecter' }).evaluate((button) => getComputedStyle(button).color), 'rgb(255, 105, 97)')
 
   // 3. Le choix est gardé par le téléphone.
   await page.reload()
   await scannerTab.waitFor()
-  assert.deepEqual(await look(), { theme: 'dark', background: 'rgb(0, 0, 0)', bar: '#000000' })
+  assert.deepEqual(await look(), { theme: 'dark', background: 'rgb(15, 17, 16)', bar: '#0F1110' })
 
   // 4. « Automatique » suit le réglage de l'iPhone, barre d'état comprise.
   await page.getByRole('button', { name: 'Réglages' }).click()
   await choice('Automatique').click()
   assert.deepEqual(await look(), DAY)
   await page.emulateMedia({ colorScheme: 'dark' })
-  await expectLook({ theme: null, background: 'rgb(0, 0, 0)', bar: '#000000' })
+  await expectLook({ theme: null, background: 'rgb(15, 17, 16)', bar: '#0F1110' })
   await page.emulateMedia({ colorScheme: 'light' })
   await expectLook(DAY)
 
   // 5. « Clair » l'emporte sur un iPhone en mode sombre.
   await page.emulateMedia({ colorScheme: 'dark' })
   await choice('Clair').click()
-  assert.deepEqual(await look(), { theme: 'light', background: 'rgb(242, 242, 247)', bar: '#F2F2F7' })
+  assert.deepEqual(await look(), { theme: 'light', background: 'rgb(247, 247, 245)', bar: '#F7F7F5' })
 
   // 6. À 320 px : rien ne dépasse, et l'en-tête tient sur une ligne.
   await page.setViewportSize({ width: 320, height: 640 })
